@@ -214,5 +214,8 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# Streamlit
+# Streamlit — only secrets excluded; config.toml is safe to commit
 .streamlit/secrets.toml
+
+# Local SQLite cache (data_loader.py) - regenerated from yfinance, not source
+market_cache.db
