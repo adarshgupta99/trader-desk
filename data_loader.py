@@ -260,6 +260,23 @@ def reset_watchlist_to_nifty50():
     reset_watchlist_to_preset("Nifty 50")
 
 
+def count_watchlist_with_data():
+    """Count watchlist tickers that actually have price rows in the cache."""
+    conn = _get_connection()
+    try:
+        rows = conn.execute("SELECT ticker FROM watchlist").fetchall()
+        count = 0
+        for (ticker,) in rows:
+            has_data = conn.execute(
+                "SELECT 1 FROM price_cache WHERE ticker = ? LIMIT 1", (ticker,)
+            ).fetchone()
+            if has_data:
+                count += 1
+        return count
+    finally:
+        conn.close()
+
+
 def remove_from_watchlist(ticker):
     conn = _get_connection()
     try:

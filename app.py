@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 
 from data_loader import (get_price_history, get_watchlist, add_to_watchlist,
                          remove_from_watchlist, seed_watchlist_if_empty,
-                         reset_watchlist_to_preset)
+                         reset_watchlist_to_preset, count_watchlist_with_data)
 
 seed_watchlist_if_empty()
 
@@ -376,11 +376,12 @@ with tab_watchlist:
 
     watchlist = get_watchlist()
     count = len(watchlist)
+    visible = count_watchlist_with_data()
 
     # ── Add instrument ────────────────────────────────────────────────────────
     st.markdown(
         f"<div style='color:#8b949e;font-size:12px;margin-bottom:6px;'>"
-        f"{count} / 30 instruments</div>",
+        f"{visible} / 30 instruments</div>",
         unsafe_allow_html=True,
     )
     col_input, col_btn = st.columns([6, 1])
@@ -425,11 +426,12 @@ with tab_watchlist:
     if not watchlist:
         st.markdown(
             f"<div style='color:{T2};text-align:center;padding:48px 0;'>"
-            "Your watchlist is empty — add up to 9 tickers above.</div>",
+            "Your watchlist is empty — add tickers above.</div>",
             unsafe_allow_html=True,
         )
     else:
         _watchlist_grid(watchlist, show_1w)
+
 
 with tab_chart:
     # Persist ticker values across tab switches via explicit session state
