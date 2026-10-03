@@ -40,7 +40,233 @@ def _get_connection():
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS watchlist (
+            ticker TEXT PRIMARY KEY,
+            label  TEXT NOT NULL,
+            added_at TEXT NOT NULL
+        )
+        """
+    )
     return conn
+
+
+# ── Watchlist ─────────────────────────────────────────────────────────────────
+
+WATCHLIST_MAX = 30
+
+def get_watchlist():
+    conn = _get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT ticker, label FROM watchlist ORDER BY added_at"
+        ).fetchall()
+        return [{"ticker": r[0], "label": r[1]} for r in rows]
+    finally:
+        conn.close()
+
+
+def add_to_watchlist(ticker, label=None):
+    """Validate ticker has data, then save to watchlist. Returns (ok, message)."""
+    ticker = ticker.strip()
+    if not ticker:
+        return False, "Enter a ticker."
+
+    conn = _get_connection()
+    try:
+        count = conn.execute("SELECT COUNT(*) FROM watchlist").fetchone()[0]
+        if count >= WATCHLIST_MAX:
+            return False, f"Watchlist is full ({WATCHLIST_MAX} max). Remove one first."
+
+        exists = conn.execute(
+            "SELECT 1 FROM watchlist WHERE ticker = ?", (ticker,)
+        ).fetchone()
+        if exists:
+            return False, f"{ticker} is already in your watchlist."
+    finally:
+        conn.close()
+
+    df = get_price_history(ticker, period="5d")
+    if df.empty:
+        return False, f"No data found for '{ticker}'. Check the ticker and try again."
+
+    display_label = label or ticker
+    conn = _get_connection()
+    try:
+        conn.execute(
+            "INSERT INTO watchlist (ticker, label, added_at) VALUES (?, ?, ?)",
+            (ticker, display_label, datetime.now(timezone.utc).isoformat()),
+        )
+        conn.commit()
+        return True, f"{display_label} added."
+    finally:
+        conn.close()
+
+
+WATCHLIST_PRESETS = {}
+
+WATCHLIST_PRESETS["Nifty 50"] = [
+    ("HDFCBANK.NS",    "HDFC Bank"),
+    ("RELIANCE.NS",    "Reliance"),
+    ("ICICIBANK.NS",   "ICICI Bank"),
+    ("INFY.NS",        "Infosys"),
+    ("TCS.NS",         "TCS"),
+    ("BHARTIARTL.NS",  "Bharti Airtel"),
+    ("ITC.NS",         "ITC"),
+    ("LT.NS",          "L&T"),
+    ("AXISBANK.NS",    "Axis Bank"),
+    ("HINDUNILVR.NS",  "HUL"),
+    ("KOTAKBANK.NS",   "Kotak Bank"),
+    ("SBIN.NS",        "SBI"),
+    ("MARUTI.NS",      "Maruti"),
+    ("SUNPHARMA.NS",   "Sun Pharma"),
+    ("M&M.NS",         "M&M"),
+    ("BAJFINANCE.NS",  "Bajaj Finance"),
+    ("WIPRO.NS",       "Wipro"),
+    ("HCLTECH.NS",     "HCL Tech"),
+    ("TITAN.NS",       "Titan"),
+    ("NTPC.NS",        "NTPC"),
+    ("POWERGRID.NS",   "Power Grid"),
+    ("TATAMOTORS.NS",  "Tata Motors"),
+    ("ONGC.NS",        "ONGC"),
+    ("ADANIPORTS.NS",  "Adani Ports"),
+    ("JSWSTEEL.NS",    "JSW Steel"),
+    ("TATASTEEL.NS",   "Tata Steel"),
+    ("CIPLA.NS",       "Cipla"),
+    ("DRREDDY.NS",     "Dr Reddy's"),
+    ("BAJAJ-AUTO.NS",  "Bajaj Auto"),
+    ("NESTLEIND.NS",   "Nestle India"),
+]
+
+WATCHLIST_PRESETS["Nifty Midcap"] = [
+    ("TRENT.NS",       "Trent"),
+    ("PERSISTENT.NS",  "Persistent"),
+    ("TIINDIA.NS",     "Tube Investments"),
+    ("KALYANKJIL.NS",  "Kalyan Jewellers"),
+    ("OBEROIRLTY.NS",  "Oberoi Realty"),
+    ("BHARATFORG.NS",  "Bharat Forge"),
+    ("CUMMINSIND.NS",  "Cummins India"),
+    ("JSWENERGY.NS",   "JSW Energy"),
+    ("KPITTECH.NS",    "KPIT Tech"),
+    ("VOLTAS.NS",      "Voltas"),
+    ("MAXHEALTH.NS",   "Max Healthcare"),
+    ("LUPIN.NS",       "Lupin"),
+    ("TORNTPHARM.NS",  "Torrent Pharma"),
+    ("HAL.NS",         "HAL"),
+    ("PAGEIND.NS",     "Page Industries"),
+    ("ASTRAL.NS",      "Astral"),
+    ("BALKRISIND.NS",  "Balkrishna Ind"),
+    ("INDHOTEL.NS",    "Indian Hotels"),
+    ("MUTHOOTFIN.NS",  "Muthoot Finance"),
+    ("CHOLAFIN.NS",    "Cholamandalam"),
+]
+
+WATCHLIST_PRESETS["Nifty Auto"] = [
+    ("MARUTI.NS",      "Maruti"),
+    ("M&M.NS",         "M&M"),
+    ("TATAMOTORS.NS",  "Tata Motors"),
+    ("BAJAJ-AUTO.NS",  "Bajaj Auto"),
+    ("HEROMOTOCO.NS",  "Hero MotoCorp"),
+    ("EICHERMOT.NS",   "Eicher Motors"),
+    ("TVSMOTOR.NS",    "TVS Motor"),
+    ("BOSCHLTD.NS",    "Bosch"),
+    ("MRF.NS",         "MRF"),
+    ("ASHOKLEY.NS",    "Ashok Leyland"),
+    ("MOTHERSON.NS",   "Motherson"),
+    ("APOLLOTYRE.NS",  "Apollo Tyres"),
+    ("TIINDIA.NS",     "Tube Investments"),
+    ("EXIDEIND.NS",    "Exide"),
+    ("BALKRISIND.NS",  "Balkrishna Ind"),
+]
+
+WATCHLIST_PRESETS["Nifty IT"] = [
+    ("TCS.NS",         "TCS"),
+    ("INFY.NS",        "Infosys"),
+    ("HCLTECH.NS",     "HCL Tech"),
+    ("WIPRO.NS",       "Wipro"),
+    ("TECHM.NS",       "Tech Mahindra"),
+    ("LTIM.NS",        "LTIMindtree"),
+    ("PERSISTENT.NS",  "Persistent"),
+    ("MPHASIS.NS",     "Mphasis"),
+    ("COFORGE.NS",     "Coforge"),
+    ("KPITTECH.NS",    "KPIT Tech"),
+]
+
+WATCHLIST_PRESETS["Bank Nifty"] = [
+    ("HDFCBANK.NS",    "HDFC Bank"),
+    ("ICICIBANK.NS",   "ICICI Bank"),
+    ("KOTAKBANK.NS",   "Kotak Bank"),
+    ("AXISBANK.NS",    "Axis Bank"),
+    ("SBIN.NS",        "SBI"),
+    ("INDUSINDBK.NS",  "IndusInd Bank"),
+    ("BANKBARODA.NS",  "Bank of Baroda"),
+    ("PNB.NS",         "PNB"),
+    ("IDFCFIRSTB.NS",  "IDFC First"),
+    ("FEDERALBNK.NS",  "Federal Bank"),
+    ("AUBANK.NS",      "AU Small Finance"),
+    ("BANDHANBNK.NS",  "Bandhan Bank"),
+]
+
+NIFTY50_TOP30 = WATCHLIST_PRESETS["Nifty 50"]  # kept for seed_watchlist_if_empty
+
+
+def seed_watchlist_if_empty():
+    """Populate watchlist with top 30 Nifty stocks on first ever launch only."""
+    conn = _get_connection()
+    try:
+        conn.execute("CREATE TABLE IF NOT EXISTS app_flags (key TEXT PRIMARY KEY, value TEXT)")
+        already_seeded = conn.execute(
+            "SELECT 1 FROM app_flags WHERE key = 'watchlist_seeded'"
+        ).fetchone()
+        if already_seeded:
+            return
+        conn.execute("INSERT INTO app_flags (key, value) VALUES ('watchlist_seeded', '1')")
+        conn.commit()
+        now = datetime.now(timezone.utc)
+        rows = [
+            (ticker, label, (now.replace(microsecond=i)).isoformat())
+            for i, (ticker, label) in enumerate(NIFTY50_TOP30)
+        ]
+        conn.executemany(
+            "INSERT OR IGNORE INTO watchlist (ticker, label, added_at) VALUES (?, ?, ?)",
+            rows,
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def reset_watchlist_to_preset(preset_name):
+    """Clear watchlist and repopulate with a named preset."""
+    stocks = WATCHLIST_PRESETS.get(preset_name, [])
+    conn = _get_connection()
+    try:
+        conn.execute("DELETE FROM watchlist")
+        now = datetime.now(timezone.utc)
+        rows = [
+            (ticker, label, (now.replace(microsecond=i)).isoformat())
+            for i, (ticker, label) in enumerate(stocks)
+        ]
+        conn.executemany(
+            "INSERT INTO watchlist (ticker, label, added_at) VALUES (?, ?, ?)", rows
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def reset_watchlist_to_nifty50():
+    reset_watchlist_to_preset("Nifty 50")
+
+
+def remove_from_watchlist(ticker):
+    conn = _get_connection()
+    try:
+        conn.execute("DELETE FROM watchlist WHERE ticker = ?", (ticker,))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def _is_fresh(conn, ticker, period, interval, max_age_hours):

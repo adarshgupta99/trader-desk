@@ -65,46 +65,57 @@ User types a ticker in the browser
 ## Module Details
 
 ### `app.py`
-The Streamlit entry point. Four asset-class tabs, each with plotly charts and a period selector.
+The Streamlit entry point. Seven tabs with a shared period selector at the top.
 
-**Tabs (Rates skipped — no FRED key yet):**
+**Tabs:**
 
-| Tab | Assets |
+| Tab | Contents |
 |---|---|
+| Watchlist | Up to 30 instruments; 1D/1W toggle; preset buttons (Nifty 50, Midcap, Auto, IT, Bank); × to remove |
+| Chart | Plot 1–2 tickers on dual y-axis; period selector; persists tickers across tab switches |
 | Indices | S&P 500, Nasdaq, Nifty 50, KOSPI, FTSE 100, DAX, Euro Stoxx 50, Nikkei 225 |
-| India | Bank Nifty, Nifty IT, Nifty Auto, Nifty Energy, Nifty Midcap 150, Nifty Defence |
-| FX | USD/INR, EUR/USD, GBP/USD |
+| India | Bank Nifty, Nifty IT, Nifty Auto, Nifty Energy, Nifty Mid Select, Nifty Defence |
+| FX | USD/INR, EUR/USD, GBP/USD, EUR/INR |
 | Commodities | WTI Crude Oil, Gold, Silver |
 | Volatility | VIX (US) |
 
+Rates tab is parked until `FRED_API_KEY` is added.
+
+**Design tokens** (top of file): `UP`, `DOWN`, `BG`, `SURFACE`, `BORDER`, `GRID`, `T1`, `T2`, `T3`
+
 **Key functions:**
-- `price_chart(label, ticker, period, height)` — builds a plotly line chart; colours the line and % change green/red
-- `render_grid(assets, period, cols)` — lays out charts in a multi-column grid
-- `period_selector(key)` — renders a horizontal radio (1W / 1M / 3M / 6M / 1Y) and returns the yfinance period string
+- `price_chart(label, ticker, period)` — plotly area chart, y-axis scaled to spread, green/red by direction
+- `asset_card(label, ticker, period, decimal)` — card with CSS-restyled border, label, price, chart
+- `_constituents_popover(label, members)` — `st.popover` with approx. index weights
+- `render_grid(assets, period, cols, decimal)` — 3-column grid of `asset_card()` calls
+- `_watchlist_grid(watchlist, show_1w)` — single HTML flex block; remove via `?remove=` query param
 
 All data goes through `get_price_history()` from `data_loader.py`.
 
 ---
 
 ### `data_loader.py`
-Market data fetcher with a SQLite cache layer.
+Market data fetcher + watchlist storage, backed by SQLite.
 
-**Public function:**
+**Public functions:**
 ```python
 get_price_history(ticker, period="1mo", interval="1d", max_age_hours=6)
-→ pandas DataFrame with columns: Open, High, Low, Close, Volume
+→ DataFrame with columns: Open, High, Low, Close, Volume
+
+get_watchlist()                        → list of {"ticker": ..., "label": ...} dicts
+add_to_watchlist(ticker)               → (ok: bool, message: str)
+remove_from_watchlist(ticker)          → None
+seed_watchlist_if_empty()              → seeds Nifty 50 on first ever launch (flag-guarded)
+reset_watchlist_to_preset(preset_name) → clears and reloads a named preset
 ```
 
-**Internal flow:**
-1. `_get_connection()` — opens `market_cache.db`, creates tables if they don't exist
-2. `_is_fresh()` — checks `cache_meta` table; returns True if last fetch was < `max_age_hours` ago
-3. `_read_from_cache()` — reads rows from `price_cache` table, returns DataFrame
-4. `_fetch_from_yfinance()` — calls `yf.Ticker(ticker).history()`
-5. `_write_to_cache()` — writes OHLCV rows + updates `cache_meta` timestamp
+**Watchlist presets** (`WATCHLIST_PRESETS` dict): Nifty 50 (30), Nifty Midcap (20), Nifty Auto (15), Nifty IT (10), Bank Nifty (12)
 
 **SQLite tables:**
-- `price_cache` — rows of (ticker, period, interval, date, open, high, low, close, volume)
-- `cache_meta` — one row per (ticker, period, interval) tracking when it was last fetched
+- `price_cache` — OHLCV rows keyed by (ticker, period, interval, date)
+- `cache_meta` — last fetch timestamp per (ticker, period, interval)
+- `watchlist` — (ticker PK, label, added_at)
+- `app_flags` — key/value flags; `watchlist_seeded` prevents re-seeding after first launch
 
 ---
 
@@ -135,6 +146,7 @@ Holds secrets. Never committed. Required keys:
 | `pandas` | Data handling and DataFrames |
 | `plotly` | Interactive charts |
 | `python-dotenv` | Load `.env` secrets |
+| `jugaad-data` | Indian NSE index history (Nifty Auto, Energy, Mid Select, Defence) |
 
 **Still to add** as we build: `google-genai`, `feedparser`, `requests`, `fredapi`
 
@@ -149,11 +161,13 @@ Holds secrets. Never committed. Required keys:
 | Commit | Date | Author | What changed |
 |---|---|---|---|
 | `d45e9c1` | 2 Oct 2026 | adarshgupta99 | Initial commit — `.gitignore`, `README.md` |
-| *(uncommitted)* | 3 Oct 2026 | — | Added `app.py`, `data_loader.py`; wired SQLite cache; updated `.gitignore` for `market_cache.db` |
+| `f4b75d1` | 3 Oct 2026 | adarshgupta99 | Week 1: dashboard with five tabs, SQLite cache, dark theme, constituent popovers |
+| (pending) | 3 Oct 2026 | adarshgupta99 | Week 2: Watchlist (presets, 1D/1W toggle, HTML flex grid), Chart tab (dual y-axis, persistent state), design system |
 
 ---
 
 ## What's Coming
 
 - **Rates tab:** Parked until `FRED_API_KEY` is added to `.env`; will use FRED API for interest rate data
-- **Week 2:** Watchlists, return heatmap, cross-asset correlation matrix, date-range controls, Streamlit Cloud deploy
+- **Week 2 remaining:** Return heatmap (1d/1w/1m), cross-asset correlation matrix (cut-first), Streamlit Cloud deploy
+- **Ticker discovery:** Deferred to future week; plan is Yahoo Finance autocomplete API for search-as-you-type
