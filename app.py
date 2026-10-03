@@ -3,17 +3,35 @@ import plotly.graph_objects as go
 
 from data_loader import (get_price_history, get_watchlist, add_to_watchlist,
                          remove_from_watchlist, seed_watchlist_if_empty,
-                         reset_watchlist_to_preset, count_watchlist_with_data)
+                         reset_watchlist_to_preset, count_watchlist_with_data,
+                         clear_price_cache)
 
 seed_watchlist_if_empty()
 
-st.set_page_config(page_title="Trader Desk", layout="wide", page_icon="📊")
+st.set_page_config(page_title="Trader Desk", layout="wide", page_icon="📊", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
     /* ── Layout ── */
     .block-container { padding-top: 1.5rem; padding-bottom: 1rem; }
     footer { visibility: hidden; }
+    [data-testid="stSidebarCollapsedControl"] { display: none !important; }
+    section[data-testid="stSidebar"] { display: none !important; }
+    .clear-cache-btn {
+        position: fixed; bottom: 24px; right: 24px; z-index: 999;
+    }
+    .clear-cache-btn a {
+        display: inline-block; text-align: center; text-decoration: none;
+        border: 1px solid #3d1a1a; border-radius: 6px; padding: 0.5em 0.7em;
+        background: rgba(248,81,73,0.04); color: #5c1a1a;
+        font-size: 8px; font-weight: 700; letter-spacing: 0.12em; line-height: 1.6;
+        text-transform: uppercase; transition: all 0.2s;
+    }
+    .clear-cache-btn a:hover {
+        border-color: #f85149; color: #f85149;
+        background: rgba(248,81,73,0.08);
+        box-shadow: 0 0 12px rgba(248,81,73,0.15);
+    }
 
     /* ── Tabs ── */
     .stTabs [data-baseweb="tab"] {
@@ -73,6 +91,7 @@ st.markdown("""
         height: auto !important;
     }
     [data-testid="stBaseButton-tertiary"]:hover { color: #f85149 !important; }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -88,6 +107,18 @@ T2      = "#8b949e"   # text secondary
 T3      = "#636e7b"   # text tertiary
 
 PERIODS = {"1W": "5d", "1M": "1mo", "3M": "3mo", "6M": "6mo", "1Y": "1y", "3Y": "3y"}
+
+if st.query_params.get("clear_cache") == "1":
+    clear_price_cache()
+    st.query_params.clear()
+    st.rerun()
+
+st.markdown(
+    "<div class='clear-cache-btn'>"
+    "<a href='?clear_cache=1'>CLEAR<br>CACHE</a>"
+    "</div>",
+    unsafe_allow_html=True,
+)
 
 col_title, col_period = st.columns([2, 2])
 with col_title:
@@ -227,11 +258,12 @@ def price_chart(label, ticker, period):
     df = get_price_history(ticker, period=period)
     df = df.dropna(subset=["Close"])
     if df.empty:
-        return None, None, None
+        return None, None, None, None
 
     last  = df["Close"].iloc[-1]
     first = df["Close"].iloc[0]
     pct   = (last / first - 1) * 100
+    latest_date = df.index[-1].strftime("%d %b %Y")
     color = UP if pct >= 0 else DOWN
 
     spread = df["Close"].max() - df["Close"].min()
@@ -259,7 +291,7 @@ def price_chart(label, ticker, period):
         showlegend=False,
         hoverlabel=dict(bgcolor="#1e2530", font_size=12),
     )
-    return fig, last, pct
+    return fig, last, pct, latest_date
 
 
 def _constituents_popover(label, members):
@@ -282,7 +314,7 @@ def _constituents_popover(label, members):
 
 
 def asset_card(label, ticker, period, decimal=2):
-    fig, last, pct = price_chart(label, ticker, period)
+    fig, last, pct, latest_date = price_chart(label, ticker, period)
     if fig is None:
         st.warning(f"No data — {label}")
         return
@@ -309,11 +341,14 @@ def asset_card(label, ticker, period, decimal=2):
                 unsafe_allow_html=True,
             )
         st.markdown(
-            f"<div style='font-size:20px;font-weight:700;color:{T1};"
-            f"margin:-2px 0 2px 0;line-height:1.1;'>{last:,.{decimal}f}</div>",
+            f"<div style='display:flex;align-items:baseline;gap:10px;margin:-2px 0 2px 0;'>"
+            f"<span style='font-size:20px;font-weight:700;color:{T1};line-height:1.1;'>"
+            f"{last:,.{decimal}f}</span>"
+            f"<span style='font-size:10px;color:{T3};'>{latest_date}</span>"
+            f"</div>",
             unsafe_allow_html=True,
         )
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
 def render_grid(assets, period, cols=3, decimal=2):
@@ -393,7 +428,7 @@ with tab_watchlist:
             key="wl_input",
         )
     with col_btn:
-        add_clicked = st.button("Add", use_container_width=True, disabled=(count >= 30))
+        add_clicked = st.button("Add", width="stretch", disabled=(count >= 30))
 
     # ── Preset reset buttons ──────────────────────────────────────────────────
     st.markdown(
@@ -405,7 +440,7 @@ with tab_watchlist:
     for col, preset in zip([p1, p2, p3, p4, p5],
                            ["Nifty 50", "Nifty Midcap", "Nifty Auto", "Nifty IT", "Bank Nifty"]):
         with col:
-            if st.button(preset, use_container_width=True, key=f"preset_{preset}"):
+            if st.button(preset, width="stretch", key=f"preset_{preset}"):
                 reset_watchlist_to_preset(preset)
                 st.rerun()
 
@@ -542,7 +577,7 @@ with tab_chart:
                 hoverlabel=dict(bgcolor="#1e2530", font_size=12),
                 showlegend=False,
             )
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
     else:
         st.markdown(
             f"<div style='color:{T2};text-align:center;padding:80px 0;'>"
@@ -564,3 +599,4 @@ with tab_commodities:
 
 with tab_volatility:
     render_grid(VOLATILITY, period, cols=3, decimal=2)
+

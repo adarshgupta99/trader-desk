@@ -260,6 +260,17 @@ def reset_watchlist_to_nifty50():
     reset_watchlist_to_preset("Nifty 50")
 
 
+def clear_price_cache():
+    """Delete all cached price data so everything re-fetches from yfinance."""
+    conn = _get_connection()
+    try:
+        conn.execute("DELETE FROM price_cache")
+        conn.execute("DELETE FROM cache_meta")
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def count_watchlist_with_data():
     """Count watchlist tickers that actually have price rows in the cache."""
     conn = _get_connection()
