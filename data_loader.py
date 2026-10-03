@@ -42,64 +42,163 @@ def _get_connection():
     )
     conn.execute(
         """
-        CREATE TABLE IF NOT EXISTS watchlist (
-            ticker TEXT PRIMARY KEY,
-            label  TEXT NOT NULL,
-            added_at TEXT NOT NULL
+        CREATE TABLE IF NOT EXISTS custom_lists (
+            id   INTEGER PRIMARY KEY,
+            name TEXT NOT NULL
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS custom_list_items (
+            list_id  INTEGER NOT NULL,
+            ticker   TEXT NOT NULL,
+            label    TEXT NOT NULL,
+            added_at TEXT NOT NULL,
+            PRIMARY KEY (list_id, ticker)
+        )
+        """
+    )
+    existing = conn.execute("SELECT COUNT(*) FROM custom_lists").fetchone()[0]
+    if existing < CUSTOM_LIST_COUNT:
+        conn.executemany(
+            "INSERT OR IGNORE INTO custom_lists (id, name) VALUES (?, ?)",
+            [(i, f"List {i}") for i in range(1, CUSTOM_LIST_COUNT + 1)],
+        )
+        conn.commit()
     return conn
 
 
-# ── Watchlist ─────────────────────────────────────────────────────────────────
+# ── Custom watchlists ─────────────────────────────────────────────────────────
+#
+# Index presets below are fixed, read-only views. These four lists are the
+# only editable ones.
 
-WATCHLIST_MAX = 30
+CUSTOM_LIST_COUNT = 4
+LIST_MAX = 30
 
-def get_watchlist():
+
+def get_custom_lists():
+    conn = _get_connection()
+    try:
+        rows = conn.execute("SELECT id, name FROM custom_lists ORDER BY id").fetchall()
+        return [{"id": r[0], "name": r[1]} for r in rows]
+    finally:
+        conn.close()
+
+
+def rename_custom_list(list_id, name):
+    name = name.strip()
+    if not name:
+        return False, "Name can't be empty."
+    if len(name) > 24:
+        return False, "Keep the name under 25 characters."
+    conn = _get_connection()
+    try:
+        conn.execute("UPDATE custom_lists SET name = ? WHERE id = ?", (name, list_id))
+        conn.commit()
+        return True, f"Renamed to {name}."
+    finally:
+        conn.close()
+
+
+def get_list_items(list_id):
     conn = _get_connection()
     try:
         rows = conn.execute(
-            "SELECT ticker, label FROM watchlist ORDER BY added_at"
+            "SELECT ticker, label FROM custom_list_items WHERE list_id = ? ORDER BY added_at",
+            (list_id,),
         ).fetchall()
         return [{"ticker": r[0], "label": r[1]} for r in rows]
     finally:
         conn.close()
 
 
-def add_to_watchlist(ticker, label=None):
-    """Validate ticker has data, then save to watchlist. Returns (ok, message)."""
+def count_list_with_data(list_id):
+    """How many of this list's tickers actually have cached price rows."""
+    conn = _get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT ticker FROM custom_list_items WHERE list_id = ?", (list_id,)
+        ).fetchall()
+        count = 0
+        for (ticker,) in rows:
+            if conn.execute(
+                "SELECT 1 FROM price_cache WHERE ticker = ? LIMIT 1", (ticker,)
+            ).fetchone():
+                count += 1
+        return count
+    finally:
+        conn.close()
+
+
+def _friendly_name(ticker):
+    """Best-effort display name: known constituents first, then whatever the
+    provider reports, then the raw ticker."""
+    for members in WATCHLIST_PRESETS.values():
+        for known_ticker, known_label in members:
+            if known_ticker == ticker:
+                return known_label
+    # Read the name off the chart endpoint's metadata, not .info — .info uses
+    # quoteSummary, which returns 404 for tickers whose price data loads fine.
+    try:
+        tk = yf.Ticker(ticker)
+        tk.history(period="5d")
+        meta = tk.history_metadata or {}
+        name = meta.get("longName") or meta.get("shortName")
+        if name:
+            return name.strip()
+    except Exception:
+        pass
+    return ticker
+
+
+def add_to_list(list_id, ticker, label=None):
+    """Validate the ticker has data, then add it to one list. Returns (ok, message)."""
     ticker = ticker.strip()
     if not ticker:
         return False, "Enter a ticker."
 
     conn = _get_connection()
     try:
-        count = conn.execute("SELECT COUNT(*) FROM watchlist").fetchone()[0]
-        if count >= WATCHLIST_MAX:
-            return False, f"Watchlist is full ({WATCHLIST_MAX} max). Remove one first."
-
-        exists = conn.execute(
-            "SELECT 1 FROM watchlist WHERE ticker = ?", (ticker,)
-        ).fetchone()
-        if exists:
-            return False, f"{ticker} is already in your watchlist."
+        count = conn.execute(
+            "SELECT COUNT(*) FROM custom_list_items WHERE list_id = ?", (list_id,)
+        ).fetchone()[0]
+        if count >= LIST_MAX:
+            return False, f"This list is full ({LIST_MAX} max). Remove one first."
+        if conn.execute(
+            "SELECT 1 FROM custom_list_items WHERE list_id = ? AND ticker = ?",
+            (list_id, ticker),
+        ).fetchone():
+            return False, f"{ticker} is already in this list."
     finally:
         conn.close()
 
-    df = get_price_history(ticker, period="5d")
-    if df.empty:
+    if get_price_history(ticker, period="5d").empty:
         return False, f"No data found for '{ticker}'. Check the ticker and try again."
 
-    display_label = label or ticker
+    display_label = label or _friendly_name(ticker)
     conn = _get_connection()
     try:
         conn.execute(
-            "INSERT INTO watchlist (ticker, label, added_at) VALUES (?, ?, ?)",
-            (ticker, display_label, datetime.now(timezone.utc).isoformat()),
+            "INSERT INTO custom_list_items (list_id, ticker, label, added_at) "
+            "VALUES (?, ?, ?, ?)",
+            (list_id, ticker, display_label, datetime.now(timezone.utc).isoformat()),
         )
         conn.commit()
         return True, f"{display_label} added."
+    finally:
+        conn.close()
+
+
+def remove_from_list(list_id, ticker):
+    conn = _get_connection()
+    try:
+        conn.execute(
+            "DELETE FROM custom_list_items WHERE list_id = ? AND ticker = ?",
+            (list_id, ticker),
+        )
+        conn.commit()
     finally:
         conn.close()
 
@@ -208,90 +307,12 @@ WATCHLIST_PRESETS["Bank Nifty"] = [
     ("BANDHANBNK.NS",  "Bandhan Bank"),
 ]
 
-NIFTY50_TOP30 = WATCHLIST_PRESETS["Nifty 50"]  # kept for seed_watchlist_if_empty
-
-
-def seed_watchlist_if_empty():
-    """Populate watchlist with top 30 Nifty stocks on first ever launch only."""
-    conn = _get_connection()
-    try:
-        conn.execute("CREATE TABLE IF NOT EXISTS app_flags (key TEXT PRIMARY KEY, value TEXT)")
-        already_seeded = conn.execute(
-            "SELECT 1 FROM app_flags WHERE key = 'watchlist_seeded'"
-        ).fetchone()
-        if already_seeded:
-            return
-        conn.execute("INSERT INTO app_flags (key, value) VALUES ('watchlist_seeded', '1')")
-        conn.commit()
-        now = datetime.now(timezone.utc)
-        rows = [
-            (ticker, label, (now.replace(microsecond=i)).isoformat())
-            for i, (ticker, label) in enumerate(NIFTY50_TOP30)
-        ]
-        conn.executemany(
-            "INSERT OR IGNORE INTO watchlist (ticker, label, added_at) VALUES (?, ?, ?)",
-            rows,
-        )
-        conn.commit()
-    finally:
-        conn.close()
-
-
-def reset_watchlist_to_preset(preset_name):
-    """Clear watchlist and repopulate with a named preset."""
-    stocks = WATCHLIST_PRESETS.get(preset_name, [])
-    conn = _get_connection()
-    try:
-        conn.execute("DELETE FROM watchlist")
-        now = datetime.now(timezone.utc)
-        rows = [
-            (ticker, label, (now.replace(microsecond=i)).isoformat())
-            for i, (ticker, label) in enumerate(stocks)
-        ]
-        conn.executemany(
-            "INSERT INTO watchlist (ticker, label, added_at) VALUES (?, ?, ?)", rows
-        )
-        conn.commit()
-    finally:
-        conn.close()
-
-
-def reset_watchlist_to_nifty50():
-    reset_watchlist_to_preset("Nifty 50")
-
-
 def clear_price_cache():
     """Delete all cached price data so everything re-fetches from yfinance."""
     conn = _get_connection()
     try:
         conn.execute("DELETE FROM price_cache")
         conn.execute("DELETE FROM cache_meta")
-        conn.commit()
-    finally:
-        conn.close()
-
-
-def count_watchlist_with_data():
-    """Count watchlist tickers that actually have price rows in the cache."""
-    conn = _get_connection()
-    try:
-        rows = conn.execute("SELECT ticker FROM watchlist").fetchall()
-        count = 0
-        for (ticker,) in rows:
-            has_data = conn.execute(
-                "SELECT 1 FROM price_cache WHERE ticker = ? LIMIT 1", (ticker,)
-            ).fetchone()
-            if has_data:
-                count += 1
-        return count
-    finally:
-        conn.close()
-
-
-def remove_from_watchlist(ticker):
-    conn = _get_connection()
-    try:
-        conn.execute("DELETE FROM watchlist WHERE ticker = ?", (ticker,))
         conn.commit()
     finally:
         conn.close()

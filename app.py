@@ -3,13 +3,11 @@ from urllib.parse import quote
 import streamlit as st
 import plotly.graph_objects as go
 
-from data_loader import (get_price_history, get_watchlist, add_to_watchlist,
-                         remove_from_watchlist, seed_watchlist_if_empty,
-                         reset_watchlist_to_preset, count_watchlist_with_data,
-                         clear_price_cache)
+from data_loader import (get_price_history, clear_price_cache, WATCHLIST_PRESETS,
+                         LIST_MAX, get_custom_lists, rename_custom_list,
+                         get_list_items, add_to_list, remove_from_list,
+                         count_list_with_data)
 from news_loader import fetch_and_store, get_news, count_news, REFRESH_INTERVAL_MINUTES
-
-seed_watchlist_if_empty()
 
 st.set_page_config(page_title="Trader Desk", layout="wide", page_icon="📊", initial_sidebar_state="collapsed")
 
@@ -145,6 +143,27 @@ st.markdown("""
     .clear-cache-btn a, .clear-cache-btn a:link, .clear-cache-btn a:visited {
         text-decoration: none !important;
     }
+
+    /* ── View selector chips ── */
+    .chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0; }
+    .chip-label {
+        font-size: 12px; color: #6B675F; text-transform: uppercase;
+        letter-spacing: 0.08em; min-width: 72px;
+    }
+    a.chip, a.chip:link, a.chip:visited {
+        display: inline-block; text-decoration: none !important;
+        font-family: 'Inter', Arial, sans-serif;
+        font-size: 13px; font-weight: 500;
+        padding: 0.34em 0.8em; border-radius: 0;
+        border: 1px solid #BDB7A5; color: #6B675F !important;
+        background: transparent;
+    }
+    a.chip:hover { border-color: #6B675F; color: #1F1D19 !important; }
+    a.chip-on, a.chip-on:link, a.chip-on:visited {
+        border-color: #1F1D19; background: #1F1D19;
+        color: #DFDACB !important; font-weight: 600;
+    }
+    a.chip-on:hover { color: #DFDACB !important; }
 
     /* ── Inline confirm buttons: sized to their text ── */
     .confirm-row { display: flex; gap: 8px; margin: 6px 0 2px 0; }
@@ -481,19 +500,24 @@ def render_grid(assets, period, cols=3, decimal=2, height=220, value_size=28):
         with columns[i % cols]:
             asset_card(label, ticker, period, decimal, height, value_size)
 
-def _watchlist_grid(watchlist, show_1w):
+def _watchlist_grid(watchlist, show_1w, view=None):
+    """Render instrument tiles. `view` is the editable list this belongs to;
+    pass None for read-only index views so no remove control is drawn."""
     window = "1W" if show_1w else "1D"
     cells = ""
     for item in watchlist:
         ticker = item["ticker"]
         label  = item["label"]
+        remove = (
+            f"<a href='?view={quote(view)}&remove={quote(ticker)}' target='_self' "
+            f"class='wl-remove' title='Remove {label}'>&times;</a>"
+            if view else ""
+        )
         header = (
             f"<div style='display:flex;justify-content:space-between;align-items:center;"
             f"gap:10px;margin-bottom:5px;'>"
             f"<span style='font-size:13px;color:{T2};font-weight:600;"
-            f"white-space:nowrap;'>{label}</span>"
-            f"<a href='?remove={ticker}' target='_self' class='wl-remove' "
-            f"title='Remove {label}'>&times;</a></div>"
+            f"white-space:nowrap;'>{label}</span>{remove}</div>"
         )
 
         df = get_price_history(ticker, period="5d")
@@ -533,97 +557,111 @@ tab_watchlist, tab_chart, tab_news, tab_indices, tab_india, tab_fx, tab_commodit
 )
 
 with tab_watchlist:
-    # Handle remove via query param (set by the × link in _watchlist_grid)
+    lists = get_custom_lists()
+
+    # The active view lives in the URL, not session state: the remove control
+    # is a link, and following one is a page navigation that session state
+    # does not reliably survive.
+    view = st.query_params.get("view") or f"p:{PRESET_NAMES[0]}"
+    is_custom = view.startswith("c:")
+    list_id = int(view[2:]) if is_custom and view[2:].isdigit() else None
+    if is_custom and list_id not in {l["id"] for l in lists}:
+        view, is_custom, list_id = f"p:{PRESET_NAMES[0]}", False, None
+
     to_remove = st.query_params.get("remove")
-    if to_remove:
-        remove_from_watchlist(to_remove)
+    if to_remove and is_custom:
+        remove_from_list(list_id, to_remove)
         st.query_params.clear()
+        st.query_params["view"] = view
         st.rerun()
 
-    # The preset name travels in the URL, not session state: following a link
-    # is a page navigation and session state does not reliably survive it.
-    to_apply = st.query_params.get("preset_apply")
-    if to_apply:
-        if to_apply in PRESET_NAMES:
-            reset_watchlist_to_preset(to_apply)
-        st.session_state.pop("_pending_preset", None)
-        st.query_params.clear()
-        st.rerun()
+    # ── View selector ─────────────────────────────────────────────────────────
+    def _chips(label, items):
+        chips = "".join(
+            f"<a href='?view={quote(key)}' target='_self' "
+            f"class='chip{' chip-on' if key == view else ''}'>{name}</a>"
+            for key, name in items
+        )
+        return (
+            f"<div class='chip-row'>"
+            f"<span class='chip-label'>{label}</span>{chips}</div>"
+        )
 
-    if st.query_params.get("preset_cancel") == "1":
-        st.session_state.pop("_pending_preset", None)
-        st.query_params.clear()
-        st.rerun()
-
-    watchlist = get_watchlist()
-    count = len(watchlist)
-    visible = count_watchlist_with_data()
-
-    # ── Add instrument ────────────────────────────────────────────────────────
-    failed = count - visible
-    status = f"{count} / 30 instruments"
-    if failed:
-        status += f"  ·  {failed} couldn't load"
     st.markdown(
-        f"<div style='color:{T2};font-size:12px;margin-bottom:6px;'>{status}</div>",
+        _chips("Indices", [(f"p:{n}", n) for n in PRESET_NAMES])
+        + _chips("My lists", [(f"c:{l['id']}", l["name"]) for l in lists]),
         unsafe_allow_html=True,
     )
-    col_input, col_btn = st.columns([6, 1])
-    with col_input:
-        new_ticker = st.text_input(
-            "ticker",
-            placeholder="e.g. RELIANCE.NS · AAPL · ^GSPC · NSE:NIFTY AUTO",
-            label_visibility="collapsed",
-            key="wl_input",
-        )
-    with col_btn:
-        is_full = count >= 30
-        add_clicked = st.button("Add", width="stretch", disabled=is_full)
 
-    if is_full:
-        note = "Watchlist is full (30 of 30). Remove an instrument to add another."
+    # ── Resolve the items for this view ───────────────────────────────────────
+    if is_custom:
+        items = get_list_items(list_id)
+        active_name = next(l["name"] for l in lists if l["id"] == list_id)
+    else:
+        preset_name = view[2:]
+        if preset_name not in PRESET_NAMES:
+            preset_name = PRESET_NAMES[0]
+        items = [{"ticker": t, "label": lb} for t, lb in WATCHLIST_PRESETS[preset_name]]
+        active_name = preset_name
+
+    # ── Editing controls: custom lists only ───────────────────────────────────
+    if is_custom:
+        count = len(items)
+        failed = count - count_list_with_data(list_id)
+        status = f"{count} / {LIST_MAX} instruments"
         if failed:
-            note += f" Entries that couldn't load still count toward the cap ({failed})."
+            status += f"  ·  {failed} couldn't load"
         st.markdown(
-            f"<div style='color:{DOWN};font-size:12px;margin:-2px 0 4px 0;'>{note}</div>",
+            f"<div style='color:{T2};font-size:12px;margin:10px 0 6px 0;'>{status}</div>",
             unsafe_allow_html=True,
         )
 
-    # ── Preset reset buttons ──────────────────────────────────────────────────
-    st.markdown(
-        f"<div style='font-size:12px;color:{T2};text-transform:uppercase;"
-        f"letter-spacing:0.08em;margin:8px 0 4px 0;'>Load preset</div>",
-        unsafe_allow_html=True,
-    )
-    p1, p2, p3, p4, p5 = st.columns(5)
-    for col, preset in zip([p1, p2, p3, p4, p5], PRESET_NAMES):
-        with col:
-            if st.button(preset, width="stretch", key=f"preset_{preset}"):
-                st.session_state["_pending_preset"] = preset
+        # Bumping the nonce gives the input a new key, which is the reliable way
+        # to clear it — deleting the key alone does not empty the widget.
+        nonce = st.session_state.get(f"add_nonce_{list_id}", 0)
 
-    # Presets replace the whole watchlist — confirm before discarding entries
-    pending = st.session_state.get("_pending_preset")
-    if pending:
-        st.markdown(
-            f"<div style='font-size:14px;color:{T1};margin:10px 0 0 0;'>"
-            f"Replace all {count} entries with the {pending} preset?</div>"
-            f"<div class='confirm-row'>"
-            f"<a href='?preset_apply={quote(pending)}' target='_self' "
-            f"class='btn-danger'>Replace</a>"
-            f"<a href='?preset_cancel=1' target='_self' class='btn-quiet'>Cancel</a>"
-            f"</div>",
-            unsafe_allow_html=True,
-        )
+        c_add, c_btn, c_name, c_save = st.columns([5, 1, 3, 1])
+        with c_add:
+            new_ticker = st.text_input(
+                "ticker", placeholder="Add an instrument — e.g. RELIANCE.NS · AAPL · ^GSPC",
+                label_visibility="collapsed", key=f"add_{list_id}_{nonce}",
+            )
+        with c_btn:
+            is_full = count >= LIST_MAX
+            add_clicked = st.button("Add", width="stretch", disabled=is_full)
+        with c_name:
+            new_name = st.text_input(
+                "name", value=active_name, placeholder="List name",
+                label_visibility="collapsed", key=f"name_{list_id}",
+            )
+        with c_save:
+            rename_clicked = st.button("Rename", width="stretch")
 
-    if add_clicked and new_ticker:
-        ok, msg = add_to_watchlist(new_ticker.strip())
-        if ok:
-            del st.session_state["wl_input"]   # clear only on success
-            st.rerun()
-        else:
-            st.error(msg)
+        if is_full:
+            note = f"This list is full ({LIST_MAX} of {LIST_MAX}). Remove one to add another."
+            if failed:
+                note += f" Entries that couldn't load still count ({failed})."
+            st.markdown(
+                f"<div style='color:{DOWN};font-size:12px;margin:-2px 0 4px 0;'>{note}</div>",
+                unsafe_allow_html=True,
+            )
 
-    # ── Return toggle + grid ──────────────────────────────────────────────────
+        if add_clicked and new_ticker:
+            ok, msg = add_to_list(list_id, new_ticker.strip())
+            if ok:
+                st.session_state[f"add_nonce_{list_id}"] = nonce + 1  # clear on success
+                st.rerun()
+            else:
+                st.error(msg)
+
+        if rename_clicked:
+            ok, msg = rename_custom_list(list_id, new_name)
+            if ok:
+                st.rerun()
+            else:
+                st.error(msg)
+
+    # ── Change window + grid ──────────────────────────────────────────────────
     st.markdown(
         f"<div style='font-size:12px;color:{T2};text-transform:uppercase;"
         f"letter-spacing:0.08em;margin:10px 0 4px 0;'>Change window</div>",
@@ -634,14 +672,14 @@ with tab_watchlist:
     )
     show_1w = (wl_period == "1W")
 
-    if not watchlist:
+    if not items:
         st.markdown(
-            f"<div style='color:{T2};text-align:center;padding:48px 0;'>"
-            "Your watchlist is empty — add tickers above.</div>",
+            f"<div style='color:{T2};padding:40px 0;'>"
+            f"{active_name} is empty — add an instrument above.</div>",
             unsafe_allow_html=True,
         )
     else:
-        _watchlist_grid(watchlist, show_1w)
+        _watchlist_grid(items, show_1w, view if is_custom else None)
 
 
 with tab_chart:

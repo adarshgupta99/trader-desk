@@ -143,8 +143,19 @@ The color roles are selected; these exact hex values are **proposed implementati
 ## 3. Per-tab rules
 
 ### Watchlist
-- **Adarsh's decision (3 October 2026), overrides the original spec:** use compact tiles that wrap and hug their content, not equal-width columns. Hierarchy per tile is company name with the remove control beside it, then the **signed change as the dominant value**, then the price beneath it. Do not show the ticker on the tile and do not make the price dominant.
-- Keep entry and preset controls secondary to the heading. Label the watchlist change window separately from chart history.
+
+**Adarsh's model (4 October 2026). The earlier "load a preset into one watchlist" design was a misreading — there is no loading, replacing or saving.** The tab shows one of nine views, selected by a chip row:
+
+- **Five index views** — Nifty 50, Nifty Midcap, Nifty Auto, Nifty IT, Bank Nifty. These are fixed and read-only: each already carries its own constituents. They change only when the real index constituents or weightings change. Render no add control, no rename and no remove control on these.
+- **Four custom lists** — renameable, up to 30 instruments each, with add and remove available. These are the only editable views.
+
+Because nothing is ever destroyed by switching views, there is no confirmation step.
+
+- Use compact tiles that wrap and hug their content, not equal-width columns. Hierarchy per tile is name with the remove control beside it, then the **signed change as the dominant value**, then the price beneath it. Do not show the ticker on the tile and do not make the price dominant.
+- Resolve a friendly name when an instrument is added, falling back to the raw ticker. Read it from the chart endpoint's metadata (`Ticker.history_metadata`), not `Ticker.info` — `.info` uses Yahoo's quoteSummary endpoint, which returns 404 for tickers whose price data loads fine.
+- Keep the active view in the URL, not `st.session_state`. The remove control is a link, and following a link is a page navigation that session state does not reliably survive.
+- To clear a text input after a successful submit, change the widget's key (a nonce). Deleting the key alone does not empty the widget.
+- Keep entry controls secondary to the heading. Label the change window separately from chart history.
 - Keep failed instruments visible and removable; preserve tile geometry while loading.
 
 ### Chart
@@ -186,14 +197,14 @@ These are supplied design-sweep/QA findings from 3 October 2026, not a fresh cod
 | --- | --- | --- |
 | High | A hidden failed ticker still counts toward the 30-ticker cap; Add disables without explanation. | Render a "Couldn't load X" tile with a remove button. Explain the cap whenever Add is disabled, including failed entries. |
 | High | Remove is an 11px link; it opens a new tab and leaves the original stale. | Fixed: added `target='_self'` to force same-tab navigation. Kept as HTML link — `st.button` cannot be placed inside `st.markdown` without breaking the flex card layout. |
-| Medium | Presets silently replace the entire watchlist. | Ask for confirmation before replacing existing entries; allow cancel. |
+| Medium | Presets silently replace the entire watchlist. | Obsolete — index presets are now read-only views that replace nothing, so there is nothing to confirm. |
 | Medium | 3Y takes 20-30 seconds; clicks take 5-15 seconds and dim the whole page. | Batch compatible yfinance downloads and use an in-panel `st.spinner`. Keep SQLite as the cache layer — do not add `@st.cache_data`, it conflicts with existing SQLite caching and loses data on reboot. |
 | Medium | "Trader Desk" is clipped under the toolbar on desktop and mobile. | Use appropriate `.block-container` top padding (about `3rem` as a starting point) or `st.title`; check both viewports. |
 | Medium | Global `1W-3Y` and Chart `1M-3Y` range controls disagree. | Merge them or clearly scope them; make the Chart tab's authoritative range explicit. |
 | Low | Add input retains stale text after a successful add. | Clear its widget/session-state value after success, without clearing failed input prematurely. |
 | Low | Bad-ticker banner pushes tiles down about 72px. | Reserve feedback space or use `st.toast`; keep failed-entry details accessible. |
 | Low | 3Y repeats "01 Jan" without a year; 1W has four points and a blank gap. | Include years on multi-year ticks; inspect the 1W data/calendar mapping and range padding. Do not invent points for non-trading days. |
-| Low | Custom tickers show raw names such as "AAPL"; page width shifts about 10px when the scrollbar appears. | Resolve friendly names with ticker fallback. Reserve scrollbar space where supported and verify stable alignment. |
+| Low | Page width shifts about 10px when the scrollbar appears. | Reserve scrollbar space where supported and verify stable alignment. (Friendly-name resolution is done.) |
 
 **Untested:** verify the Watchlist `1D`/`1W` toggle changes the intended calculation, label, and state. Do not treat its behavior as confirmed.
 
