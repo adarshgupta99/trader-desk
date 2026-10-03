@@ -106,13 +106,19 @@ The color roles are selected; these exact hex values are **proposed implementati
 
 | Token | Proposed value | Use |
 | --- | --- | --- |
-| Canvas | `#F7F5F0` | Page and panel backgrounds |
-| Primary | `#171717` | Headings, prices, positive changes |
-| Secondary | `#60605B` | Metadata, labels, neutral chart ticks |
-| Rule | `#D8D5CD` | Thin separators and panel boundaries |
-| Signal | `#C74424` | Negative changes and specified accent lines |
+| Canvas | `#DFDACB` | Page background |
+| Surface | `#D7D2C1` | Card and panel backgrounds |
+| Primary | `#1F1D19` | Headings and prices |
+| Secondary | `#6B675F` | Metadata, labels, neutral chart ticks |
+| Tertiary | `#9C988D` | De-emphasised controls (remove ×) |
+| Rule | `#BDB7A5` | Thin separators and panel boundaries |
+| Signal | `#C25C36` | Negative changes and accent lines |
+| Positive | `#35875B` | Positive changes |
 
-- Remove teal navigation/inputs, yellow series styling, and green positive changes. Use neutral controls; use primary text or a thin signal underline for active navigation.
+**Adarsh's decision (3 October 2026):** the palette is deliberately matte — muted and low-glare rather than bright. Keep new colours desaturated to match; do not reintroduce saturated or neon values.
+
+- Remove teal navigation/inputs and yellow series styling. Use neutral controls; use primary text or a thin signal underline for active navigation.
+- **Adarsh's decision (3 October 2026), overrides the original spec:** positive changes are green `#35875B`, not near-black. Green is used for direction only (change values and single-series chart lines), never for navigation, controls or surfaces.
 - Do not add extra accent colors, gradients, rounded cards, or decorative shadows. Check text contrast against its actual background.
 
 ### Type and layout
@@ -126,7 +132,8 @@ The color roles are selected; these exact hex values are **proposed implementati
 
 ### Direction and number formatting
 - Say "change", not "gain", "loss", "win", or "good/bad". A rising FX quote or VIX value is not inherently favorable.
-- Show positive changes in near-black and negative changes in signal orange. Always show a sign on change values, including `+0.00`; suppress negative zero after rounding. Do not color the whole panel by direction.
+- Show positive changes in green `#35875B` and negative changes in signal terracotta. Always show a sign on change values, including `+0.00`; suppress negative zero after rounding.
+- **Adarsh's decision (3 October 2026), overrides the original spec:** single-series chart lines are also coloured by direction — green when the change over the plotted range is positive, terracotta when negative. Panel fills remain removed, so a panel is never flooded with colour; only the line and the change value carry direction.
 - Put the change period beside the change (`1D`, `1W`, or the actual selected period). Keep change windows distinct from chart-history windows.
 - Show currency or units with each value or in an unambiguous persistent label. Never infer units from a ticker alone.
 - Preserve four decimal places and trailing zeros for FX quotes. **Proposed default:** two decimals for other prices, index points, and percentage changes unless source precision or the instrument requires otherwise.
@@ -136,7 +143,7 @@ The color roles are selected; these exact hex values are **proposed implementati
 ## 3. Per-tab rules
 
 ### Watchlist
-- Use equal-width columns: four on desktop, fewer on smaller screens. Show a readable company name, secondary ticker, dominant price with currency, then a subordinate signed change and explicit `1D`/`1W` label.
+- **Adarsh's decision (3 October 2026), overrides the original spec:** use compact tiles that wrap and hug their content, not equal-width columns. Hierarchy per tile is company name with the remove control beside it, then the **signed change as the dominant value**, then the price beneath it. Do not show the ticker on the tile and do not make the price dominant.
 - Keep entry and preset controls secondary to the heading. Label the watchlist change window separately from chart history.
 - Keep failed instruments visible and removable; preserve tile geometry while loading.
 
@@ -150,7 +157,7 @@ The color roles are selected; these exact hex values are **proposed implementati
 ### Indices and India
 - Restyle both tabs with the same three-column small-multiples component. Align existing India heading/context with Indices; do not add new content.
 - Use larger values, square ruled boundaries, and matching name/value/chart baselines.
-- Use thin orange lines with very light or no fill. Do not create saturated loss-filled panels.
+- Use thin direction-coloured lines with no fill. Do not create saturated loss-filled panels.
 - Format constituents/weights as a readable two-column ruled popover table. Right-align tabular weights and label them "approximate". Normalize axis scale formatting across panels.
 
 ### FX

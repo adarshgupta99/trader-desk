@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 import streamlit as st
 import plotly.graph_objects as go
 
@@ -17,7 +19,7 @@ st.markdown("""
 
     /* ── Layout ── */
     html, body, [data-testid="stAppViewContainer"], .main {
-        background-color: #F7F5F0 !important;
+        background-color: #DFDACB !important;
         font-family: 'Inter', Arial, sans-serif !important;
     }
     .block-container { padding-top: 2rem; padding-bottom: 1rem; }
@@ -31,7 +33,7 @@ st.markdown("""
     }
     .clear-cache-btn a {
         display: inline-block; text-align: center; text-decoration: none;
-        border: 1px solid #d4a89a; border-radius: 4px; padding: 0.5em 0.7em;
+        border: 1px solid #d4a89a; border-radius: 0; padding: 0.5em 0.7em;
         background: rgba(199,68,36,0.04); color: #c74424;
         font-size: 8px; font-weight: 700; letter-spacing: 0.12em; line-height: 1.6;
         text-transform: uppercase; transition: all 0.2s;
@@ -44,16 +46,16 @@ st.markdown("""
     /* ── Tabs ── */
     .stTabs [data-baseweb="tab"] {
         font-size: 13px; font-weight: 500; letter-spacing: 0.02em;
-        color: #60605B; font-family: 'Inter', Arial, sans-serif;
+        color: #6B675F; font-family: 'Inter', Arial, sans-serif;
     }
-    .stTabs [aria-selected="true"] { color: #171717 !important; }
-    .stTabs [data-baseweb="tab-border"] { background: #D8D5CD !important; }
-    .stTabs [data-baseweb="tab-highlight"] { background: #C74424 !important; }
+    .stTabs [aria-selected="true"] { color: #1F1D19 !important; }
+    .stTabs [data-baseweb="tab-border"] { background: #BDB7A5 !important; }
+    .stTabs [data-baseweb="tab-highlight"] { background: #C25C36 !important; }
 
     /* ── Chart cards: restyle Streamlit's bordered container ── */
     [data-testid="stVerticalBlockBorderWrapper"] {
-        background: #EFEDE8 !important;
-        border: 1px solid #D8D5CD !important;
+        background: #D7D2C1 !important;
+        border: 1px solid #BDB7A5 !important;
         border-radius: 0px !important;
         padding: 6px 8px 2px 8px !important;
     }
@@ -63,27 +65,27 @@ st.markdown("""
         background: transparent !important;
         border: none !important;
         padding: 0 !important;
-        color: #171717 !important;
+        color: #1F1D19 !important;
         font-size: 14px !important;
         font-weight: 500 !important;
         letter-spacing: 0 !important;
         height: auto !important;
         min-height: 0 !important;
         line-height: 1.4 !important;
-        border-bottom: 1px dotted #9A9990 !important;
+        border-bottom: 1px dotted #9C988D !important;
         box-shadow: none !important;
         cursor: pointer !important;
         font-family: 'Inter', Arial, sans-serif !important;
     }
     [data-testid="stPopover"] button:hover {
-        color: #171717 !important;
-        border-bottom-color: #60605B !important;
+        color: #1F1D19 !important;
+        border-bottom-color: #6B675F !important;
     }
 
     /* ── Popover panel ── */
     [data-testid="stPopoverBody"] {
-        background: #F7F5F0 !important;
-        border: 1px solid #D8D5CD !important;
+        background: #DFDACB !important;
+        border: 1px solid #BDB7A5 !important;
         border-radius: 4px !important;
         min-width: 0 !important;
         width: fit-content !important;
@@ -94,78 +96,95 @@ st.markdown("""
 
     /* ── Remove button ── */
     [data-testid="stBaseButton-tertiary"] {
-        color: #60605B !important;
+        color: #6B675F !important;
         font-size: 11px !important;
         padding: 0 4px !important;
         height: auto !important;
     }
-    [data-testid="stBaseButton-tertiary"]:hover { color: #C74424 !important; }
+    [data-testid="stBaseButton-tertiary"]:hover { color: #C25C36 !important; }
 
     /* ── Inputs and buttons ── */
     [data-testid="stTextInput"] input {
-        background: #EFEDE8 !important;
-        border-color: #D8D5CD !important;
-        color: #171717 !important;
+        background: #D7D2C1 !important;
+        border-color: #BDB7A5 !important;
+        color: #1F1D19 !important;
         font-family: 'Inter', Arial, sans-serif !important;
     }
     [data-testid="stBaseButton-secondary"] {
-        background: #EFEDE8 !important;
-        border-color: #D8D5CD !important;
-        color: #171717 !important;
+        background: #D7D2C1 !important;
+        border-color: #BDB7A5 !important;
+        color: #1F1D19 !important;
         font-family: 'Inter', Arial, sans-serif !important;
     }
 
     /* ── Divider ── */
-    hr { border-color: #D8D5CD !important; }
+    hr { border-color: #BDB7A5 !important; }
 
-    /* ── Watchlist grid: equal columns, collapsing on narrow screens ── */
+    /* ── Watchlist: compact tiles that wrap and hug their content ── */
     .wl-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 1px;
-        background: #D8D5CD;
-        border: 1px solid #D8D5CD;
-        margin: 4px 0;
-    }
-    @media (max-width: 1100px) { .wl-grid { grid-template-columns: repeat(3, 1fr); } }
-    @media (max-width: 800px)  { .wl-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 500px)  { .wl-grid { grid-template-columns: 1fr; } }
-    .wl-cell {
-        background: #F7F5F0;
-        padding: 12px 14px;
-        min-height: 92px;
         display: flex;
-        flex-direction: column;
-        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 6px 0;
+    }
+    .wl-cell {
+        background: #D7D2C1;
+        border: 1px solid #BDB7A5;
+        padding: 9px 13px;
+        min-width: 132px;
+        flex: 0 0 auto;
     }
     a.wl-remove, a.wl-remove:link, a.wl-remove:visited {
-        font-size: 16px !important; color: #9A9990 !important;
+        font-size: 16px !important; color: #9C988D !important;
         text-decoration: none !important;
         line-height: 1; padding: 2px 7px; margin: -2px -7px 0 0;
     }
-    a.wl-remove:hover { color: #C74424 !important; }
+    a.wl-remove:hover { color: #C25C36 !important; }
 
     /* Streamlit colours bare anchors blue; keep our own links neutral */
     .clear-cache-btn a, .clear-cache-btn a:link, .clear-cache-btn a:visited {
         text-decoration: none !important;
     }
 
+    /* ── Inline confirm buttons: sized to their text ── */
+    .confirm-row { display: flex; gap: 8px; margin: 6px 0 2px 0; }
+    .confirm-row a, .confirm-row a:link, .confirm-row a:visited {
+        display: inline-block;
+        text-decoration: none !important;
+        font-family: 'Inter', Arial, sans-serif;
+        font-size: 13px; font-weight: 600;
+        padding: 0.42em 0.95em;
+        border-radius: 0;
+    }
+    a.btn-danger, a.btn-danger:link, a.btn-danger:visited {
+        border: 1px solid #C25C36; color: #C25C36 !important;
+        background: rgba(194,92,54,0.07);
+    }
+    a.btn-danger:hover { background: rgba(194,92,54,0.16); }
+    a.btn-quiet, a.btn-quiet:link, a.btn-quiet:visited {
+        border: 1px solid #BDB7A5; color: #6B675F !important;
+        background: transparent;
+    }
+    a.btn-quiet:hover { border-color: #6B675F; color: #1F1D19 !important; }
+
 </style>
 """, unsafe_allow_html=True)
 
 # ── Design tokens ─────────────────────────────────────────────────────────────
-UP      = "#171717"   # positive — near-black per spec
-DOWN    = "#C74424"   # negative — signal orange-red
-BG      = "#F7F5F0"   # canvas
-SURFACE = "#EFEDE8"   # card surface
-BORDER  = "#D8D5CD"   # rule / border
-GRID    = "#D8D5CD"   # chart grid
-T1      = "#171717"   # text primary
-T2      = "#60605B"   # text secondary
-T3      = "#9A9990"   # text tertiary
+UP      = "#35875B"   # positive — green
+DOWN    = "#C25C36"   # negative — terracotta
+BG      = "#DFDACB"   # canvas — matte, low-glare
+SURFACE = "#D7D2C1"   # card surface
+BORDER  = "#BDB7A5"   # rule / border
+GRID    = "#BDB7A5"   # chart grid
+T1      = "#1F1D19"   # text primary
+T2      = "#6B675F"   # text secondary
+T3      = "#9C988D"   # text tertiary
 
 PERIODS = {"1W": "5d", "1M": "1mo", "3M": "3mo", "6M": "6mo", "1Y": "1y", "3Y": "3y"}
 PERIOD_LABELS = {v: k for k, v in PERIODS.items()}
+
+PRESET_NAMES = ["Nifty 50", "Nifty Midcap", "Nifty Auto", "Nifty IT", "Bank Nifty"]
 
 TABULAR = "font-variant-numeric:tabular-nums lining-nums;"
 
@@ -370,13 +389,11 @@ def price_chart(label, ticker, period, height=220):
     # Multi-year ranges need the year on x-ticks; shorter ranges don't
     tickformat = "%b %Y" if period in ("1y", "3y") else "%d %b"
 
-    # One consistent accent line; direction is carried by the change value,
-    # never by filling or recolouring the whole panel (spec).
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=df.index, y=df["Close"],
         mode="lines",
-        line=dict(color=DOWN, width=1.5),
+        line=dict(color=(UP if pct >= 0 else DOWN), width=1.5),
         hovertemplate="<b>%{x|%d %b %Y}</b><br>%{y:,.2f}<extra></extra>",
         name=label,
     ))
@@ -470,16 +487,13 @@ def _watchlist_grid(watchlist, show_1w):
     for item in watchlist:
         ticker = item["ticker"]
         label  = item["label"]
-        remove = (
-            f"<a href='?remove={ticker}' target='_self' class='wl-remove' "
-            f"title='Remove {label}'>&times;</a>"
-        )
         header = (
-            f"<div style='display:flex;justify-content:space-between;align-items:flex-start;'>"
-            f"<div>"
-            f"<div style='font-size:14px;color:{T1};font-weight:500;line-height:1.2;'>{label}</div>"
-            f"<div style='font-size:12px;color:{T2};line-height:1.3;'>{ticker}</div>"
-            f"</div>{remove}</div>"
+            f"<div style='display:flex;justify-content:space-between;align-items:center;"
+            f"gap:10px;margin-bottom:5px;'>"
+            f"<span style='font-size:13px;color:{T2};font-weight:600;"
+            f"white-space:nowrap;'>{label}</span>"
+            f"<a href='?remove={ticker}' target='_self' class='wl-remove' "
+            f"title='Remove {label}'>&times;</a></div>"
         )
 
         df = get_price_history(ticker, period="5d")
@@ -489,8 +503,8 @@ def _watchlist_grid(watchlist, show_1w):
             # Keep failed instruments visible and removable (spec, high severity)
             cells += (
                 f"<div class='wl-cell'>{header}"
-                f"<div style='font-size:13px;color:{DOWN};'>Couldn't load</div>"
-                f"</div>"
+                f"<div style='font-size:13px;color:{DOWN};line-height:1.5;'>"
+                f"Couldn't load</div></div>"
             )
             continue
 
@@ -502,13 +516,11 @@ def _watchlist_grid(watchlist, show_1w):
 
         cells += (
             f"<div class='wl-cell'>{header}"
-            f"<div>"
-            f"<div style='font-size:24px;font-weight:600;color:{T1};"
-            f"line-height:1.15;{TABULAR}'>{format_price(ticker, last, decimal)}</div>"
-            f"<div style='font-size:13px;color:{color};font-weight:600;{TABULAR}'>"
-            f"{signed_pct(pct)}"
-            f"<span style='color:{T2};font-weight:400;padding-left:5px;'>{window}</span>"
-            f"</div></div></div>"
+            f"<div style='font-size:22px;font-weight:700;color:{color};"
+            f"line-height:1.1;margin-bottom:3px;{TABULAR}'>{signed_pct(pct)}</div>"
+            f"<div style='font-size:14px;font-weight:600;color:{T1};{TABULAR}'>"
+            f"{format_price(ticker, last, decimal)}</div>"
+            f"</div>"
         )
 
     st.markdown(f"<div class='wl-grid'>{cells}</div>", unsafe_allow_html=True)
@@ -525,6 +537,21 @@ with tab_watchlist:
     to_remove = st.query_params.get("remove")
     if to_remove:
         remove_from_watchlist(to_remove)
+        st.query_params.clear()
+        st.rerun()
+
+    # The preset name travels in the URL, not session state: following a link
+    # is a page navigation and session state does not reliably survive it.
+    to_apply = st.query_params.get("preset_apply")
+    if to_apply:
+        if to_apply in PRESET_NAMES:
+            reset_watchlist_to_preset(to_apply)
+        st.session_state.pop("_pending_preset", None)
+        st.query_params.clear()
+        st.rerun()
+
+    if st.query_params.get("preset_cancel") == "1":
+        st.session_state.pop("_pending_preset", None)
         st.query_params.clear()
         st.rerun()
 
@@ -569,8 +596,7 @@ with tab_watchlist:
         unsafe_allow_html=True,
     )
     p1, p2, p3, p4, p5 = st.columns(5)
-    for col, preset in zip([p1, p2, p3, p4, p5],
-                           ["Nifty 50", "Nifty Midcap", "Nifty Auto", "Nifty IT", "Bank Nifty"]):
+    for col, preset in zip([p1, p2, p3, p4, p5], PRESET_NAMES):
         with col:
             if st.button(preset, width="stretch", key=f"preset_{preset}"):
                 st.session_state["_pending_preset"] = preset
@@ -579,20 +605,15 @@ with tab_watchlist:
     pending = st.session_state.get("_pending_preset")
     if pending:
         st.markdown(
-            f"<div style='font-size:14px;color:{T1};margin:6px 0 4px 0;'>"
-            f"Replace all {count} entries with the {pending} preset?</div>",
+            f"<div style='font-size:14px;color:{T1};margin:10px 0 0 0;'>"
+            f"Replace all {count} entries with the {pending} preset?</div>"
+            f"<div class='confirm-row'>"
+            f"<a href='?preset_apply={quote(pending)}' target='_self' "
+            f"class='btn-danger'>Replace</a>"
+            f"<a href='?preset_cancel=1' target='_self' class='btn-quiet'>Cancel</a>"
+            f"</div>",
             unsafe_allow_html=True,
         )
-        c_yes, c_no, _ = st.columns([1, 1, 5])
-        with c_yes:
-            if st.button("Replace", width="stretch", key="preset_confirm"):
-                reset_watchlist_to_preset(pending)
-                del st.session_state["_pending_preset"]
-                st.rerun()
-        with c_no:
-            if st.button("Cancel", width="stretch", key="preset_cancel"):
-                del st.session_state["_pending_preset"]
-                st.rerun()
 
     if add_clicked and new_ticker:
         ok, msg = add_to_watchlist(new_ticker.strip())
