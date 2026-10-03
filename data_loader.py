@@ -42,6 +42,23 @@ def _get_connection():
     )
     conn.execute(
         """
+        CREATE TABLE IF NOT EXISTS symbols (
+            ticker TEXT PRIMARY KEY,
+            name   TEXT NOT NULL,
+            kind   TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS symbols_meta (
+            key   TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS custom_lists (
             id   INTEGER PRIMARY KEY,
             name TEXT NOT NULL
@@ -306,6 +323,146 @@ WATCHLIST_PRESETS["Bank Nifty"] = [
     ("AUBANK.NS",      "AU Small Finance"),
     ("BANDHANBNK.NS",  "Bandhan Bank"),
 ]
+
+# ── Instrument universe (search) ──────────────────────────────────────────────
+#
+# Single source of truth for the hand-picked instruments. app.py derives its
+# per-tab grids from this, and the searchable symbol table is seeded from it.
+
+CURATED_INSTRUMENTS = [
+    ("Indices",     "S&P 500",          "^GSPC"),
+    ("Indices",     "Nasdaq",           "^IXIC"),
+    ("Indices",     "Nifty 50",         "^NSEI"),
+    ("Indices",     "KOSPI (Korea)",    "^KS11"),
+    ("Indices",     "FTSE 100 (UK)",    "^FTSE"),
+    ("Indices",     "DAX (Germany)",    "^GDAXI"),
+    ("Indices",     "Euro Stoxx 50",    "^STOXX50E"),
+    ("Indices",     "Nikkei (Japan)",   "^N225"),
+    ("India",       "Bank Nifty",       "^NSEBANK"),
+    ("India",       "Nifty IT",         "^CNXIT"),
+    ("India",       "Nifty Auto",       "NSE:NIFTY AUTO"),
+    ("India",       "Nifty Energy",     "NSE:NIFTY ENERGY"),
+    ("India",       "Nifty Mid Select", "NSE:NIFTY MID SELECT"),
+    ("India",       "Nifty Defence",    "NSE:NIFTY INDIA DEFENCE"),
+    ("FX",          "USD / INR",        "USDINR=X"),
+    ("FX",          "EUR / USD",        "EURUSD=X"),
+    ("FX",          "GBP / USD",        "GBPUSD=X"),
+    ("FX",          "EUR / INR",        "EURINR=X"),
+    ("Commodities", "WTI Crude Oil",    "CL=F"),
+    ("Commodities", "Gold",             "GC=F"),
+    ("Commodities", "Silver",           "SI=F"),
+    ("Volatility",  "VIX (US)",         "^VIX"),
+]
+
+SYMBOLS_MAX_AGE_DAYS = 7
+
+
+def _nse_equities():
+    """(ticker, name) for every mainboard NSE equity, from NSE's own daily
+    bhavcopy. Returns [] if no recent trading day can be fetched."""
+    from io import StringIO
+
+    from jugaad_data.nse import bhavcopy_raw
+
+    day = date_type.today()
+    for _ in range(8):          # walk back over weekends and holidays
+        try:
+            raw = bhavcopy_raw(day)
+        except Exception:
+            day -= timedelta(days=1)
+            continue
+        frame = pd.read_csv(StringIO(raw))
+        frame = frame[frame["SctySrs"] == "EQ"]
+        pairs = {}
+        for symbol, name in zip(frame["TckrSymb"], frame["FinInstrmNm"]):
+            symbol = str(symbol).strip()
+            if symbol:
+                pairs[f"{symbol}.NS"] = str(name).strip().title()
+        return sorted(pairs.items())
+    return []
+
+
+def symbol_count():
+    conn = _get_connection()
+    try:
+        return conn.execute("SELECT COUNT(*) FROM symbols").fetchone()[0]
+    finally:
+        conn.close()
+
+
+def refresh_symbols(force=False):
+    """Rebuild the searchable instrument table. Returns (changed, message)."""
+    conn = _get_connection()
+    try:
+        if not force:
+            row = conn.execute(
+                "SELECT value FROM symbols_meta WHERE key = 'refreshed_at'"
+            ).fetchone()
+            count = conn.execute("SELECT COUNT(*) FROM symbols").fetchone()[0]
+            if row and count:
+                age = datetime.now(timezone.utc) - datetime.fromisoformat(row[0])
+                if age < timedelta(days=SYMBOLS_MAX_AGE_DAYS):
+                    return False, "Symbol table is current."
+    finally:
+        conn.close()
+
+    equities = _nse_equities()
+
+    conn = _get_connection()
+    try:
+        rows = [(t, n, c) for c, n, t in CURATED_INSTRUMENTS]
+        rows += [(t, n, "NSE equity") for t, n in equities]
+        # Curated entries are inserted first and win on conflict, so their
+        # hand-written names survive the bulk NSE load.
+        conn.executemany(
+            "INSERT OR IGNORE INTO symbols (ticker, name, kind) VALUES (?, ?, ?)", rows
+        )
+        conn.execute(
+            "INSERT INTO symbols_meta (key, value) VALUES ('refreshed_at', ?) "
+            "ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            (datetime.now(timezone.utc).isoformat(),),
+        )
+        conn.commit()
+        total = conn.execute("SELECT COUNT(*) FROM symbols").fetchone()[0]
+    finally:
+        conn.close()
+
+    if not equities:
+        return True, f"{total} instruments (NSE list unavailable — curated only)."
+    return True, f"{total} instruments."
+
+
+def search_instruments(query, limit=10):
+    """Match a query against instrument names and tickers, best match first."""
+    query = (query or "").strip()
+    if len(query) < 2:
+        return []
+    like = f"%{query}%"
+    starts = f"{query}%"
+    conn = _get_connection()
+    try:
+        rows = conn.execute(
+            """
+            SELECT ticker, name, kind
+            FROM symbols
+            WHERE name LIKE ? OR ticker LIKE ?
+            ORDER BY
+                CASE WHEN kind <> 'NSE equity' THEN 0 ELSE 1 END,
+                CASE
+                    WHEN ticker LIKE ? THEN 0
+                    WHEN name   LIKE ? THEN 1
+                    ELSE 2
+                END,
+                LENGTH(name),
+                name
+            LIMIT ?
+            """,
+            (like, like, starts, starts, limit),
+        ).fetchall()
+        return [{"ticker": r[0], "name": r[1], "kind": r[2]} for r in rows]
+    finally:
+        conn.close()
+
 
 def clear_price_cache():
     """Delete all cached price data so everything re-fetches from yfinance."""

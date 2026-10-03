@@ -6,10 +6,13 @@ import plotly.graph_objects as go
 from data_loader import (get_price_history, clear_price_cache, WATCHLIST_PRESETS,
                          LIST_MAX, get_custom_lists, rename_custom_list,
                          get_list_items, add_to_list, remove_from_list,
-                         count_list_with_data)
+                         count_list_with_data, search_instruments,
+                         refresh_symbols, CURATED_INSTRUMENTS)
 from news_loader import fetch_and_store, get_news, count_news, REFRESH_INTERVAL_MINUTES
 
 st.set_page_config(page_title="Trader Desk", layout="wide", page_icon="📊", initial_sidebar_state="collapsed")
+
+refresh_symbols()   # no-op unless the instrument table is missing or stale
 
 st.markdown("""
 <style>
@@ -164,6 +167,24 @@ st.markdown("""
         color: #DFDACB !important; font-weight: 600;
     }
     a.chip-on:hover { color: #DFDACB !important; }
+
+    /* ── Search results ── */
+    .srch {
+        border: 1px solid #BDB7A5; background: #D7D2C1;
+        max-width: 640px; margin: 4px 0 2px 0;
+    }
+    .srch-row {
+        display: flex; justify-content: space-between; align-items: baseline;
+        gap: 18px; padding: 7px 12px;
+        border-bottom: 1px solid #BDB7A5;
+        text-decoration: none !important;
+        font-family: 'Inter', Arial, sans-serif;
+    }
+    .srch-row:last-child { border-bottom: none; }
+    a.srch-row:hover { background: #CFC9B6; }
+    .srch-name { font-size: 13px; color: #1F1D19 !important; font-weight: 500; }
+    .srch-meta { font-size: 12px; color: #6B675F !important; white-space: nowrap; }
+    .srch-held { opacity: 0.55; }
 
     /* ── Inline confirm buttons: sized to their text ── */
     .confirm-row { display: flex; gap: 8px; margin: 6px 0 2px 0; }
@@ -351,42 +372,16 @@ CONSTITUENTS = {
 
 # ── Asset definitions ─────────────────────────────────────────────────────────
 
-INDICES = [
-    ("S&P 500",        "^GSPC"),
-    ("Nasdaq",         "^IXIC"),
-    ("Nifty 50",       "^NSEI"),
-    ("KOSPI (Korea)",  "^KS11"),
-    ("FTSE 100 (UK)",  "^FTSE"),
-    ("DAX (Germany)",  "^GDAXI"),
-    ("Euro Stoxx 50",  "^STOXX50E"),
-    ("Nikkei (Japan)", "^N225"),
-]
+def _group(category):
+    return [(name, ticker) for cat, name, ticker in CURATED_INSTRUMENTS
+            if cat == category]
 
-INDIA = [
-    ("Bank Nifty",       "^NSEBANK"),
-    ("Nifty IT",         "^CNXIT"),
-    ("Nifty Auto",       "NSE:NIFTY AUTO"),
-    ("Nifty Energy",     "NSE:NIFTY ENERGY"),
-    ("Nifty Mid Select", "NSE:NIFTY MID SELECT"),
-    ("Nifty Defence",    "NSE:NIFTY INDIA DEFENCE"),
-]
 
-FX = [
-    ("USD / INR", "USDINR=X"),
-    ("EUR / USD", "EURUSD=X"),
-    ("GBP / USD", "GBPUSD=X"),
-    ("EUR / INR", "EURINR=X"),
-]
-
-COMMODITIES = [
-    ("WTI Crude Oil", "CL=F"),
-    ("Gold",          "GC=F"),
-    ("Silver",        "SI=F"),
-]
-
-VOLATILITY = [
-    ("VIX (US)", "^VIX"),
-]
+INDICES     = _group("Indices")
+INDIA       = _group("India")
+FX          = _group("FX")
+COMMODITIES = _group("Commodities")
+VOLATILITY  = _group("Volatility")
 
 # ── Chart builder ─────────────────────────────────────────────────────────────
 
@@ -575,6 +570,19 @@ with tab_watchlist:
         st.query_params["view"] = view
         st.rerun()
 
+    # Adding happens through a link too, so a failure message has to travel
+    # back in the URL — session state does not survive the navigation.
+    to_add = st.query_params.get("add")
+    if to_add and is_custom:
+        ok, msg = add_to_list(list_id, to_add)
+        st.query_params.clear()
+        st.query_params["view"] = view
+        if not ok:
+            st.query_params["err"] = msg
+        st.rerun()
+
+    err = st.query_params.get("err")
+
     # ── View selector ─────────────────────────────────────────────────────────
     def _chips(label, items):
         chips = "".join(
@@ -616,19 +624,15 @@ with tab_watchlist:
             unsafe_allow_html=True,
         )
 
-        # Bumping the nonce gives the input a new key, which is the reliable way
-        # to clear it — deleting the key alone does not empty the widget.
-        nonce = st.session_state.get(f"add_nonce_{list_id}", 0)
+        is_full = count >= LIST_MAX
 
-        c_add, c_btn, c_name, c_save = st.columns([5, 1, 3, 1])
-        with c_add:
-            new_ticker = st.text_input(
-                "ticker", placeholder="Add an instrument — e.g. RELIANCE.NS · AAPL · ^GSPC",
-                label_visibility="collapsed", key=f"add_{list_id}_{nonce}",
+        c_search, c_name, c_save = st.columns([6, 3, 1])
+        with c_search:
+            query = st.text_input(
+                "search", placeholder="Search instruments — name or ticker",
+                label_visibility="collapsed", key=f"search_{list_id}",
+                disabled=is_full,
             )
-        with c_btn:
-            is_full = count >= LIST_MAX
-            add_clicked = st.button("Add", width="stretch", disabled=is_full)
         with c_name:
             new_name = st.text_input(
                 "name", value=active_name, placeholder="List name",
@@ -636,6 +640,12 @@ with tab_watchlist:
             )
         with c_save:
             rename_clicked = st.button("Rename", width="stretch")
+
+        if err:
+            st.markdown(
+                f"<div style='color:{DOWN};font-size:12px;margin:2px 0 4px 0;'>{err}</div>",
+                unsafe_allow_html=True,
+            )
 
         if is_full:
             note = f"This list is full ({LIST_MAX} of {LIST_MAX}). Remove one to add another."
@@ -645,14 +655,38 @@ with tab_watchlist:
                 f"<div style='color:{DOWN};font-size:12px;margin:-2px 0 4px 0;'>{note}</div>",
                 unsafe_allow_html=True,
             )
-
-        if add_clicked and new_ticker:
-            ok, msg = add_to_list(list_id, new_ticker.strip())
-            if ok:
-                st.session_state[f"add_nonce_{list_id}"] = nonce + 1  # clear on success
-                st.rerun()
-            else:
-                st.error(msg)
+        elif query and len(query.strip()) >= 2:
+            held = {i["ticker"] for i in items}
+            results = search_instruments(query, limit=8)
+            rows = ""
+            for hit in results:
+                if hit["ticker"] in held:
+                    rows += (
+                        f"<span class='srch-row srch-held'>"
+                        f"<span class='srch-name'>{hit['name']}</span>"
+                        f"<span class='srch-meta'>{hit['ticker']} · already added</span>"
+                        f"</span>"
+                    )
+                else:
+                    rows += (
+                        f"<a class='srch-row' target='_self' "
+                        f"href='?view={quote(view)}&add={quote(hit['ticker'])}'>"
+                        f"<span class='srch-name'>{hit['name']}</span>"
+                        f"<span class='srch-meta'>{hit['ticker']} · {hit['kind']}</span>"
+                        f"</a>"
+                    )
+            # The table covers NSE plus curated instruments. Anything outside it
+            # (a US equity, say) can still go in as a raw ticker.
+            if not results:
+                raw = query.strip().upper()
+                rows += (
+                    f"<a class='srch-row' target='_self' "
+                    f"href='?view={quote(view)}&add={quote(raw)}'>"
+                    f"<span class='srch-name'>Try “{raw}” as a ticker</span>"
+                    f"<span class='srch-meta'>no local match</span>"
+                    f"</a>"
+                )
+            st.markdown(f"<div class='srch'>{rows}</div>", unsafe_allow_html=True)
 
         if rename_clicked:
             ok, msg = rename_custom_list(list_id, new_name)
