@@ -5,6 +5,7 @@ from data_loader import (get_price_history, get_watchlist, add_to_watchlist,
                          remove_from_watchlist, seed_watchlist_if_empty,
                          reset_watchlist_to_preset, count_watchlist_with_data,
                          clear_price_cache)
+from news_loader import fetch_and_store, get_news, count_news, REFRESH_INTERVAL_MINUTES
 
 seed_watchlist_if_empty()
 
@@ -397,8 +398,8 @@ def _watchlist_grid(watchlist, show_1w):
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 
-tab_watchlist, tab_chart, tab_indices, tab_india, tab_fx, tab_commodities, tab_volatility = st.tabs(
-    ["Watchlist", "Chart", "Indices", "India", "FX", "Commodities", "Volatility"]
+tab_watchlist, tab_chart, tab_news, tab_indices, tab_india, tab_fx, tab_commodities, tab_volatility = st.tabs(
+    ["Watchlist", "Chart", "News", "Indices", "India", "FX", "Commodities", "Volatility"]
 )
 
 with tab_watchlist:
@@ -599,4 +600,40 @@ with tab_commodities:
 
 with tab_volatility:
     render_grid(VOLATILITY, period, cols=3, decimal=2)
+
+with tab_news:
+    @st.fragment(run_every=f"{REFRESH_INTERVAL_MINUTES}m")
+    def _news_feed():
+        added = fetch_and_store()
+        total = count_news()
+        articles = get_news(limit=200)
+
+        st.markdown(
+            f"<div style='color:{T3};font-size:12px;margin-bottom:12px;'>"
+            f"{total} articles stored · refreshes every {REFRESH_INTERVAL_MINUTES} min"
+            f"{'  · +' + str(added) + ' new' if added else ''}"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+        for art in articles:
+            pub = art["published_at"][:16].replace("T", "  ") if art["published_at"] else ""
+            title_html = (
+                f"<a href='{art['url']}' target='_blank' style='color:{T1};"
+                f"text-decoration:none;font-size:14px;font-weight:500;line-height:1.4;'>"
+                f"{art['title']}</a>"
+                if art["url"] else
+                f"<span style='color:{T1};font-size:14px;font-weight:500;'>{art['title']}</span>"
+            )
+            st.markdown(
+                f"<div style='padding:10px 0;border-bottom:1px solid {BORDER};'>"
+                f"{title_html}"
+                f"<div style='margin-top:4px;font-size:11px;color:{T3};'>"
+                f"<span style='color:{T2};'>{art['source']}</span>"
+                f"{'  ·  ' + pub if pub else ''}"
+                f"</div></div>",
+                unsafe_allow_html=True,
+            )
+
+    _news_feed()
 
