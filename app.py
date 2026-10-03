@@ -13,40 +13,48 @@ st.set_page_config(page_title="Trader Desk", layout="wide", page_icon="📊", in
 
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
     /* ── Layout ── */
-    .block-container { padding-top: 1.5rem; padding-bottom: 1rem; }
+    html, body, [data-testid="stAppViewContainer"], .main {
+        background-color: #F7F5F0 !important;
+        font-family: 'Inter', Arial, sans-serif !important;
+    }
+    .block-container { padding-top: 2rem; padding-bottom: 1rem; }
     footer { visibility: hidden; }
     [data-testid="stSidebarCollapsedControl"] { display: none !important; }
     section[data-testid="stSidebar"] { display: none !important; }
+
+    /* ── Clear cache button ── */
     .clear-cache-btn {
         position: fixed; bottom: 24px; right: 24px; z-index: 999;
     }
     .clear-cache-btn a {
         display: inline-block; text-align: center; text-decoration: none;
-        border: 1px solid #3d1a1a; border-radius: 6px; padding: 0.5em 0.7em;
-        background: rgba(248,81,73,0.04); color: #5c1a1a;
+        border: 1px solid #d4a89a; border-radius: 4px; padding: 0.5em 0.7em;
+        background: rgba(199,68,36,0.04); color: #c74424;
         font-size: 8px; font-weight: 700; letter-spacing: 0.12em; line-height: 1.6;
         text-transform: uppercase; transition: all 0.2s;
+        font-family: 'Inter', Arial, sans-serif;
     }
     .clear-cache-btn a:hover {
-        border-color: #f85149; color: #f85149;
-        background: rgba(248,81,73,0.08);
-        box-shadow: 0 0 12px rgba(248,81,73,0.15);
+        border-color: #c74424; background: rgba(199,68,36,0.08);
     }
 
     /* ── Tabs ── */
     .stTabs [data-baseweb="tab"] {
         font-size: 13px; font-weight: 500; letter-spacing: 0.02em;
-        color: #636e7b;
+        color: #60605B; font-family: 'Inter', Arial, sans-serif;
     }
-    .stTabs [aria-selected="true"] { color: #e6edf3 !important; }
-    .stTabs [data-baseweb="tab-border"] { background: #21262d !important; }
+    .stTabs [aria-selected="true"] { color: #171717 !important; }
+    .stTabs [data-baseweb="tab-border"] { background: #D8D5CD !important; }
+    .stTabs [data-baseweb="tab-highlight"] { background: #C74424 !important; }
 
     /* ── Chart cards: restyle Streamlit's bordered container ── */
     [data-testid="stVerticalBlockBorderWrapper"] {
-        background: #161b22 !important;
-        border: 1px solid #21262d !important;
-        border-radius: 10px !important;
+        background: #EFEDE8 !important;
+        border: 1px solid #D8D5CD !important;
+        border-radius: 0px !important;
         padding: 6px 8px 2px 8px !important;
     }
 
@@ -55,28 +63,28 @@ st.markdown("""
         background: transparent !important;
         border: none !important;
         padding: 0 !important;
-        color: #8b949e !important;
-        font-size: 10px !important;
+        color: #171717 !important;
+        font-size: 14px !important;
         font-weight: 500 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
+        letter-spacing: 0 !important;
         height: auto !important;
         min-height: 0 !important;
         line-height: 1.4 !important;
-        border-bottom: 1px dotted #444 !important;
+        border-bottom: 1px dotted #9A9990 !important;
         box-shadow: none !important;
         cursor: pointer !important;
+        font-family: 'Inter', Arial, sans-serif !important;
     }
     [data-testid="stPopover"] button:hover {
-        color: #c9d1d9 !important;
-        border-bottom-color: #8b949e !important;
+        color: #171717 !important;
+        border-bottom-color: #60605B !important;
     }
 
     /* ── Popover panel ── */
     [data-testid="stPopoverBody"] {
-        background: #1c2128 !important;
-        border: 1px solid #30363d !important;
-        border-radius: 8px !important;
+        background: #F7F5F0 !important;
+        border: 1px solid #D8D5CD !important;
+        border-radius: 4px !important;
         min-width: 0 !important;
         width: fit-content !important;
     }
@@ -84,30 +92,113 @@ st.markdown("""
     /* ── Segmented control ── */
     [data-testid="stSegmentedControl"] { gap: 2px; }
 
-    /* ── Remove button: small muted link ── */
+    /* ── Remove button ── */
     [data-testid="stBaseButton-tertiary"] {
-        color: #636e7b !important;
+        color: #60605B !important;
         font-size: 11px !important;
         padding: 0 4px !important;
         height: auto !important;
     }
-    [data-testid="stBaseButton-tertiary"]:hover { color: #f85149 !important; }
+    [data-testid="stBaseButton-tertiary"]:hover { color: #C74424 !important; }
+
+    /* ── Inputs and buttons ── */
+    [data-testid="stTextInput"] input {
+        background: #EFEDE8 !important;
+        border-color: #D8D5CD !important;
+        color: #171717 !important;
+        font-family: 'Inter', Arial, sans-serif !important;
+    }
+    [data-testid="stBaseButton-secondary"] {
+        background: #EFEDE8 !important;
+        border-color: #D8D5CD !important;
+        color: #171717 !important;
+        font-family: 'Inter', Arial, sans-serif !important;
+    }
+
+    /* ── Divider ── */
+    hr { border-color: #D8D5CD !important; }
+
+    /* ── Watchlist grid: equal columns, collapsing on narrow screens ── */
+    .wl-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1px;
+        background: #D8D5CD;
+        border: 1px solid #D8D5CD;
+        margin: 4px 0;
+    }
+    @media (max-width: 1100px) { .wl-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 800px)  { .wl-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px)  { .wl-grid { grid-template-columns: 1fr; } }
+    .wl-cell {
+        background: #F7F5F0;
+        padding: 12px 14px;
+        min-height: 92px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    a.wl-remove, a.wl-remove:link, a.wl-remove:visited {
+        font-size: 16px !important; color: #9A9990 !important;
+        text-decoration: none !important;
+        line-height: 1; padding: 2px 7px; margin: -2px -7px 0 0;
+    }
+    a.wl-remove:hover { color: #C74424 !important; }
+
+    /* Streamlit colours bare anchors blue; keep our own links neutral */
+    .clear-cache-btn a, .clear-cache-btn a:link, .clear-cache-btn a:visited {
+        text-decoration: none !important;
+    }
 
 </style>
 """, unsafe_allow_html=True)
 
 # ── Design tokens ─────────────────────────────────────────────────────────────
-UP      = "#00d4aa"   # positive / teal
-DOWN    = "#f85149"   # negative / red
-BG      = "#0e1117"   # page background
-SURFACE = "#161b22"   # card surface
-BORDER  = "#21262d"   # subtle border
-GRID    = "#21262d"   # chart grid
-T1      = "#e6edf3"   # text primary
-T2      = "#8b949e"   # text secondary
-T3      = "#636e7b"   # text tertiary
+UP      = "#171717"   # positive — near-black per spec
+DOWN    = "#C74424"   # negative — signal orange-red
+BG      = "#F7F5F0"   # canvas
+SURFACE = "#EFEDE8"   # card surface
+BORDER  = "#D8D5CD"   # rule / border
+GRID    = "#D8D5CD"   # chart grid
+T1      = "#171717"   # text primary
+T2      = "#60605B"   # text secondary
+T3      = "#9A9990"   # text tertiary
 
 PERIODS = {"1W": "5d", "1M": "1mo", "3M": "3mo", "6M": "6mo", "1Y": "1y", "3Y": "3y"}
+PERIOD_LABELS = {v: k for k, v in PERIODS.items()}
+
+TABULAR = "font-variant-numeric:tabular-nums lining-nums;"
+
+
+def signed_pct(pct):
+    """Format a percentage change with an explicit sign; never show -0.00."""
+    if round(pct, 2) == 0:
+        return "+0.00%"
+    return f"{pct:+.2f}%"
+
+
+def format_inr(value, decimals=2):
+    """Indian digit grouping: 1234567.89 -> 12,34,567.89"""
+    whole, _, frac = f"{value:.{decimals}f}".partition(".")
+    neg = whole.startswith("-")
+    whole = whole.lstrip("-")
+    if len(whole) > 3:
+        head, tail = whole[:-3], whole[-3:]
+        parts = []
+        while len(head) > 2:
+            parts.insert(0, head[-2:])
+            head = head[:-2]
+        if head:
+            parts.insert(0, head)
+        whole = ",".join(parts) + "," + tail
+    return ("-" if neg else "") + whole + ("." + frac if frac else "")
+
+
+def format_price(ticker, value, decimals=2):
+    """Format a price with currency where the ticker makes it unambiguous."""
+    if ticker.endswith((".NS", ".BO")):
+        return "₹" + format_inr(value, decimals)
+    return f"{value:,.{decimals}f}"
 
 if st.query_params.get("clear_cache") == "1":
     clear_price_cache()
@@ -124,19 +215,25 @@ st.markdown(
 col_title, col_period = st.columns([2, 2])
 with col_title:
     st.markdown(
-        f"<div style='font-size:20px;font-weight:700;color:{T1};letter-spacing:-0.01em;"
-        f"padding-top:4px;'>📊 Trader Desk</div>",
+        f"<div style='font-size:38px;font-weight:700;color:{T1};letter-spacing:-0.02em;"
+        f"line-height:1.1;padding-top:2px;'>Trader Desk</div>",
         unsafe_allow_html=True,
     )
 with col_period:
-    st.markdown("<div style='padding-top:6px'>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div style='font-size:12px;color:{T2};text-transform:uppercase;"
+        f"letter-spacing:0.08em;margin:6px 0 2px 0;'>History — panel tabs</div>",
+        unsafe_allow_html=True,
+    )
     period_label = st.segmented_control(
         "Period", list(PERIODS.keys()), default="1M", label_visibility="collapsed"
     )
-    st.markdown("</div>", unsafe_allow_html=True)
 
 period = PERIODS[period_label or "1M"]
-st.divider()
+st.markdown(
+    f"<div style='border-top:2px solid {T1};margin:14px 0 0 0;'></div>",
+    unsafe_allow_html=True,
+)
 
 # ── Constituents ──────────────────────────────────────────────────────────────
 
@@ -255,7 +352,7 @@ VOLATILITY = [
 
 # ── Chart builder ─────────────────────────────────────────────────────────────
 
-def price_chart(label, ticker, period):
+def price_chart(label, ticker, period, height=220):
     df = get_price_history(ticker, period=period)
     df = df.dropna(subset=["Close"])
     if df.empty:
@@ -265,32 +362,37 @@ def price_chart(label, ticker, period):
     first = df["Close"].iloc[0]
     pct   = (last / first - 1) * 100
     latest_date = df.index[-1].strftime("%d %b %Y")
-    color = UP if pct >= 0 else DOWN
 
     spread = df["Close"].max() - df["Close"].min()
     ymin = df["Close"].min() - spread * 0.1
     ymax = df["Close"].max() + spread * 0.1
 
+    # Multi-year ranges need the year on x-ticks; shorter ranges don't
+    tickformat = "%b %Y" if period in ("1y", "3y") else "%d %b"
+
+    # One consistent accent line; direction is carried by the change value,
+    # never by filling or recolouring the whole panel (spec).
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=df.index, y=df["Close"],
         mode="lines",
-        fill="tozeroy",
-        fillcolor=f"rgba({'0,212,170' if pct >= 0 else '248,81,73'},0.10)",
-        line=dict(color=color, width=1.8),
+        line=dict(color=DOWN, width=1.5),
         hovertemplate="<b>%{x|%d %b %Y}</b><br>%{y:,.2f}<extra></extra>",
         name=label,
     ))
     fig.update_layout(
-        height=220,
+        height=height,
         margin=dict(l=10, r=10, t=10, b=10),
-        paper_bgcolor=BG,
-        plot_bgcolor=BG,
-        xaxis=dict(showgrid=False, showline=False, tickfont=dict(size=10, color="#8b949e"), tickformat="%d %b"),
+        paper_bgcolor=SURFACE,
+        plot_bgcolor=SURFACE,
+        font=dict(family="Inter, Arial, sans-serif"),
+        xaxis=dict(showgrid=False, showline=False, tickfont=dict(size=12, color=T2),
+                   tickformat=tickformat),
         yaxis=dict(showgrid=True, gridcolor=GRID, gridwidth=1, showline=False, zeroline=False,
-                   tickfont=dict(size=10, color="#8b949e"), side="right", range=[ymin, ymax]),
+                   tickfont=dict(size=12, color=T2), side="right", range=[ymin, ymax]),
         showlegend=False,
-        hoverlabel=dict(bgcolor="#1e2530", font_size=12),
+        hoverlabel=dict(bgcolor="#FFFFFF", bordercolor=BORDER,
+                        font=dict(size=12, color=T1, family="Inter, Arial, sans-serif")),
     )
     return fig, last, pct, latest_date
 
@@ -298,102 +400,118 @@ def price_chart(label, ticker, period):
 def _constituents_popover(label, members):
     with st.popover(label):
         rows = "".join(
-            f"<tr>"
-            f"<td style='padding:2px 14px 2px 0;color:#c9d1d9;font-size:12.5px;"
-            f"white-space:nowrap;border:none;'>· {name}</td>"
-            f"<td style='padding:2px 0;color:#8b949e;font-size:12.5px;"
-            f"text-align:right;border:none;'>{w:.1f}%</td>"
+            f"<tr style='border-bottom:1px solid {BORDER};'>"
+            f"<td style='padding:4px 18px 4px 0;color:{T1};font-size:13px;"
+            f"white-space:nowrap;border:none;'>{name}</td>"
+            f"<td style='padding:4px 0;color:{T2};font-size:13px;"
+            f"text-align:right;border:none;"
+            f"font-variant-numeric:tabular-nums lining-nums;'>{w:.1f}%</td>"
             f"</tr>"
             for name, w in members
         )
         st.markdown(
-            f"<div style='font-size:10px;color:#8b949e;text-transform:uppercase;"
-            f"letter-spacing:0.05em;margin-bottom:4px;'>Approx. weights</div>"
+            f"<div style='font-size:12px;color:{T2};text-transform:uppercase;"
+            f"letter-spacing:0.05em;margin-bottom:6px;"
+            f"padding-bottom:4px;border-bottom:1px solid {BORDER};'>Approximate weights</div>"
             f"<table style='border-collapse:collapse;border:none;'>{rows}</table>",
             unsafe_allow_html=True,
         )
 
 
-def asset_card(label, ticker, period, decimal=2):
-    fig, last, pct, latest_date = price_chart(label, ticker, period)
+def asset_card(label, ticker, period, decimal=2, height=220, value_size=28):
+    fig, last, pct, latest_date = price_chart(label, ticker, period, height)
     if fig is None:
         st.warning(f"No data — {label}")
         return
 
-    sign  = "+" if pct >= 0 else ""
     color = UP if pct >= 0 else DOWN
     members = CONSTITUENTS.get(ticker)
+    period_label = PERIOD_LABELS.get(period, period)
 
     with st.container(border=True):
-        c_label, c_pct = st.columns([5, 2])
+        c_label, c_pct = st.columns([5, 3])
         with c_label:
             if members:
                 _constituents_popover(label, members)
             else:
                 st.markdown(
-                    f"<span style='font-size:10px;color:{T2};font-weight:500;"
-                    f"text-transform:uppercase;letter-spacing:0.08em;'>{label}</span>",
+                    f"<span style='font-size:14px;color:{T1};font-weight:500;'>{label}</span>",
                     unsafe_allow_html=True,
                 )
         with c_pct:
             st.markdown(
-                f"<div style='text-align:right;font-size:12px;color:{color};"
-                f"font-weight:600;padding-top:1px;'>{sign}{pct:.2f}%</div>",
+                f"<div style='text-align:right;padding-top:1px;'>"
+                f"<span style='font-size:14px;color:{color};font-weight:600;{TABULAR}'>"
+                f"{signed_pct(pct)}</span>"
+                f"<span style='font-size:12px;color:{T2};padding-left:5px;'>{period_label}</span>"
+                f"</div>",
                 unsafe_allow_html=True,
             )
         st.markdown(
-            f"<div style='display:flex;align-items:baseline;gap:10px;margin:-2px 0 2px 0;'>"
-            f"<span style='font-size:20px;font-weight:700;color:{T1};line-height:1.1;'>"
-            f"{last:,.{decimal}f}</span>"
-            f"<span style='font-size:10px;color:{T3};'>{latest_date}</span>"
+            f"<div style='display:flex;align-items:baseline;gap:10px;margin:2px 0 4px 0;'>"
+            f"<span style='font-size:{value_size}px;font-weight:600;color:{T1};"
+            f"line-height:1.1;{TABULAR}'>{last:,.{decimal}f}</span>"
+            f"<span style='font-size:12px;color:{T2};'>{latest_date}</span>"
             f"</div>",
             unsafe_allow_html=True,
         )
         st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
-def render_grid(assets, period, cols=3, decimal=2):
+def render_grid(assets, period, cols=3, decimal=2, height=220, value_size=28):
     columns = st.columns(cols)
     for i, (label, ticker) in enumerate(assets):
         with columns[i % cols]:
-            asset_card(label, ticker, period, decimal)
+            asset_card(label, ticker, period, decimal, height, value_size)
 
 def _watchlist_grid(watchlist, show_1w):
-    cards_html = ""
+    window = "1W" if show_1w else "1D"
+    cells = ""
     for item in watchlist:
         ticker = item["ticker"]
         label  = item["label"]
+        remove = (
+            f"<a href='?remove={ticker}' target='_self' class='wl-remove' "
+            f"title='Remove {label}'>&times;</a>"
+        )
+        header = (
+            f"<div style='display:flex;justify-content:space-between;align-items:flex-start;'>"
+            f"<div>"
+            f"<div style='font-size:14px;color:{T1};font-weight:500;line-height:1.2;'>{label}</div>"
+            f"<div style='font-size:12px;color:{T2};line-height:1.3;'>{ticker}</div>"
+            f"</div>{remove}</div>"
+        )
+
         df = get_price_history(ticker, period="5d")
         df = df.dropna(subset=["Close"])
+
         if df.empty:
+            # Keep failed instruments visible and removable (spec, high severity)
+            cells += (
+                f"<div class='wl-cell'>{header}"
+                f"<div style='font-size:13px;color:{DOWN};'>Couldn't load</div>"
+                f"</div>"
+            )
             continue
+
         last    = df["Close"].iloc[-1]
         decimal = 4 if ticker.endswith("=X") else 2
         pct = ((last / df["Close"].iloc[0]) - 1) * 100 if show_1w else (
               ((last / df["Close"].iloc[-2]) - 1) * 100 if len(df) >= 2 else 0.0)
-        sign  = "+" if pct >= 0 else ""
         color = UP if pct >= 0 else DOWN
 
-        cards_html += (
-            f"<div style='background:{SURFACE};border:1px solid {BORDER};"
-            f"border-radius:8px;padding:10px 14px;min-width:140px;'>"
-            f"<div style='display:flex;justify-content:space-between;align-items:center;"
-            f"margin-bottom:6px;'>"
-            f"<span style='font-size:13px;color:{T2};font-weight:600;'>{label}</span>"
-            f"<a href='?remove={ticker}' style='font-size:11px;color:{T3};text-decoration:none;"
-            f"line-height:1;padding-left:10px;' title='Remove'>×</a>"
-            f"</div>"
-            f"<div style='font-size:22px;font-weight:700;color:{color};line-height:1;margin-bottom:4px;'>"
-            f"{sign}{pct:.2f}%</div>"
-            f"<div style='font-size:14px;font-weight:600;color:{T1};'>"
-            f"{last:,.{decimal}f}</div>"
-            f"</div>"
+        cells += (
+            f"<div class='wl-cell'>{header}"
+            f"<div>"
+            f"<div style='font-size:24px;font-weight:600;color:{T1};"
+            f"line-height:1.15;{TABULAR}'>{format_price(ticker, last, decimal)}</div>"
+            f"<div style='font-size:13px;color:{color};font-weight:600;{TABULAR}'>"
+            f"{signed_pct(pct)}"
+            f"<span style='color:{T2};font-weight:400;padding-left:5px;'>{window}</span>"
+            f"</div></div></div>"
         )
 
-    st.markdown(
-        f"<div style='display:flex;flex-wrap:wrap;gap:12px;padding:4px 0;'>{cards_html}</div>",
-        unsafe_allow_html=True,
-    )
+    st.markdown(f"<div class='wl-grid'>{cells}</div>", unsafe_allow_html=True)
 
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -415,9 +533,12 @@ with tab_watchlist:
     visible = count_watchlist_with_data()
 
     # ── Add instrument ────────────────────────────────────────────────────────
+    failed = count - visible
+    status = f"{count} / 30 instruments"
+    if failed:
+        status += f"  ·  {failed} couldn't load"
     st.markdown(
-        f"<div style='color:#8b949e;font-size:12px;margin-bottom:6px;'>"
-        f"{visible} / 30 instruments</div>",
+        f"<div style='color:{T2};font-size:12px;margin-bottom:6px;'>{status}</div>",
         unsafe_allow_html=True,
     )
     col_input, col_btn = st.columns([6, 1])
@@ -429,12 +550,22 @@ with tab_watchlist:
             key="wl_input",
         )
     with col_btn:
-        add_clicked = st.button("Add", width="stretch", disabled=(count >= 30))
+        is_full = count >= 30
+        add_clicked = st.button("Add", width="stretch", disabled=is_full)
+
+    if is_full:
+        note = "Watchlist is full (30 of 30). Remove an instrument to add another."
+        if failed:
+            note += f" Entries that couldn't load still count toward the cap ({failed})."
+        st.markdown(
+            f"<div style='color:{DOWN};font-size:12px;margin:-2px 0 4px 0;'>{note}</div>",
+            unsafe_allow_html=True,
+        )
 
     # ── Preset reset buttons ──────────────────────────────────────────────────
     st.markdown(
-        f"<div style='font-size:10px;color:{T3};text-transform:uppercase;"
-        f"letter-spacing:0.08em;margin:6px 0 4px 0;'>Load preset</div>",
+        f"<div style='font-size:12px;color:{T2};text-transform:uppercase;"
+        f"letter-spacing:0.08em;margin:8px 0 4px 0;'>Load preset</div>",
         unsafe_allow_html=True,
     )
     p1, p2, p3, p4, p5 = st.columns(5)
@@ -442,18 +573,41 @@ with tab_watchlist:
                            ["Nifty 50", "Nifty Midcap", "Nifty Auto", "Nifty IT", "Bank Nifty"]):
         with col:
             if st.button(preset, width="stretch", key=f"preset_{preset}"):
-                reset_watchlist_to_preset(preset)
+                st.session_state["_pending_preset"] = preset
+
+    # Presets replace the whole watchlist — confirm before discarding entries
+    pending = st.session_state.get("_pending_preset")
+    if pending:
+        st.markdown(
+            f"<div style='font-size:14px;color:{T1};margin:6px 0 4px 0;'>"
+            f"Replace all {count} entries with the {pending} preset?</div>",
+            unsafe_allow_html=True,
+        )
+        c_yes, c_no, _ = st.columns([1, 1, 5])
+        with c_yes:
+            if st.button("Replace", width="stretch", key="preset_confirm"):
+                reset_watchlist_to_preset(pending)
+                del st.session_state["_pending_preset"]
+                st.rerun()
+        with c_no:
+            if st.button("Cancel", width="stretch", key="preset_cancel"):
+                del st.session_state["_pending_preset"]
                 st.rerun()
 
     if add_clicked and new_ticker:
         ok, msg = add_to_watchlist(new_ticker.strip())
         if ok:
-            st.success(msg)
+            del st.session_state["wl_input"]   # clear only on success
             st.rerun()
         else:
             st.error(msg)
 
     # ── Return toggle + grid ──────────────────────────────────────────────────
+    st.markdown(
+        f"<div style='font-size:12px;color:{T2};text-transform:uppercase;"
+        f"letter-spacing:0.08em;margin:10px 0 4px 0;'>Change window</div>",
+        unsafe_allow_html=True,
+    )
     wl_period = st.segmented_control(
         "wl_period", ["1D", "1W"], default="1D", label_visibility="collapsed", key="wl_period"
     )
@@ -478,16 +632,22 @@ with tab_chart:
     def _save_t1(): st.session_state["_ct1"] = st.session_state["chart_t1"]
     def _save_t2(): st.session_state["_ct2"] = st.session_state["chart_t2"]
 
+    lbl = (f"<div style='font-size:12px;color:{T2};text-transform:uppercase;"
+           f"letter-spacing:0.08em;margin:0 0 4px 0;'>{{}}</div>")
     c1, c2, c3 = st.columns([3, 3, 2])
     with c1:
+        st.markdown(lbl.format("Instrument 1"), unsafe_allow_html=True)
         t1 = st.text_input("Ticker 1", placeholder="e.g. RELIANCE.NS", key="chart_t1",
                            value=st.session_state["_ct1"],
                            label_visibility="collapsed", on_change=_save_t1)
     with c2:
+        st.markdown(lbl.format("Instrument 2 (optional)"), unsafe_allow_html=True)
         t2 = st.text_input("Ticker 2 (optional)", placeholder="e.g. HDFCBANK.NS",
                            key="chart_t2", value=st.session_state["_ct2"],
                            label_visibility="collapsed", on_change=_save_t2)
     with c3:
+        # This control, not the global one, governs the chart below (spec)
+        st.markdown(lbl.format("History — this chart"), unsafe_allow_html=True)
         chart_period_label = st.segmented_control(
             "cp", ["1M", "3M", "6M", "1Y", "3Y"], default="3M",
             label_visibility="collapsed", key="chart_period"
@@ -509,73 +669,87 @@ with tab_chart:
         if df1.empty:
             st.warning(f"No data for '{t1.strip()}'")
         else:
-            C1 = "#00d4aa"   # teal — always ticker 1
-            C2 = "#e8b84b"   # amber — always ticker 2
+            # Comparison identity: series 1 black solid, series 2 gray dashed
+            C1, C2 = T1, T2
+            name1, name2 = t1.strip(), (t2.strip() if t2 else "")
             pct1 = (df1["Close"].iloc[-1] / df1["Close"].iloc[0] - 1) * 100
-            sign1 = "+" if pct1 >= 0 else ""
             pct1_color = UP if pct1 >= 0 else DOWN
 
             has_t2 = df2 is not None and not df2.empty
+            cp_label = chart_period_label or "3M"
 
             # ── Summary bar ───────────────────────────────────────────────────
             summary = (
-                f"<div style='display:flex;gap:20px;margin-bottom:10px;align-items:center;'>"
-                f"<span style='display:inline-flex;align-items:center;gap:6px;'>"
-                f"<span style='width:10px;height:2px;background:{C1};display:inline-block;border-radius:2px;'></span>"
-                f"<span style='font-size:12px;color:{T2};font-weight:500;'>{t1.strip()}</span>"
-                f"<span style='font-size:14px;color:{pct1_color};font-weight:700;'>{sign1}{pct1:.2f}%</span>"
+                f"<div style='display:flex;gap:24px;margin-bottom:12px;align-items:center;"
+                f"flex-wrap:wrap;'>"
+                f"<span style='display:inline-flex;align-items:center;gap:8px;'>"
+                f"<span style='width:16px;height:0;border-top:2px solid {C1};"
+                f"display:inline-block;'></span>"
+                f"<span style='font-size:14px;color:{T1};font-weight:500;'>{name1}</span>"
+                f"<span style='font-size:14px;color:{pct1_color};font-weight:600;{TABULAR}'>"
+                f"{signed_pct(pct1)}</span>"
+                f"<span style='font-size:12px;color:{T2};'>{cp_label}</span>"
                 f"</span>"
             )
             if has_t2:
                 pct2 = (df2["Close"].iloc[-1] / df2["Close"].iloc[0] - 1) * 100
-                sign2 = "+" if pct2 >= 0 else ""
                 pct2_color = UP if pct2 >= 0 else DOWN
                 summary += (
-                    f"<span style='display:inline-flex;align-items:center;gap:6px;'>"
-                    f"<span style='width:10px;height:2px;background:{C2};display:inline-block;border-radius:2px;'></span>"
-                    f"<span style='font-size:12px;color:{T2};font-weight:500;'>{t2.strip()}</span>"
-                    f"<span style='font-size:14px;color:{pct2_color};font-weight:700;'>{sign2}{pct2:.2f}%</span>"
+                    f"<span style='display:inline-flex;align-items:center;gap:8px;'>"
+                    f"<span style='width:16px;height:0;border-top:2px dashed {C2};"
+                    f"display:inline-block;'></span>"
+                    f"<span style='font-size:14px;color:{T1};font-weight:500;'>{name2}</span>"
+                    f"<span style='font-size:14px;color:{pct2_color};font-weight:600;{TABULAR}'>"
+                    f"{signed_pct(pct2)}</span>"
+                    f"<span style='font-size:12px;color:{T2};'>{cp_label}</span>"
                     f"</span>"
                 )
             summary += "</div>"
             st.markdown(summary, unsafe_allow_html=True)
 
             # ── Chart ─────────────────────────────────────────────────────────
+            tickformat_x = "%b %Y" if chart_period in ("1y", "3y") else "%d %b"
+
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=df1.index, y=df1["Close"],
-                name=t1.strip(), mode="lines",
-                line=dict(color=C1, width=2),
+                name=name1, mode="lines",
+                line=dict(color=C1, width=1.8),
                 yaxis="y1",
-                hovertemplate="<b>%{x|%d %b %Y}</b><br>%{y:,.2f}<extra>" + t1.strip() + "</extra>",
+                hovertemplate="<b>%{x|%d %b %Y}</b><br>%{y:,.4f}<extra>" + name1 + "</extra>",
             ))
 
-            yaxis2_cfg = {}
+            yaxis2_cfg = None
             if has_t2:
                 fig.add_trace(go.Scatter(
                     x=df2.index, y=df2["Close"],
-                    name=t2.strip(), mode="lines",
-                    line=dict(color=C2, width=2),
+                    name=name2, mode="lines",
+                    line=dict(color=C2, width=1.8, dash="dash"),
                     yaxis="y2",
-                    hovertemplate="<b>%{x|%d %b %Y}</b><br>%{y:,.2f}<extra>" + t2.strip() + "</extra>",
+                    hovertemplate="<b>%{x|%d %b %Y}</b><br>%{y:,.4f}<extra>" + name2 + "</extra>",
                 ))
                 yaxis2_cfg = dict(
-                    tickfont=dict(size=10, color=C2), showgrid=False,
+                    title=dict(text=name2, font=dict(size=12, color=T2)),
+                    tickfont=dict(size=12, color=T2), showgrid=False,
                     zeroline=False, overlaying="y", side="right",
-                    tickformat=",.0f",
+                    tickformat=",.0f",   # match left axis; never mix raw with k
                 )
 
             fig.update_layout(
                 height=460,
                 margin=dict(l=10, r=10, t=10, b=10),
                 paper_bgcolor=BG, plot_bgcolor=BG,
+                font=dict(family="Inter, Arial, sans-serif"),
                 xaxis=dict(showgrid=False, showline=False,
-                           tickfont=dict(size=10, color=T2), tickformat="%d %b"),
-                yaxis=dict(tickfont=dict(size=10, color=C1), showgrid=True,
+                           tickfont=dict(size=12, color=T2), tickformat=tickformat_x),
+                yaxis=dict(title=dict(text=name1, font=dict(size=12, color=T2)),
+                           tickfont=dict(size=12, color=T2), showgrid=True,
                            gridcolor=GRID, zeroline=False, side="left",
                            tickformat=",.0f"),
-                yaxis2=yaxis2_cfg if yaxis2_cfg else None,
-                hoverlabel=dict(bgcolor="#1e2530", font_size=12),
+                yaxis2=yaxis2_cfg,
+                hoverlabel=dict(bgcolor="#FFFFFF", bordercolor=BORDER,
+                                font=dict(size=12, color=T1,
+                                          family="Inter, Arial, sans-serif")),
                 showlegend=False,
             )
             st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
@@ -593,13 +767,14 @@ with tab_india:
     render_grid(INDIA, period, cols=3, decimal=2)
 
 with tab_fx:
-    render_grid(FX, period, cols=3, decimal=4)
+    render_grid(FX, period, cols=2, decimal=4)
 
 with tab_commodities:
     render_grid(COMMODITIES, period, cols=3, decimal=2)
 
 with tab_volatility:
-    render_grid(VOLATILITY, period, cols=3, decimal=2)
+    # Single instrument: dominant value, larger chart (spec)
+    render_grid(VOLATILITY, period, cols=1, decimal=2, height=420, value_size=40)
 
 with tab_news:
     @st.fragment(run_every=f"{REFRESH_INTERVAL_MINUTES}m")
