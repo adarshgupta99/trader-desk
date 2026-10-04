@@ -4,4 +4,3 @@ pandas
 plotly
 python-dotenv
 jugaad-data
-feedparser
