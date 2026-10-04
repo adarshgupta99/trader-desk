@@ -1,0 +1,3361 @@
+ticker,name,kind
+GC=F,Gold,Commodities
+SI=F,Silver,Commodities
+CL=F,WTI Crude Oil,Commodities
+ADS.DE,Adidas,DAX
+AIR.PA,Airbus,DAX
+ALV.DE,Allianz,DAX
+BAS.DE,BASF,DAX
+BMW.DE,BMW,DAX
+BAYN.DE,Bayer,DAX
+BEI.DE,Beiersdorf,DAX
+BNR.DE,Brenntag,DAX
+CBK.DE,Commerzbank,DAX
+CON.DE,Continental,DAX
+DTG.DE,Daimler Truck,DAX
+DBK.DE,Deutsche Bank,DAX
+DB1.DE,Deutsche Börse,DAX
+DHL.DE,Deutsche Post,DAX
+DTE.DE,Deutsche Telekom,DAX
+EOAN.DE,E.ON,DAX
+FRE.DE,Fresenius,DAX
+FME.DE,Fresenius Medical Care,DAX
+G1A.DE,GEA Group,DAX
+HNR1.DE,Hannover Re,DAX
+HEI.DE,Heidelberg Materials,DAX
+HEN3.DE,Henkel,DAX
+IFX.DE,Infineon Technologies,DAX
+MTX.DE,MTU Aero Engines,DAX
+MBG.DE,Mercedes-Benz Group,DAX
+MRK.DE,Merck,DAX
+MUV2.DE,Munich Re,DAX
+PAH3.DE,Porsche SE,DAX
+QIA.DE,Qiagen,DAX
+RWE.DE,RWE,DAX
+RHM.DE,Rheinmetall,DAX
+SAP.DE,SAP,DAX
+G24.DE,Scout24,DAX
+SIE.DE,Siemens,DAX
+ENR.DE,Siemens Energy,DAX
+SHL.DE,Siemens Healthineers,DAX
+SY1.DE,Symrise,DAX
+VOW3.DE,Volkswagen Group,DAX
+VNA.DE,Vonovia,DAX
+ZAL.DE,Zalando,DAX
+ASML.AS,ASML Holding,Euro Stoxx 50
+ADYEN.AS,Adyen,Euro Stoxx 50
+AD.AS,Ahold Delhaize,Euro Stoxx 50
+AI.PA,Air Liquide,Euro Stoxx 50
+ABI.BR,Anheuser-Busch InBev,Euro Stoxx 50
+ARGX.BR,Argenx,Euro Stoxx 50
+CS.PA,Axa,Euro Stoxx 50
+BBVA.MC,BBVA,Euro Stoxx 50
+BNP.PA,BNP Paribas,Euro Stoxx 50
+SAN.MC,Banco Santander,Euro Stoxx 50
+BN.PA,Danone,Euro Stoxx 50
+ENEL.MI,Enel,Euro Stoxx 50
+ENI.MI,Eni,Euro Stoxx 50
+EL.PA,EssilorLuxottica,Euro Stoxx 50
+RACE.MI,Ferrari,Euro Stoxx 50
+RMS.PA,Hermès,Euro Stoxx 50
+INGA.AS,ING Group,Euro Stoxx 50
+IBE.MC,Iberdrola,Euro Stoxx 50
+ITX.MC,Inditex,Euro Stoxx 50
+ISP.MI,Intesa Sanpaolo,Euro Stoxx 50
+OR.PA,L'Oréal,Euro Stoxx 50
+MC.PA,LVMH Moët Hennessy Louis Vuitton,Euro Stoxx 50
+NDA-FI.HE,Nordea,Euro Stoxx 50
+PRX.AS,Prosus,Euro Stoxx 50
+SAF.PA,Safran,Euro Stoxx 50
+SGO.PA,Saint-Gobain,Euro Stoxx 50
+SAN.PA,Sanofi,Euro Stoxx 50
+SU.PA,Schneider Electric,Euro Stoxx 50
+TTE.PA,TotalEnergies,Euro Stoxx 50
+UCG.MI,UniCredit,Euro Stoxx 50
+DG.PA,Vinci SA,Euro Stoxx 50
+VOW.DE,Volkswagen Group,Euro Stoxx 50
+WKL.AS,Wolters Kluwer,Euro Stoxx 50
+III.L,3i,FTSE 100
+ABDN.L,Aberdeen Group,FTSE 100
+ADM.L,Admiral Group,FTSE 100
+AAF.L,Airtel Africa,FTSE 100
+ALW.L,Alliance Witan,FTSE 100
+AAL.L,Anglo American plc,FTSE 100
+ANTO.L,Antofagasta plc,FTSE 100
+ABF.L,Associated British Foods,FTSE 100
+AZN.L,AstraZeneca,FTSE 100
+AUTO.L,Autotrader Group,FTSE 100
+AV.L,Aviva,FTSE 100
+BA.L,BAE Systems,FTSE 100
+BP.L,BP,FTSE 100
+BT-A.L,BT Group,FTSE 100
+BAB.L,Babcock International,FTSE 100
+BBY.L,Balfour Beatty,FTSE 100
+BARC.L,Barclays,FTSE 100
+BTRW.L,Barratt Redrow,FTSE 100
+BATS.L,British American Tobacco,FTSE 100
+BLND.L,British Land,FTSE 100
+BNZL.L,Bunzl,FTSE 100
+BRBY.L,Burberry Group,FTSE 100
+CNA.L,Centrica,FTSE 100
+CCEP.L,Coca-Cola Europacific Partners,FTSE 100
+CCH.L,Coca-Cola HBC,FTSE 100
+CPG.L,Compass Group,FTSE 100
+CCC.L,Computacenter,FTSE 100
+CTEC.L,Convatec,FTSE 100
+CRDA.L,Croda International,FTSE 100
+DCC.L,DCC Energy,FTSE 100
+DGE.L,Diageo,FTSE 100
+DPLM.L,Diploma,FTSE 100
+EZJ.L,EasyJet,FTSE 100
+EDV.L,Endeavour Mining,FTSE 100
+EXPN.L,Experian,FTSE 100
+FCIT.L,F & C Investment Trust,FTSE 100
+FRES.L,Fresnillo plc,FTSE 100
+GSK.L,GSK plc,FTSE 100
+GAW.L,Games Workshop,FTSE 100
+GLEN.L,Glencore,FTSE 100
+HSBA.L,HSBC,FTSE 100
+HLN.L,Haleon,FTSE 100
+HLMA.L,Halma plc,FTSE 100
+HSX.L,Hiscox,FTSE 100
+HWDN.L,Howdens Joinery,FTSE 100
+ICG.L,ICG,FTSE 100
+IGG.L,IG Group,FTSE 100
+IHG.L,IHG Hotels & Resorts,FTSE 100
+IMI.L,IMI,FTSE 100
+IMB.L,Imperial Brands,FTSE 100
+INF.L,Informa,FTSE 100
+IAG.L,International Airlines Group,FTSE 100
+ITRK.L,Intertek,FTSE 100
+INVP.L,Investec,FTSE 100
+ITH.L,Ithaca Energy,FTSE 100
+JD.L,JD Sports,FTSE 100
+KGF.L,Kingfisher plc,FTSE 100
+LAND.L,Land Securities,FTSE 100
+LGEN.L,Legal & General,FTSE 100
+BGEO.L,Lion Finance Group,FTSE 100
+LLOY.L,Lloyds Banking Group,FTSE 100
+LSEG.L,London Stock Exchange Group,FTSE 100
+LMP.L,LondonMetric Property,FTSE 100
+MNG.L,M&G,FTSE 100
+MKS.L,Marks & Spencer,FTSE 100
+MRO.L,Melrose Industries,FTSE 100
+MTLN.L,Metlen Energy & Metals,FTSE 100
+NWG.L,NatWest Group,FTSE 100
+NG.L,National Grid plc,FTSE 100
+NXT.L,Next plc,FTSE 100
+PSON.L,Pearson plc,FTSE 100
+PSH.L,Pershing Square Holdings,FTSE 100
+PCT.L,Polar Capital Technology Trust,FTSE 100
+PRU.L,Prudential plc,FTSE 100
+REL.L,RELX,FTSE 100
+RKT.L,Reckitt,FTSE 100
+RTO.L,Rentokil Initial,FTSE 100
+RIO.L,Rio Tinto,FTSE 100
+RR.L,Rolls-Royce Holdings,FTSE 100
+SSE.L,SSE plc,FTSE 100
+SGE.L,Sage Group,FTSE 100
+SBRY.L,Sainsbury's,FTSE 100
+SMT.L,Scottish Mortgage Investment Trust,FTSE 100
+SGRO.L,Segro,FTSE 100
+SVT.L,Severn Trent,FTSE 100
+SHEL.L,Shell plc,FTSE 100
+SN.L,Smith & Nephew,FTSE 100
+SMIN.L,Smiths Group,FTSE 100
+SPX.L,Spirax Group,FTSE 100
+STJ.L,St. James's Place,FTSE 100
+STAN.L,Standard Chartered,FTSE 100
+SDLF.L,Standard Life,FTSE 100
+TSCO.L,Tesco,FTSE 100
+BBOX.L,Tritax Big Box REIT,FTSE 100
+ULVR.L,Unilever,FTSE 100
+UU.L,United Utilities,FTSE 100
+VOD.L,Vodafone Group,FTSE 100
+WPP.L,WPP,FTSE 100
+WEIR.L,Weir,FTSE 100
+WTB.L,Whitbread,FTSE 100
+EURINR=X,EUR / INR,FX
+EURUSD=X,EUR / USD,FX
+GBPUSD=X,GBP / USD,FX
+USDINR=X,USD / INR,FX
+^NSEBANK,Bank Nifty,India
+NSE:NIFTY AUTO,Nifty Auto,India
+NSE:NIFTY INDIA DEFENCE,Nifty Defence,India
+NSE:NIFTY ENERGY,Nifty Energy,India
+^CNXIT,Nifty IT,India
+NSE:NIFTY MID SELECT,Nifty Mid Select,India
+^GDAXI,DAX (Germany),Indices
+^STOXX50E,Euro Stoxx 50,Indices
+^FTSE,FTSE 100 (UK),Indices
+^KS11,KOSPI (Korea),Indices
+^IXIC,Nasdaq,Indices
+^NSEI,Nifty 50,Indices
+^N225,Nikkei (Japan),Indices
+^GSPC,S&P 500,Indices
+20MICRONS.NS,20 Microns Ltd,NSE equity
+21STCENMGM.NS,21St Century Mgmt Service,NSE equity
+360ONE.NS,360 One Wam Limited,NSE equity
+GOLD360.NS,360Oneamc - Gold360,NSE equity
+MSCI360.NS,360Oneamc - Msci360,NSE equity
+SILVER360.NS,360Oneamc - Silver360,NSE equity
+3BBLACKBIO.NS,3B Blackbio Dx Ltd.,NSE equity
+3MINDIA.NS,3M India Limited,NSE equity
+3PLAND.NS,3P Land Holdings Limited,NSE equity
+5PAISA.NS,5Paisa Capital Limited,NSE equity
+63MOONS.NS,63 Moons Technologies Ltd,NSE equity
+ABCOTS.NS,A B Cotspin India Limited,NSE equity
+ABMKNO.NS,A B M Knowledgeware Ltd.,NSE equity
+AKCAPIT.NS,A K Capital Services Ltd.,NSE equity
+AONESTEELS.NS,A-One Steels India Ltd,NSE equity
+A2ZINFRA.NS,A2Z Infra Engineering Ltd,NSE equity
+AAATECH.NS,Aaa Technologies Limited,NSE equity
+AADHARHFC.NS,Aadhar Housing Finance L,NSE equity
+AAKASH.NS,Aakash Exploration Ser L,NSE equity
+AAREYDRUGS.NS,Aarey Drugs & Pharm Ltd,NSE equity
+AARON.NS,Aaron Industries Limited,NSE equity
+AARTIDRUGS.NS,Aarti Drugs Ltd.,NSE equity
+AARTIIND.NS,Aarti Industries Ltd,NSE equity
+AARTIPHARM.NS,Aarti Pharmalabs Limited,NSE equity
+AARVI.NS,Aarvi Encon Limited,NSE equity
+AASTHA.NS,Aastha Spintex Limited,NSE equity
+AAVAS.NS,Aavas Financiers Limited,NSE equity
+ABANSENT.NS,Abans Enterprises Ltd.,NSE equity
+AFSL.NS,Abans Financial Srvcs Ltd,NSE equity
+ABB.NS,Abb India Limited,NSE equity
+ABBOTINDIA.NS,Abbott India Limited,NSE equity
+ACC.NS,Acc Limited,NSE equity
+ACCELYA.NS,Accelya Soln India Ltd,NSE equity
+ACEINTEG.NS,Ace Integrated Solu. Ltd.,NSE equity
+ACMESOLAR.NS,Acme Solar Holdings Ltd,NSE equity
+ACE.NS,Action Const Equip Ltd,NSE equity
+ACUTAAS.NS,Acutaas Chemicals Limited,NSE equity
+ADANIENSOL.NS,Adani Energy Solution Ltd,NSE equity
+ADANIENT.NS,Adani Enterprises Limited,NSE equity
+ADANIGREEN.NS,Adani Green Energy Ltd,NSE equity
+ADANIPORTS.NS,Adani Port & Sez Ltd,NSE equity
+ADANIPOWER.NS,Adani Power Ltd,NSE equity
+ATGL.NS,Adani Total Gas Limited,NSE equity
+ADDIND.NS,Addi Industries Ltd.,NSE equity
+ADFFOODS.NS,Adf Foods Limited,NSE equity
+ABSLAMC.NS,Adit Birl Sun Lif Amc Ltd,NSE equity
+ABCAPITAL.NS,Aditya Birla Capital Ltd.,NSE equity
+ABFRL.NS,Aditya Birla Fashion & Rt,NSE equity
+ABLBL.NS,Aditya Birla Lifes Bran L,NSE equity
+BIRLAMONEY.NS,Aditya Birla Money Ltd,NSE equity
+ABREL.NS,Aditya Birla Real Est Ltd,NSE equity
+CPPLUS.NS,Aditya Infotech Limited,NSE equity
+AVL.NS,Aditya Vision Limited,NSE equity
+BSLGOLDETF.NS,Aditybirla Sl Gold Etf-Gr,NSE equity
+BSLNIFTY.NS,Aditybirla Sl Nif Etf-Gr,NSE equity
+ADOR.NS,Ador Welding Ltd,NSE equity
+ADVAIT.NS,Advait Enrgy Transition L,NSE equity
+ADVANCE.NS,Advance Agrolife Limited,NSE equity
+ADVENZYMES.NS,Advanced Enzyme Tech Ltd,NSE equity
+ADVANIHOTR.NS,Advani Hot.& Res.(I) Ltd,NSE equity
+ADVENTHTL.NS,Advent Hotels Internati L,NSE equity
+ADVIKCA.NS,Advik Capital Ltd.,NSE equity
+RAMBHAJO.NS,Advit Jewels Limited,NSE equity
+AEGISLOG.NS,Aegis Logistics Limited,NSE equity
+AEGISVOPAK.NS,Aegis Vopak Terminals Ltd,NSE equity
+AEQUS.NS,Aequs Limited,NSE equity
+AEROENTER.NS,Aeroflex Enterprises Ltd,NSE equity
+AEROFLEX.NS,Aeroflex Industries Ltd,NSE equity
+AERONEU.NS,Aeroflex Neu Limited,NSE equity
+AETHER.NS,Aether Industries Limited,NSE equity
+AFCONS.NS,Afcons Infrastructure Ltd,NSE equity
+AFFLE.NS,Affle 3I Limited,NSE equity
+AFFORDABLE.NS,Afford Robo & Auto Ltd,NSE equity
+AGARIND.NS,Agarwal Inds Corp Ltd.,NSE equity
+AGI.NS,Agi Greenpac Limited,NSE equity
+AGIIL.NS,Agi Infra Limited,NSE equity
+AGRITECH.NS,Agri-Tech (India) Limited,NSE equity
+AGROPHOS.NS,Agro Phos India Limited,NSE equity
+AHLADA.NS,Ahlada Engineers Limited,NSE equity
+AHLUCONT.NS,Ahluwalia Cont Ind Ltd,NSE equity
+AIAENG.NS,Aia Engineering Limited,NSE equity
+AIRAN.NS,Airan Limited,NSE equity
+AIROLAM.NS,Airo Lam Limited,NSE equity
+AJANTPHARM.NS,Ajanta Pharma Limited,NSE equity
+AJAXENGG.NS,Ajax Engineering Limited,NSE equity
+AJMERA.NS,Ajmera Realty & Inf I Ltd,NSE equity
+AJOONI.NS,Ajooni Biotech Limited,NSE equity
+AKASH.NS,Akash Infra-Projects Ltd,NSE equity
+AKG.NS,Akg Exim Limited,NSE equity
+AFIL.NS,Akme Fintrade (India) Ltd,NSE equity
+AKSHAR.NS,Akshar Spintex Limited,NSE equity
+AKUMS.NS,Akums Drugs And Pharma L,NSE equity
+ALANKIT.NS,Alankit Limited,NSE equity
+ALBERTDAVD.NS,Albert David Limited,NSE equity
+ALEMBICLTD.NS,Alembic Limited,NSE equity
+APLLTD.NS,Alembic Pharma Ltd,NSE equity
+ALGOQUANT.NS,Algoquant Fintech Limited,NSE equity
+ALICON.NS,Alicon Castalloy Limited,NSE equity
+ALIVUS.NS,Alivus Life Sciences Ltd,NSE equity
+ALKEM.NS,Alkem Laboratories Ltd.,NSE equity
+ALKYLAMINE.NS,Alkyl Amines Chem. Ltd,NSE equity
+ALLTIME.NS,All Time Plastics Limited,NSE equity
+AGL.NS,Allcargo Global Limited,NSE equity
+ALLCARGO.NS,Allcargo Logistics Ltd,NSE equity
+ATL.NS,Allcargo Terminals Ltd,NSE equity
+ALLDIGI.NS,Alldigi Tech Limited,NSE equity
+ABDL.NS,Allied Blend N Distils L,NSE equity
+ADSL.NS,Allied Digital Serv. Ltd,NSE equity
+ALOKINDS.NS,Alok Industries Limited,NSE equity
+ALPA.NS,Alpa Laboratories Ltd,NSE equity
+ALPINETEX.NS,Alpine Texworld Limited,NSE equity
+ALUFLUOR.NS,Alufluoride Ltd.,NSE equity
+AMAGI.NS,Amagi Media Labs Limited,NSE equity
+AMAL.NS,Amal Ltd.,NSE equity
+ARE&M.NS,Amara Raja Energy Mob Ltd,NSE equity
+AMARJOTHI.NS,Amarjothi Spinning Mill L,NSE equity
+AMBER.NS,Amber Enterprises (I) Ltd,NSE equity
+AMBICAAGAR.NS,Ambica Agar & Aromaindltd,NSE equity
+AMBIKCO.NS,Ambika Cotton Mill Ltd.,NSE equity
+AMBUJACEM.NS,Ambuja Cements Ltd,NSE equity
+AMNPLST.NS,Amines & Plasticizers Ltd,NSE equity
+AEROPLANE.NS,Amir Chand Jag Kum (E) L,NSE equity
+AMJLAND.NS,Amj Land Holdings Limited,NSE equity
+AMRUTANJAN.NS,Amrutajan Health Ltd,NSE equity
+ARSSBL.NS,Anand Rathi Sh N Stk Br L,NSE equity
+ANANDRATHI.NS,Anand Rathi Wealth Ltd,NSE equity
+ANANTRAJ.NS,Anant Raj Limited,NSE equity
+ACL.NS,Andhra Cements Limited,NSE equity
+ANDHRAPAP.NS,Andhra Paper Limited,NSE equity
+ANDHRSUGAR.NS,Andhra Sugars Ltd,NSE equity
+ANDREWYU.NS,Andrew Yule & Co. Ltd.,NSE equity
+ANGELONE.NS,Angel One Limited,NSE equity
+ANIKINDS.NS,Anik Industries Ltd,NSE equity
+APCL.NS,Anjani Portland Cem Ltd,NSE equity
+AHCL.NS,Anlon Healthcare Limited,NSE equity
+ANNAPURNA.NS,Annapurna Swadisht Ltd,NSE equity
+ANNU.NS,Annu Projects Limited,NSE equity
+ANSALBU.NS,Ansal Buildwell Ltd.,NSE equity
+ANTGRAPHIC.NS,Antarctica Ltd,NSE equity
+ANTELOPUS.NS,Antelopus Selan Enrgy Ltd,NSE equity
+ANTHEM.NS,Anthem Biosciences Ltd,NSE equity
+AWHCL.NS,Antony Waste Hdg Cell Ltd,NSE equity
+ANUHPHR.NS,Anuh Pharma Limited,NSE equity
+ANURAS.NS,Anupam Rasayan India Ltd,NSE equity
+AONEGOLD.NS,Aoneamc - Aonegold,NSE equity
+AONELIQUID.NS,Aoneamc - Aoneliquid,NSE equity
+AONENIFTY.NS,Aoneamc - Aonenifty,NSE equity
+AONESILVER.NS,Aoneamc - Aonesilver,NSE equity
+AONETMMQ50.NS,Aoneamc - Aonetmmq50,NSE equity
+AONETOTAL.NS,Aoneamc - Aonetotal,NSE equity
+APARINDS.NS,Apar Industries Ltd.,NSE equity
+APCOTEXIND.NS,Apcotex Industries Limite,NSE equity
+APEX.NS,Apex Frozen Foods Limited,NSE equity
+APLAPOLLO.NS,Apl Apollo Tubes Ltd,NSE equity
+APOLLOHOSP.NS,Apollo Hospitals Enter. L,NSE equity
+APOLLO.NS,Apollo Micro Systems Ltd,NSE equity
+APOLLOPIPE.NS,Apollo Pipes Limited,NSE equity
+APOLSINHOT.NS,Apollo Sindoori Hotel Ltd,NSE equity
+APOLLOTYRE.NS,Apollo Tyres Ltd,NSE equity
+APTECHT.NS,Aptech Limited,NSE equity
+APTUS.NS,Aptus Value Hsg Fin I Ltd,NSE equity
+AQYLON.NS,Aqylon Nexus Limited,NSE equity
+ACI.NS,Archean Chemical Ind Ltd,NSE equity
+ADL.NS,Archidply Decor Limited,NSE equity
+ARCHIDPLY.NS,Archidply Ind. Ltd,NSE equity
+ARCHIES.NS,Archies Ltd,NSE equity
+ARCL.NS,Arcl Organics Ltd.,NSE equity
+ARDEE.NS,Ardee Industries Limited,NSE equity
+ARFIN.NS,Arfin India Limited,NSE equity
+ARIHANTCAP.NS,Arihant Capital Mkts Ltd,NSE equity
+ARIHANT.NS,Arihant Foun & Hou Ltd,NSE equity
+ARIHANTSUP.NS,Arihant Superstruct Ltd,NSE equity
+ARIS.NS,Arisinfra Solutions Ltd,NSE equity
+ARKADE.NS,Arkade Developers Limited,NSE equity
+ARMANFIN.NS,Arman Fin Serv Ltd,NSE equity
+ARMEE.NS,Armee Infotech Limited,NSE equity
+AROGRANITE.NS,Aro Granite Ind. Ltd.,NSE equity
+ARROWGREEN.NS,Arrow Greentech Limited,NSE equity
+ARTNIRMAN.NS,Art Nirman Limited,NSE equity
+AEPL.NS,Artemis Electricals & P L,NSE equity
+ARTEMISMED.NS,Artemis Med Service Ltd,NSE equity
+ARVEE.NS,Arvee Laboratories I Ltd,NSE equity
+ARVINDFASN.NS,Arvind Fashions Limited,NSE equity
+ARVIND.NS,Arvind Limited,NSE equity
+ARVSMART.NS,Arvind Smartspaces Ltd,NSE equity
+ARYAMAN.NS,Aryaman Financial Serv L,NSE equity
+ASAHIINDIA.NS,Asahi India Glass Limited,NSE equity
+ASHAPURMIN.NS,Ashapura Minechem Ltd,NSE equity
+ASHIANA.NS,Ashiana Housing Ltd,NSE equity
+ASHIMASYN.NS,Ashima Ltd,NSE equity
+ASHOKLEY.NS,Ashok Leyland Ltd,NSE equity
+ASHOKA.NS,Ashoka Buildcon Ltd,NSE equity
+ASHOKAMET.NS,Ashoka Metcast Limited,NSE equity
+ASIANENE.NS,Asian Energy Services Ltd,NSE equity
+ASIANTILES.NS,Asian Granito Ind. Ltd.,NSE equity
+AHLEAST.NS,Asian Hotels (East) Ltd,NSE equity
+ASIANHOTNR.NS,Asian Hotels (North) Ltd,NSE equity
+ASIANPAINT.NS,Asian Paints Limited,NSE equity
+ASTAR.NS,Asian Star Co. Ltd.,NSE equity
+ASIANTNE.NS,Asian Tea & Exports Ltd.,NSE equity
+ASKAUTOLTD.NS,Ask Automotive Limited,NSE equity
+ASPINWALL.NS,Aspinwall & Co Ltd,NSE equity
+ASSAMENT.NS,Assam Entrade Limited,NSE equity
+ARCIL.NS,Asset Reconstruc Co (I) L,NSE equity
+ASALCBR.NS,Asso Alcohols & Brew Ltd,NSE equity
+ASTEC.NS,Astec Lifesciences Ltd,NSE equity
+ASTERDM.NS,Aster Dm Quality Care Ltd,NSE equity
+ASTRAMICRO.NS,Astra Microwave Ltd,NSE equity
+ASTRAL.NS,Astral Limited,NSE equity
+ASTRAZEN.NS,Astrazeneca Pharma Ind Lt,NSE equity
+ATALREAL.NS,Atal Realtech Limited,NSE equity
+ATAM.NS,Atam Valves Limited,NSE equity
+ATHERENERG.NS,Ather Energy Limited,NSE equity
+ATLANTAELE.NS,Atlanta Electricals Ltd,NSE equity
+ATLANTAA.NS,Atlantaa Limited,NSE equity
+ATLASCYCLE.NS,Atlas Cycle (Haryana) Ltd,NSE equity
+ATULAUTO.NS,Atul Auto Limited,NSE equity
+ATUL.NS,Atul Ltd,NSE equity
+AUBANK.NS,Au Small Finance Bank Ltd,NSE equity
+AUGMONT.NS,Augmont Enterprises Ltd,NSE equity
+AURIONPRO.NS,Aurionpro Soln Ltd,NSE equity
+AUROPHARMA.NS,Aurobindo Pharma Ltd,NSE equity
+AURUM.NS,Aurum Proptech Limited,NSE equity
+AURUS.NS,Aurus Gem Corp Limited,NSE equity
+AUSOMENT.NS,Ausom Enterprise Limited,NSE equity
+AUSTENG.NS,Austin Engineering Co. L,NSE equity
+AIIL.NS,Authum Invest & Infra Ltd,NSE equity
+AUTOIND.NS,Autoline Industries Ltd,NSE equity
+ACGL.NS,Automobile Corpn Of Goa L,NSE equity
+AUTOAXLES.NS,Automotive Axles Limited,NSE equity
+ASAL.NS,Automotive Stampings & As,NSE equity
+AVADHSUGAR.NS,Avadh Sug & Energy Ltd,NSE equity
+AVALON.NS,Avalon Technologies Ltd,NSE equity
+AVANCE.NS,Avance Technologies Ltd.,NSE equity
+AVANTEL.NS,Avantel Limited,NSE equity
+AVANTIFEED.NS,Avanti Feeds Limited,NSE equity
+DMART.NS,Avenue Supermarts Limited,NSE equity
+CCAVENUE.NS,Avenuesai Limited,NSE equity
+ASMS.NS,Avio Smart Mrkt Stack Ltd,NSE equity
+AVONMORE.NS,Avonmore Cap&Mgt Serv Ltd,NSE equity
+AVROIND.NS,Avro India Limited,NSE equity
+AVTNPL.NS,Avt Natural Products Ltd,NSE equity
+AWFIS.NS,Awfis Space Solutions Ltd,NSE equity
+AWL.NS,Awl Agri Business Limited,NSE equity
+AXISBANK.NS,Axis Bank Limited,NSE equity
+ENERGYAXIS.NS,Axisamc - Energyaxis,NSE equity
+BNKETFAXIS.NS,Axisamc-Bnketfaxis,NSE equity
+CONSUMAXIS.NS,Axisamc-Consumaxis,NSE equity
+GOLDAXIS.NS,Axisamc-Goldaxis,NSE equity
+HEALTHAXIS.NS,Axisamc-Healthaxis,NSE equity
+ITAXIS.NS,Axisamc-Itaxis,NSE equity
+NIFTYAXIS.NS,Axisamc-Niftyaxis,NSE equity
+SENSEXAXIS.NS,Axisamc-Sensexaxis,NSE equity
+SILVERAXIS.NS,Axisamc-Silveraxis,NSE equity
+VALUEAXIS.NS,Axisamc-Valueaxis,NSE equity
+AXISCADES.NS,Axiscades Tech Ltd,NSE equity
+AXITA.NS,Axita Cotton Limited,NSE equity
+AXTEL.NS,Axtel Industries Ltd.,NSE equity
+AYE.NS,Aye Finance Limited,NSE equity
+AYMSYNTEX.NS,Aym Syntex Limited,NSE equity
+AZAD.NS,Azad Engineering Limited,NSE equity
+AZADIND.NS,Azad India Mobility Ltd.,NSE equity
+BBTCL.NS,B&B Triplewall Cont Ltd,NSE equity
+BAGFILMS.NS,B.A.G Films And Media Ltd,NSE equity
+BLKASHYAP.NS,B.L.Kashyap & Son Ltd,NSE equity
+STYLEBAAZA.NS,Baazar Style Retail Ltd,NSE equity
+BAIDFIN.NS,Baid Finserv Limited,NSE equity
+BAJAJ-AUTO.NS,Bajaj Auto Limited,NSE equity
+BAJAJCON.NS,Bajaj Consumer Care Ltd,NSE equity
+BAJAJELEC.NS,Bajaj Elect.Ltd,NSE equity
+BAJFINANCE.NS,Bajaj Finance Limited,NSE equity
+BAJAJFINSV.NS,Bajaj Finserv Ltd.,NSE equity
+BAJAJHCARE.NS,Bajaj Healthcare Limited,NSE equity
+BAJAJHIND.NS,Bajaj Hindusthan Sugar Lt,NSE equity
+BAJAJHLDNG.NS,Bajaj Holdings & Invs Ltd,NSE equity
+BAJAJHFL.NS,Bajaj Housing Finance Ltd,NSE equity
+BAJAJST.NS,Bajaj Steel Inds. Ltd.,NSE equity
+BAJEL.NS,Bajel Projects Limited,NSE equity
+BALPHARMA.NS,Bal Pharma Ltd.,NSE equity
+BALAMINES.NS,Balaji Amines Limited,NSE equity
+BALAJITELE.NS,Balaji Telefilms Limited.,NSE equity
+BALAXI.NS,Balaxi Pharma Ltd,NSE equity
+BALKRISIND.NS,Balkrishna Ind. Ltd,NSE equity
+BALKRISHNA.NS,Balkrishna Paper Mills L,NSE equity
+BALMLAWRIE.NS,Balmer Lawrie & Co Ltd,NSE equity
+BLIL.NS,Balmer Lawrie Invsts. L,NSE equity
+BALRAMCHIN.NS,Balrampur Chini Mills Ltd,NSE equity
+BALUFORGE.NS,Balu Forge Industries Ltd,NSE equity
+BANARBEADS.NS,Banaras Beads Ltd,NSE equity
+BANCOINDIA.NS,Banco Products (I) Ltd,NSE equity
+BANDHANBNK.NS,Bandhan Bank Limited,NSE equity
+GOLDBND.NS,Bandhanamc - Goldbnd,NSE equity
+IDFNIFTYET.NS,Bandhanamc - Idfniftyet,NSE equity
+SILVERBND.NS,Bandhanamc - Silverbnd,NSE equity
+BANG.NS,Bang Overseas Ltd.,NSE equity
+BANKBARODA.NS,Bank Of Baroda,NSE equity
+BANKINDIA.NS,Bank Of India,NSE equity
+MAHABANK.NS,Bank Of Maharashtra,NSE equity
+BANKA.NS,Banka Bioloo Limited,NSE equity
+BANARISUG.NS,Bannari Amman Sugars Ltd,NSE equity
+BANSALWIRE.NS,Bansal Wire Industries L,NSE equity
+BANSWRAS.NS,Banswara Syntex Limited,NSE equity
+BVCL.NS,Barak Valley Cem. Ltd.,NSE equity
+BBNPNBETF.NS,Barodabnp - Bbnpnbetf,NSE equity
+BBNPPGOLD.NS,Barodabnp - Bbnppgold,NSE equity
+BASF.NS,Basf India Ltd,NSE equity
+BATAINDIA.NS,Bata India Ltd,NSE equity
+BATLIBOI.NS,Batliboi Ltd.,NSE equity
+BAYERCROP.NS,Bayer Cropscience Ltd,NSE equity
+BCLIND.NS,Bcl Industries Limited,NSE equity
+BCPL.NS,Bcpl Railway Infra Ltd,NSE equity
+BEARDSELL.NS,Beardsell Limited,NSE equity
+BEDMUTHA.NS,Bedmutha Indust Ltd,NSE equity
+BEEKAY.NS,Beekay Steel Inds. Ltd.,NSE equity
+BLEL.NS,Behari Lal Engineering L,NSE equity
+BELLACASA.NS,Bella Casa Fash And Ret L,NSE equity
+BELRISE.NS,Belrise Industries Ltd,NSE equity
+BLAL.NS,Beml Land Assets Limited,NSE equity
+BEML.NS,Beml Limited,NSE equity
+BENARAS.NS,Benares Hotels Ltd.,NSE equity
+BENGALASM.NS,Bengal & Assam Co. Ltd.,NSE equity
+BERGEPAINT.NS,Berger Paints (I) Ltd,NSE equity
+BESTAGRO.NS,Best Agrolife Limited,NSE equity
+BETA.NS,Beta Drugs Limited,NSE equity
+BFINVEST.NS,Bf Investment Limited,NSE equity
+BFUTILITIE.NS,Bf Utilities Limited,NSE equity
+BANK10BETF.NS,Bfam - Bank10Betf,NSE equity
+BANKBETF.NS,Bfam - Bankbetf,NSE equity
+LIQUIDBETF.NS,Bfam - Liquidbetf,NSE equity
+NIFTYBETF.NS,Bfam - Niftybetf,NSE equity
+BHAGERIA.NS,Bhageria Industries Ltd,NSE equity
+BHAGCHEM.NS,Bhagiradha Chem & Inds L,NSE equity
+BHAGYANGR.NS,Bhagyanagar India Limited,NSE equity
+BHANDARI.NS,Bhandari Hosiery Exp Ltd,NSE equity
+BEPL.NS,Bhansali Eng. Polymers Lt,NSE equity
+BBL.NS,Bharat Bijlee Ltd,NSE equity
+BHARATCOAL.NS,Bharat Coking Coal Ltd,NSE equity
+BDL.NS,Bharat Dynamics Limited,NSE equity
+BEL.NS,Bharat Electronics Ltd,NSE equity
+BHARATFORG.NS,Bharat Forge Ltd,NSE equity
+BPLPHARMA.NS,Bharat Parenterals Ltd.,NSE equity
+BPCL.NS,Bharat Petroleum Corp  Lt,NSE equity
+BHARATRAS.NS,Bharat Rasayan Ltd,NSE equity
+BRNL.NS,Bharat Road Network Ltd,NSE equity
+BHARATSE.NS,Bharat Seats Limited,NSE equity
+BHARATWIRE.NS,Bharat Wire Ropes Ltd.,NSE equity
+BHARTIARTL.NS,Bharti Airtel Limited,NSE equity
+BHARTIHEXA.NS,Bharti Hexacom Limited,NSE equity
+BIL.NS,Bhartiya International,NSE equity
+BHEL.NS,Bhel,NSE equity
+BIGBLOC.NS,Bigbloc Construction Ltd,NSE equity
+BIKAJI.NS,Bikaji Foods Intern Ltd,NSE equity
+GROWW.NS,Billionbrains Garage Vn L,NSE equity
+BIMETAL.NS,Bimetal Bearings Ltd.,NSE equity
+BIOCON.NS,Biocon Limited.,NSE equity
+BIOFILCHEM.NS,Biofil Chem & Pharma Ltd,NSE equity
+BIRLACABLE.NS,Birla Cable Limited,NSE equity
+BIRLACORPN.NS,Birla Corporation Ltd,NSE equity
+BIRLANU.NS,Birlanu Limited,NSE equity
+ABSL10BANK.NS,Birlaslamc - Absl10Bank,NSE equity
+ABSLBANETF.NS,Birlaslamc - Abslbanetf,NSE equity
+ABSLLIQUID.NS,Birlaslamc - Abslliquid,NSE equity
+ABSLMSCIN.NS,Birlaslamc - Abslmscin,NSE equity
+ABSLNN50ET.NS,Birlaslamc - Abslnn50Et,NSE equity
+BSLSENETFG.NS,Birlaslamc - Bslsenetfg,NSE equity
+GSEC10ABSL.NS,Birlaslamc - Gsec10Absl,NSE equity
+HEALTHY.NS,Birlaslamc - Healthy,NSE equity
+MOMENTUM.NS,Birlaslamc - Momentum,NSE equity
+NIFTYQLITY.NS,Birlaslamc - Niftyqlity,NSE equity
+SILVER.NS,Birlaslamc - Silver,NSE equity
+TECH.NS,Birlaslamc - Tech,NSE equity
+ABSLPSE.NS,Birlaslamc-Abslpse,NSE equity
+BSOFT.NS,Birlasoft Limited,NSE equity
+BBOX.NS,Black Box Limited,NSE equity
+BLACKROSE.NS,Black Rose Inds. Ltd.,NSE equity
+BLACKBUCK.NS,Blackbuck Limited,NSE equity
+BLBLIMITED.NS,Blb Limited,NSE equity
+BLSE.NS,Bls E-Services Limited,NSE equity
+BLS.NS,Bls Intl Servs Ltd,NSE equity
+BLUECLOUDS.NS,Blue Cloud Softech Solu L,NSE equity
+BLUECOAST.NS,Blue Coast Hotels Limited,NSE equity
+BLUEDART.NS,Blue Dart Express Ltd,NSE equity
+BLUEJET.NS,Blue Jet Healthcare Ltd,NSE equity
+BLUESTARCO.NS,Blue Star Limited,NSE equity
+BLUESTONE.NS,Bluestone Jewel Lfstl Ltd,NSE equity
+BLUSPRING.NS,Bluspring Enterprises Ltd,NSE equity
+BMWVENTLTD.NS,Bmw Ventures Limited,NSE equity
+BNAGROCHEM.NS,Bn Agrochem Ltd.,NSE equity
+BTML.NS,Bodhi Tree Multimedia Ltd,NSE equity
+BOHRAIND.NS,Bohra Industries Limited,NSE equity
+BBTC.NS,Bombay Burmah Trading Cor,NSE equity
+BOMDYEING.NS,Bombay Dyeing & Mfg. Co L,NSE equity
+BSHSL.NS,Bombay Super Hybrid Seeds,NSE equity
+BONLON.NS,Bonlon Industries Limited,NSE equity
+BORANA.NS,Borana Weaves Limited,NSE equity
+BOROLTD.NS,Borosil Limited,NSE equity
+BORORENEW.NS,Borosil Renewables Ltd,NSE equity
+BOROSCI.NS,Borosil Scientific Ltd,NSE equity
+BOSCH-HCIL.NS,Bosch Home Comfrt Ind Ltd,NSE equity
+BOSCHLTD.NS,Bosch Limited,NSE equity
+BPL.NS,Bpl Ltd,NSE equity
+BRAHMINFRA.NS,Brahmaputra Infra L,NSE equity
+FIRSTCRY.NS,Brainbees Solutions Ltd,NSE equity
+BCONCEPTS.NS,Brand Concepts Limited,NSE equity
+BRIGADE.NS,Brigade Enter. Ltd,NSE equity
+BRIGHOTEL.NS,Brigade Hotel Venture Ltd,NSE equity
+BRIGHTBR.NS,Bright Brothers Ltd.,NSE equity
+BCG.NS,Brightcom Group Limited,NSE equity
+BRITANNIA.NS,Britannia Industries Ltd,NSE equity
+BROOKS.NS,Brooks Lab Limited,NSE equity
+BSE.NS,Bse Limited,NSE equity
+BSL.NS,Bsl Ltd,NSE equity
+BUTTERFLY.NS,Btrfly Gandhi Appl Ltd,NSE equity
+CGVAK.NS,C G V A K Software & Ex L,NSE equity
+MAPMYINDIA.NS,C.E. Info Systems Limited,NSE equity
+CMLL.NS,Caliber Mining And Log L,NSE equity
+CAMLINFINE.NS,Camlin Fine Sciences Ltd,NSE equity
+CAMPUS.NS,Campus Activewear Limited,NSE equity
+CANFINHOME.NS,Can Fin Homes Ltd,NSE equity
+CANBK.NS,Canara Bank,NSE equity
+CANHLIFE.NS,Canara Hsbc Life Ins Co L,NSE equity
+CRAMC.NS,Canara Robeco Amc Limited,NSE equity
+CANTABIL.NS,Cantabil Retail Ltd,NSE equity
+CAPACITE.NS,Capacite Infraproject Ltd,NSE equity
+CAPILLARY.NS,Capillary Techno India L,NSE equity
+CIFL.NS,Capital India Finance Ltd,NSE equity
+CAPITALSFB.NS,Capital Small Fin Bank L,NSE equity
+CAPLIPOINT.NS,Caplin Point Lab Ltd.,NSE equity
+CGCL.NS,Capri Global Capital Ltd,NSE equity
+CPL.NS,Captain Polyplast Limited,NSE equity
+CARBORUNIV.NS,Carborundum Universal Ltd,NSE equity
+CARERATING.NS,Care Ratings Limited,NSE equity
+CPEDU.NS,Career Point Edutech Ltd,NSE equity
+CARRARO.NS,Carraro India Limited,NSE equity
+CARTRADE.NS,Cartrade Tech Limited,NSE equity
+CARYSIL.NS,Carysil Limited,NSE equity
+CASTROLIND.NS,Castrol India Limited,NSE equity
+CCL.NS,Ccl Products (I) Ltd,NSE equity
+CEATLTD.NS,Ceat Limited,NSE equity
+CEIGALL.NS,Ceigall India Limited,NSE equity
+CEINSYS.NS,Ceinsys Tech Limited,NSE equity
+CELEBRITY.NS,Celebrity Fashions Ltd,NSE equity
+CELLO.NS,Cello World Limited,NSE equity
+CEMPRO.NS,Cemindia Projects Limited,NSE equity
+CENTRALBK.NS,Central Bank Of India,NSE equity
+CDSL.NS,Central Depo Ser (I) Ltd,NSE equity
+CMPDI.NS,Central Mine P N D Inst L,NSE equity
+CENTRUM.NS,Centrum Capital Limited,NSE equity
+CENTUM.NS,Centum Electronics Ltd,NSE equity
+CENTENKA.NS,Century Enka Ltd,NSE equity
+CENTEXT.NS,Century Extrusions Ltd,NSE equity
+CENTURYPLY.NS,Century Plyboards (I) Ltd,NSE equity
+CERA.NS,Cera Sanitaryware Ltd,NSE equity
+CESC.NS,Cesc Ltd,NSE equity
+CGPOWER.NS,Cg Power And Ind Sol Ltd,NSE equity
+CHALET.NS,Chalet Hotels Limited,NSE equity
+CLSEL.NS,Chaman Lal Setia Exp Ltd,NSE equity
+CHAMBLFERT.NS,Chambal Fertilizers Ltd,NSE equity
+CHEMBOND.NS,Chembond Materialtech Ltd,NSE equity
+CHEMCON.NS,Chemcon Special Chem Ltd,NSE equity
+CHEMCRUX.NS,Chemcrux Enterprises Ltd.,NSE equity
+CHEMFAB.NS,Chemfab Alkalis Limited,NSE equity
+CHEMPLASTS.NS,Chemplast Sanmar Limited,NSE equity
+CHENNPETRO.NS,Chennai Petroleum Corp Lt,NSE equity
+CHEVIOT.NS,Cheviot Company Limited,NSE equity
+CHOICEIN.NS,Choice International Ltd,NSE equity
+CHOICEGOLD.NS,Choiceamc - Choicegold,NSE equity
+CHOLAHLDNG.NS,Cholamandalam Fin Hol Ltd,NSE equity
+CHOLAFIN.NS,Cholamandalam In & Fin Co,NSE equity
+CIEINDIA.NS,Cie Automotive India Ltd,NSE equity
+CINELINE.NS,Cineline India Limited,NSE equity
+CINEVISTA.NS,Cinevista Limited,NSE equity
+CIPLA.NS,Cipla Ltd,NSE equity
+CUB.NS,City Union Bank Ltd,NSE equity
+CLEDUCATE.NS,Cl Educate Limited,NSE equity
+CLEANMAX.NS,Clean Max Enviro En Sol L,NSE equity
+CLEAN.NS,Clean Science & Tech Ltd,NSE equity
+CMRGREEN.NS,Cmr Green Technologies L,NSE equity
+CMSINFO.NS,Cms Info Systems Limited,NSE equity
+COALINDIA.NS,Coal India Ltd,NSE equity
+COASTCORP.NS,Coastal Corporation Ltd,NSE equity
+COCHINSHIP.NS,Cochin Shipyard Limited,NSE equity
+COFFEEDAY.NS,Coffee Day Enterprise Ltd,NSE equity
+COFORGE.NS,Coforge Limited,NSE equity
+COHANCE.NS,Cohance Lifesciences Ltd,NSE equity
+COLPAL.NS,Colgate Palmolive Ltd.,NSE equity
+COMFINTE.NS,Comfort Intech Ltd.,NSE equity
+COMSYN.NS,Commercial Syn Bags Ltd,NSE equity
+COMPEAU.NS,Competent Automob Co. L,NSE equity
+COMPUSOFT.NS,Compucom Software Ltd,NSE equity
+CAMS.NS,Computer Age Mngt Ser Ltd,NSE equity
+CONCORDBIO.NS,Concord Biotech Limited,NSE equity
+CEWATER.NS,Concord Enviro Systems L,NSE equity
+CONFIPET.NS,Confidence Petro Ind Ltd.,NSE equity
+CCCL.NS,Cons. Const. Consort Ltd,NSE equity
+CONCOR.NS,Container Corp Of Ind Ltd,NSE equity
+CONTROLPR.NS,Control Print Limited,NSE equity
+CORALFINAC.NS,Coral India Fin & Hous Lt,NSE equity
+COROMANDEL.NS,Coromandel Interntl. Ltd,NSE equity
+CORONA.NS,Corona Remedies Limited,NSE equity
+COSMOFIRST.NS,Cosmo First Limited,NSE equity
+CCHHL.NS,Country Club Hosp Hol Ltd,NSE equity
+CPCAP.NS,Cp Capital Limited,NSE equity
+CPSEETF.NS,Cpse Etf,NSE equity
+CRAFTSMAN.NS,Craftsman Automation Ltd,NSE equity
+CRAVATEX.NS,Cravatex Ltd.,NSE equity
+CREATIVEYE.NS,Creative Eye Limited,NSE equity
+CNL.NS,Creative Newtech Limited,NSE equity
+CREDITACC.NS,Creditaccess Grameen Ltd,NSE equity
+MUFTI.NS,Credo Brands Marketing L,NSE equity
+CREST.NS,Crest Ventures Limited,NSE equity
+CRISIL.NS,Crisil Ltd,NSE equity
+CRIZAC.NS,Crizac Limited,NSE equity
+CROMPTON.NS,Crompt Grea Con Elec Ltd,NSE equity
+CROWN.NS,Crown Lifters Limited,NSE equity
+CSBBANK.NS,Csb Bank Limited,NSE equity
+CSLFINANCE.NS,Csl Finance Limited,NSE equity
+CSM.NS,Csm Technologies Limited,NSE equity
+CUMMINSIND.NS,Cummins India Ltd,NSE equity
+CUPID.NS,Cupid Limited,NSE equity
+CYIENTDLM.NS,Cyient Dlm Limited,NSE equity
+CYIENT.NS,Cyient Limited,NSE equity
+DLINKINDIA.NS,D-Link India Ltd,NSE equity
+DPABHUSHAN.NS,D. P. Abhushan Limited,NSE equity
+DBCORP.NS,D.B.Corp Ltd,NSE equity
+DABUR.NS,Dabur India Ltd,NSE equity
+DALBHARAT.NS,Dalmia Bharat Limited,NSE equity
+DALMIASUG.NS,Dalmia Bharat Sug In Ltd,NSE equity
+DAMCAPITAL.NS,Dam Capital Advisors Ltd,NSE equity
+DANGEE.NS,Dangee Dums Limited,NSE equity
+DATAPATTNS.NS,Data Patterns India Ltd,NSE equity
+DATAMATICS.NS,Datamatics Global Ser Ltd,NSE equity
+DAVANGERE.NS,Davangere Sugar Company L,NSE equity
+DCI.NS,Dc Infotech And Comun Ltd,NSE equity
+DCBBANK.NS,Dcb Bank Limited,NSE equity
+DCMFINSERV.NS,Dcm Financial Services Lt,NSE equity
+DCM.NS,Dcm Ltd,NSE equity
+DCMNVL.NS,Dcm Nouvelle Limited,NSE equity
+DCMSRIND.NS,Dcm Shriram Ind Ltd,NSE equity
+DCMSIL.NS,Dcm Shriram Internatnl L,NSE equity
+DCMSHRIRAM.NS,Dcm Shriram Limited,NSE equity
+DCW.NS,Dcw Ltd,NSE equity
+DCXINDIA.NS,Dcx Systems Limited,NSE equity
+DDEVPLSTIK.NS,Ddev Plastiks Ind Ltd,NSE equity
+DENORA.NS,De Nora India Limited,NSE equity
+DECCANCE.NS,Deccan Cements Limited,NSE equity
+DECNGOLD.NS,Deccan Gold Mines Ltd.,NSE equity
+DEEDEV.NS,Dee Development Eng Ltd,NSE equity
+DEEPINDS.NS,Deep Industries Limited,NSE equity
+DEEPA.NS,Deepa Jewellers Limited,NSE equity
+DBEIL.NS,Deepak Builders & Eng I L,NSE equity
+DEEPAKFERT.NS,Deepak Fertilizers & Petr,NSE equity
+DEEPAKNTR.NS,Deepak Nitrite Ltd,NSE equity
+DELHIVERY.NS,Delhivery Limited,NSE equity
+DELTACORP.NS,Delta Corp Limited,NSE equity
+DELTAMAGNT.NS,Delta Manufacturing Ltd,NSE equity
+DEN.NS,Den Networks Ltd,NSE equity
+DENTA.NS,Denta Water N Infra Sol L,NSE equity
+DEVX.NS,Dev Accelerator Limited,NSE equity
+DEVIT.NS,Dev Info Technology Ltd,NSE equity
+DEVYANI.NS,Devyani International Ltd,NSE equity
+DBOL.NS,Dhampur Bio Organics Ltd,NSE equity
+DHAMPURSUG.NS,Dhampur Sugar Mills Ltd.,NSE equity
+DHANBANK.NS,Dhanlaxmi Bank Limited,NSE equity
+DHANUKA.NS,Dhanuka Agritech Ltd,NSE equity
+DHARMAJ.NS,Dharmaj Crop Guard Ltd,NSE equity
+DHATRE.NS,Dhatre Udyog Ltd.,NSE equity
+DHOOTTRANS.NS,Dhoot Transmission Ltd,NSE equity
+DHRUV.NS,Dhruv Consultancy Ser Ltd,NSE equity
+DHUNINV.NS,Dhunseri Investments Ltd,NSE equity
+DVL.NS,Dhunseri Ventures Limited,NSE equity
+DIAMINESQ.NS,Diamines & Chemicals Ltd,NSE equity
+DICIND.NS,Dic India Limited,NSE equity
+DIFFNKG.NS,Diffusion Engineers Ltd,NSE equity
+DGCONTENT.NS,Digicontent Limited,NSE equity
+DIGIDRIVE.NS,Digidrive Distributors L,NSE equity
+DIGISPICE.NS,Digispice Technologies Lt,NSE equity
+DIGITIDE.NS,Digitide Solutions Ltd,NSE equity
+DNAMEDIA.NS,Diligent Media Corp Ltd.,NSE equity
+DBL.NS,Dilip Buildcon Limited,NSE equity
+DISAQ.NS,Disa India Ltd.,NSE equity
+DISHTV.NS,Dish Tv India Ltd.,NSE equity
+DCAL.NS,Dishman Carbo Amcis Ltd,NSE equity
+DIVGIITTS.NS,Divgi Torqtransfer Syst L,NSE equity
+DIVISLAB.NS,Divi S Laboratories Ltd,NSE equity
+DIXON.NS,Dixon Techno (India) Ltd,NSE equity
+DJML.NS,Dj Mediaprint & Log Ltd,NSE equity
+DLF.NS,Dlf Limited,NSE equity
+DMCC.NS,Dmcc Speciality Chemicals,NSE equity
+DODLA.NS,Dodla Dairy Limited,NSE equity
+DOLATALGO.NS,Dolat Algotech Limited,NSE equity
+DOLLAR.NS,Dollar Industries Limited,NSE equity
+DOLLEX.NS,Dollex Agrotech Limited,NSE equity
+DOLPHIN.NS,Dolphin Off Ent (Ind) L,NSE equity
+DOMS.NS,Doms Industries Limited,NSE equity
+DONEAR.NS,Donear Ind. Limited,NSE equity
+AGARWALEYE.NS,Dr Agarwals Health Care L,NSE equity
+DRAGARWQ.NS,Dr. Agarwal'S Eye Hosp L,NSE equity
+LALPATHLAB.NS,Dr. Lal Path Labs Ltd.,NSE equity
+DRREDDY.NS,Dr. Reddy S Laboratories,NSE equity
+DRCSYSTEMS.NS,Drc Systems India Limited,NSE equity
+DREAMFOLKS.NS,Dreamfolks Services Ltd,NSE equity
+DREDGECORP.NS,Dredging Corp Of India,NSE equity
+KEEPLEARN.NS,Dsj Keep Learning Ltd,NSE equity
+LIQUIDETF.NS,Dsp Liquid Etf,NSE equity
+BANK10ADD.NS,Dspamc - Bank10Add,NSE equity
+BANKADD.NS,Dspamc - Dspbank,NSE equity
+GOLDADD.NS,Dspamc - Dspgold,NSE equity
+ITADD.NS,Dspamc - Dspit,NSE equity
+EQUAL50ADD.NS,Dspamc - Dspnewetf,NSE equity
+NIFTYADD.NS,Dspamc - Dspnifty,NSE equity
+PSUBANKADD.NS,Dspamc - Dsppsbketf,NSE equity
+PVTBANKADD.NS,Dspamc - Dsppvbketf,NSE equity
+MIDQ50ADD.NS,Dspamc - Dspq50Etf,NSE equity
+SENSEXADD.NS,Dspamc - Dspsenxetf,NSE equity
+SILVERADD.NS,Dspamc - Dspsilvetf,NSE equity
+FLEXIADD.NS,Dspamc - Flexiadd,NSE equity
+FMCGADD.NS,Dspamc - Fmcgadd,NSE equity
+HEALTHADD.NS,Dspamc - Healthadd,NSE equity
+LIQUIDADD.NS,Dspamc - Liquidadd,NSE equity
+MIDBANKADD.NS,Dspamc - Midbankadd,NSE equity
+MIDCAPADD.NS,Dspamc - Midcapadd,NSE equity
+MSCIADD.NS,Dspamc - Msciadd,NSE equity
+NEXT30ADD.NS,Dspamc - Next30Add,NSE equity
+NEXT50ADD.NS,Dspamc - Next50Add,NSE equity
+SMALLADD.NS,Dspamc - Smalladd,NSE equity
+TOP10ADD.NS,Dspamc - Top10Add,NSE equity
+DUCON.NS,Ducon Infratechnologies L,NSE equity
+DWARKESH.NS,Dwarikesh Sugar Ind Ltd,NSE equity
+DSSL.NS,Dynacons Sys & Soln Ltd,NSE equity
+DYNAMATECH.NS,Dynamatic Technologies,NSE equity
+DYCL.NS,Dynamic Cables Limited,NSE equity
+DYNPRO.NS,Dynemic Products Limited,NSE equity
+EASTWEST.NS,East West Freight Carri L,NSE equity
+EASEMYTRIP.NS,Easy Trip Planners Ltd,NSE equity
+ECLERX.NS,Eclerx Services Ltd,NSE equity
+ECORECO.NS,Eco Recycling Ltd.,NSE equity
+ECOSMOBLTY.NS,Ecos (India) Mob & Hosp L,NSE equity
+BBETF0432.NS,Edelamc - Bbetf0432,NSE equity
+EBANK10.NS,Edelamc - Ebank10,NSE equity
+EBANKNIFTY.NS,Edelamc - Ebanknifty,NSE equity
+EBBETF0430.NS,Edelamc - Ebbetf0430,NSE equity
+EBBETF0431.NS,Edelamc - Ebbetf0431,NSE equity
+EBBETF0433.NS,Edelamc - Ebbetf0433,NSE equity
+ECAPINSURE.NS,Edelamc - Ecapinsure,NSE equity
+EGOLD.NS,Edelamc - Egold,NSE equity
+ELIQUID.NS,Edelamc - Eliquid,NSE equity
+ELM250.NS,Edelamc - Elm250,NSE equity
+ELMDIV.NS,Edelamc - Elmdiv,NSE equity
+EMETAL.NS,Edelamc - Emetal,NSE equity
+EMULTIMQ.NS,Edelamc - Emultimq,NSE equity
+ENEXT50.NS,Edelamc - Enext50,NSE equity
+ENIFTY.NS,Edelamc - Enifty,NSE equity
+ESENSEX.NS,Edelamc - Esensex,NSE equity
+ESILVER.NS,Edelamc - Esilver,NSE equity
+EDELWEISS.NS,Edelweiss Fin Serv Ltd,NSE equity
+EFCIL.NS,Efc (I) Limited,NSE equity
+EICHERMOT.NS,Eicher Motors Ltd,NSE equity
+EIDPARRY.NS,Eid Parry India Ltd,NSE equity
+EIHAHOTELS.NS,Eih Associated Hotels Ltd,NSE equity
+EIHOTEL.NS,Eih Limited,NSE equity
+EIMCOELECO.NS,Eimco Elecon (India) Ltd,NSE equity
+ELANTAS.NS,Elantas Beck India Ltd.,NSE equity
+ELCIDIN.NS,Elcid Investments Ltd.,NSE equity
+ELDEHSG.NS,Eldeco Hsg & Ind Ltd.,NSE equity
+ELECON.NS,Elecon Eng. Co. Ltd,NSE equity
+EMIL.NS,Electronics Mart Ind Ltd,NSE equity
+ELECTCAST.NS,Electrosteel Castings Ltd,NSE equity
+ELECTHERM.NS,Electrotherm (I) Ltd.,NSE equity
+ELEVATE.NS,Elevate Campuses Limited,NSE equity
+ELGIEQUIP.NS,Elgi Equipments Ltd,NSE equity
+ELGIRUBCO.NS,Elgi Rubber Co. Ltd,NSE equity
+ELIN.NS,Elin Electronics Limited,NSE equity
+ELITECON.NS,Elitecon International L,NSE equity
+ELLEN.NS,Ellenbarrie Indus Gases L,NSE equity
+ELPROINTL.NS,Elpro International Ltd,NSE equity
+EMAMILTD.NS,Emami Limited,NSE equity
+EMAMIREAL.NS,Emami Realty Limited,NSE equity
+EMBDL.NS,Embassy Developments Ltd,NSE equity
+EMCURE.NS,Emcure Pharmaceuticals L,NSE equity
+EMKAY.NS,Emkay Global Fin Serv Ltd,NSE equity
+EMMVEE.NS,Emmvee Photovoltaic Pwr L,NSE equity
+EMPIND.NS,Empire Industries Ltd.,NSE equity
+EMPOWER.NS,Empower India Ltd.,NSE equity
+EMSLIMITED.NS,Ems Limited,NSE equity
+EMUDHRA.NS,Emudhra Limited,NSE equity
+ENDURANCE.NS,Endurance Techno. Ltd.,NSE equity
+ENERGYDEV.NS,Energy Deve. Co.Ltd,NSE equity
+ENGINERSIN.NS,Engineers India Ltd,NSE equity
+ENKEIWHEL.NS,Enkei Wheels (India) Ltd.,NSE equity
+ENTERO.NS,Entero Healthcare Solu L,NSE equity
+ENIL.NS,Entertain Net. Ind. Ltd.,NSE equity
+EIEL.NS,Enviro Infra Engineers L,NSE equity
+EPACK.NS,Epack Durable Limited,NSE equity
+EPACKPEB.NS,Epack Prefab Techn Ltd,NSE equity
+EPIGRAL.NS,Epigral Limited,NSE equity
+EPL.NS,Epl Limited,NSE equity
+EQUITASBNK.NS,Equitas Small Fin Bnk Ltd,NSE equity
+ERIS.NS,Eris Lifesciences Limited,NSE equity
+ESABINDIA.NS,Esab India Ltd,NSE equity
+ESCORTS.NS,Escorts Kubota Limited,NSE equity
+ESDS.NS,Esds Software Solution L,NSE equity
+ESSARSHPNG.NS,Essar Shipping Ltd,NSE equity
+ESTER.NS,Ester Industries Ltd,NSE equity
+ETERNAL.NS,Eternal Limited,NSE equity
+ETHOSLTD.NS,Ethos Limited,NSE equity
+EUREKAFORB.NS,Eureka Forbes Limited,NSE equity
+EUROBOND.NS,Euro Panel Products Ltd,NSE equity
+EUROPRATIK.NS,Euro Pratik Sales Limited,NSE equity
+EUROTEXIND.NS,Eurotex Industries Ltd,NSE equity
+EVEREADY.NS,Eveready Inds. Ind.  Ltd.,NSE equity
+EKC.NS,Everest Kanto Cylinderltd,NSE equity
+EXCELINDUS.NS,Excel Industries Ltd,NSE equity
+EXCELSOFT.NS,Excelsoft Technologies L,NSE equity
+EXICOM.NS,Exicom Tele Systems Ltd,NSE equity
+EXIDEIND.NS,Exide Industries Ltd,NSE equity
+EXPLEOSOL.NS,Expleo Solutions Limited,NSE equity
+EXXARO.NS,Exxaro Tiles Limited,NSE equity
+FABTECH.NS,Fabtech Technologies Ltd,NSE equity
+FACT.NS,Fact Ltd,NSE equity
+FAZE3Q.NS,Faze Three Limited,NSE equity
+FCSSOFT.NS,Fcs Software Soln. Ltd.,NSE equity
+FDC.NS,Fdc Limited,NSE equity
+FEDFINA.NS,Fedbank Financial Ser L,NSE equity
+FEDDERSHOL.NS,Fedders Holding Ltd.,NSE equity
+FEDERALBNK.NS,Federal Bank Ltd,NSE equity
+FMGOETZE.NS,Federal-Mogul Goetze (Ind,NSE equity
+FERMENTA.NS,Fermenta Biotech Ltd.,NSE equity
+FIBERWEB.NS,Fiberweb India Limited,NSE equity
+FIEMIND.NS,Fiem Industries Limited,NSE equity
+FILATFASH.NS,Filatex Fashions Limited,NSE equity
+FILATEX.NS,Filatex India Ltd,NSE equity
+FINEORG.NS,Fine Organic Ind. Ltd.,NSE equity
+FCL.NS,Fineotex Chemical Limited,NSE equity
+FINKURVE.NS,Finkurve Financial Serv L,NSE equity
+FINOPB.NS,Fino Payments Bank Ltd,NSE equity
+FINCABLES.NS,Finolex Cables Ltd,NSE equity
+FINPIPE.NS,Finolex Industries Ltd,NSE equity
+FSL.NS,Firstsource Solu. Ltd.,NSE equity
+FISCHER.NS,Fischer Medical Venture L,NSE equity
+FIVESTAR.NS,Five-Star Bus Fin Ltd,NSE equity
+FLAIR.NS,Flair Writing Indust Ltd,NSE equity
+FOODSIN.NS,Foods & Inns Limited,NSE equity
+FORCEMOT.NS,Force Motors Limited,NSE equity
+FORTIS.NS,Fortis Healthcare Ltd,NSE equity
+FOSECOIND.NS,Foseco India Ltd,NSE equity
+FRACTAL.NS,Fractal Analytics Limited,NSE equity
+FREDUN.NS,Fredun Pharmaceuticals L,NSE equity
+FRONTSP.NS,Frontier Springs Ltd.,NSE equity
+NYKAA.NS,Fsn E Commerce Ventures,NSE equity
+UTLSOLAR.NS,Fujiyama Power Systems L,NSE equity
+FUSION.NS,Fusion Finance Limited,NSE equity
+FMNL.NS,Future Mkt Networks Ltd,NSE equity
+GMBREW.NS,G M Breweries Ltd,NSE equity
+GRINFRA.NS,G R Infraprojects Limited,NSE equity
+GTECJAINX.NS,G-Tec Jainx Education Ltd,NSE equity
+GABRIEL.NS,Gabriel India Ltd,NSE equity
+GAIL.NS,Gail (India) Ltd,NSE equity
+GAJA.NS,Gaja Alt Asset Mgt Ltd,NSE equity
+GALAPREC.NS,Gala Precision Eng Ltd,NSE equity
+GALAXYSURF.NS,Galaxy Surfactants Ltd,NSE equity
+GALLANTT.NS,Gallantt Ispat Limited,NSE equity
+GANDHAR.NS,Gandhar Oil Refine Ind L,NSE equity
+GANDHITUBE.NS,Gandhi Spl. Tubes Ltd,NSE equity
+GANESHCP.NS,Ganesh Consumer Product L,NSE equity
+GANESHHOU.NS,Ganesh Housing Limited,NSE equity
+GANECOS.NS,Ganesha Ecosphere Limited,NSE equity
+GANGAFORGE.NS,Ganga Forging Limited,NSE equity
+GANGESSECU.NS,Ganges Securities Limited,NSE equity
+GRSE.NS,Garden Reach Ship&Eng Ltd,NSE equity
+GARUDA.NS,Garuda Construct N Eng L,NSE equity
+GRWRHITECH.NS,Garware Hi-Tech Films Ltd,NSE equity
+GARFIBRES.NS,Garware Tech Fibres Ltd,NSE equity
+GATEWAY.NS,Gateway Distriparks Ltd,NSE equity
+GAUDIUMIVF.NS,Gaudium Ivf N Women H L,NSE equity
+GAYAHWS.NS,Gayatri Highways Limited,NSE equity
+GAYAPROJ.NS,Gayatri Projects Ltd,NSE equity
+GVPIL.NS,Ge Power India Limited,NSE equity
+GVT&D.NS,Ge Vernova T&D India Ltd,NSE equity
+GEEKAYWIRE.NS,Geekay Wires Limited,NSE equity
+GEMAROMA.NS,Gem Aromatics Limited,NSE equity
+GICRE.NS,General Ins Corp Of India,NSE equity
+GENCON.NS,Generic Eng Cons Proj Ltd,NSE equity
+GENESYS.NS,Genesys Intl Corpn Ltd,NSE equity
+GENUSPAPER.NS,Genus P&B Limited,NSE equity
+GENUSPOWER.NS,Genus Power Infrastru Ltd,NSE equity
+GEOJITFSL.NS,Geojit Financial Ser L,NSE equity
+GFLLIMITED.NS,Gfl Limited,NSE equity
+GHCL.NS,Ghcl Limited,NSE equity
+GHCLTEXTIL.NS,Ghcl Textiles Limited,NSE equity
+GICHSGFIN.NS,Gic Housing Finance Ltd,NSE equity
+GILLANDERS.NS,Gillanders Arbuthnot Ltd,NSE equity
+GILLETTE.NS,Gillette India Ltd,NSE equity
+GKENERGY.NS,Gk Energy Limited,NSE equity
+GKB.NS,Gkb Ophthalmics Ltd.,NSE equity
+GKWLIMITED.NS,Gkw Limited,NSE equity
+GLAND.NS,Gland Pharma Limited,NSE equity
+GLASSWALL.NS,Glass Wall System (I) Ltd,NSE equity
+GLAXO.NS,Glaxosmithkline Pharma Lt,NSE equity
+GLENMARK.NS,Glenmark Pharmaceuticals,NSE equity
+GLOBAL.NS,Global Education Limited,NSE equity
+MEDANTA.NS,Global Health Limited,NSE equity
+GSLSU.NS,Global Surfaces Limited,NSE equity
+GLOBALVECT.NS,Global Vec Helicorp Ltd,NSE equity
+GLOBALE.NS,Globale Tessile Limited,NSE equity
+GLOBECIVIL.NS,Globe Civil Projects Ltd,NSE equity
+GLOBE.NS,Globe Enterprise (I) Ltd,NSE equity
+GLOBUSSPR.NS,Globus Spirits Ltd,NSE equity
+GLOSTERLTD.NS,Gloster Limited,NSE equity
+GLOTTIS.NS,Glottis Limited,NSE equity
+GMMPFAUDLR.NS,Gmm Pfaudler Limited,NSE equity
+GMRAIRPORT.NS,Gmr Airports Limited,NSE equity
+GMRP&UI.NS,Gmr Pow And Urban Infra L,NSE equity
+GNA.NS,Gna Axles Limited,NSE equity
+EBGNG.NS,Gng Electronics Limited,NSE equity
+GODIGIT.NS,Go Digit General Ins Ltd,NSE equity
+GOCOLORS.NS,Go Fashion India Ltd,NSE equity
+GOACARBON.NS,Goa Carbon Limited,NSE equity
+GOCLCORP.NS,Gocl Corporation Limited,NSE equity
+GODAVARIB.NS,Godavari Biorefineries L,NSE equity
+GPIL.NS,Godawari Pow & Isp Ltd,NSE equity
+GODFRYPHLP.NS,Godfrey Phillips India Lt,NSE equity
+GODREJAGRO.NS,Godrej Agrovet Limited,NSE equity
+GODREJCP.NS,Godrej Consumer Products,NSE equity
+GODREJIND.NS,Godrej Industries Ltd,NSE equity
+GODREJPROP.NS,Godrej Properties Ltd,NSE equity
+GOKEX.NS,Gokaldas Exports Ltd.,NSE equity
+GOKULAGRO.NS,Gokul Agro Resources Ltd,NSE equity
+GOKUL.NS,Gokul Refoils & Solv Ltd,NSE equity
+GOLDIAM.NS,Goldiam International Ltd,NSE equity
+GOODLUCK.NS,Goodluck India Limited,NSE equity
+GOODYEAR.NS,Goodyear India Limited,NSE equity
+GOPAL.NS,Gopal Snacks Limited,NSE equity
+GOYALALUM.NS,Goyal Aluminiums Limited,NSE equity
+GPTHEALTH.NS,Gpt Healthcare Limited,NSE equity
+GPTINFRA.NS,Gpt Infraprojects Ltd,NSE equity
+GRANDOAK.NS,Grand Oak Canyons Dist L,NSE equity
+GRANULES.NS,Granules India Limited,NSE equity
+GRAPHITE.NS,Graphite India Ltd,NSE equity
+GRASIM.NS,Grasim Industries Ltd,NSE equity
+GRAUWEIL.NS,Grauer & Weil Ind Ltd,NSE equity
+GRAVITA.NS,Gravita India Limited,NSE equity
+GREAVESCOT.NS,Greaves Cotton Ltd.,NSE equity
+GREENLAM.NS,Greenlam Industries Ltd.,NSE equity
+GREENPANEL.NS,Greenpanel Industries Ltd,NSE equity
+GREENPLY.NS,Greenply Industries Ltd,NSE equity
+GCSL.NS,Gretex Corporate Services,NSE equity
+GRINDWELL.NS,Grindwell Norton Limited,NSE equity
+GRMOVER.NS,Grm Overseas Limited,NSE equity
+CEMNTGROWW.NS,Growwamc - Cemntgroww,NSE equity
+GROWWCAPM.NS,Growwamc - Growwcapm,NSE equity
+GROWWCHEM.NS,Growwamc - Growwchem,NSE equity
+GROWWDEFNC.NS,Growwamc - Growwdefnc,NSE equity
+GROWWEV.NS,Growwamc - Growwev,NSE equity
+GROWWGOLD.NS,Growwamc - Growwgold,NSE equity
+GROWWHOSPI.NS,Growwamc - Growwhospi,NSE equity
+GROWWLIQID.NS,Growwamc - Growwliqid,NSE equity
+GROWWLOVOL.NS,Growwamc - Growwlovol,NSE equity
+GROWWMC150.NS,Growwamc - Growwmc150,NSE equity
+GROWWMETAL.NS,Growwamc - Growwmetal,NSE equity
+GROWWMOM50.NS,Growwamc - Growwmom50,NSE equity
+GROWWN200.NS,Growwamc - Growwn200,NSE equity
+GROWWNET.NS,Growwamc - Growwnet,NSE equity
+GROWWNIFTY.NS,Growwamc - Growwnifty,NSE equity
+GROWWNXT50.NS,Growwamc - Growwnxt50,NSE equity
+GROWWPOWER.NS,Growwamc - Growwpower,NSE equity
+GROWWPSE.NS,Growwamc - Growwpse,NSE equity
+GROWWPSUBK.NS,Growwamc - Growwpsubk,NSE equity
+GROWWRAIL.NS,Growwamc - Growwrail,NSE equity
+GROWWRLTY.NS,Growwamc - Growwrlty,NSE equity
+GROWWSC250.NS,Growwamc - Growwsc250,NSE equity
+GROWWSLVR.NS,Growwamc - Growwslvr,NSE equity
+PVTBKGROWW.NS,Growwamc - Pvtbkgroww,NSE equity
+SMALLGROWW.NS,Growwamc - Smallgroww,NSE equity
+GRPLTD.NS,Grp Limited,NSE equity
+GSPCROP.NS,Gsp Crop Science Limited,NSE equity
+GSS.NS,Gss Infotech Limited,NSE equity
+GTLINFRA.NS,Gtl Infra.Ltd,NSE equity
+GTL.NS,Gtl Ltd,NSE equity
+GTPL.NS,Gtpl Hathway Limited,NSE equity
+GUFICBIO.NS,Gufic Biosciences Ltd.,NSE equity
+GIPCL.NS,Guj Ind Pow Co. Ltd,NSE equity
+GNFC.NS,Guj Nar Val Fer & Chem L,NSE equity
+GSFC.NS,Guj State Fert & Chem Ltd,NSE equity
+GUJAPOLLO.NS,Guj. Apollo Ind. Ltd.,NSE equity
+GUJALKALI.NS,Gujarat Alkalies & Chem,NSE equity
+GAEL.NS,Gujarat Ambuja Exports Lt,NSE equity
+GUJENERGY.NS,Gujarat Energy Limited,NSE equity
+FLUOROCHEM.NS,Gujarat Fluorochem Ltd,NSE equity
+GKSL.NS,Gujarat Kidney N Sup Sp L,NSE equity
+GLFL.NS,Gujarat Lease Financing L,NSE equity
+GMDCLTD.NS,Gujarat Mineral Dev Corp,NSE equity
+GNRL.NS,Gujarat Natural Res L,NSE equity
+GPPL.NS,Gujarat Pipavav Port Ltd,NSE equity
+GUJRAFFIA.NS,Gujarat Raffia Indust Ltd,NSE equity
+GUJTHEM.NS,Gujarat Themis Biosyn Ltd,NSE equity
+GULFOILLUB.NS,Gulf Oil Lub. Ind. Ltd.,NSE equity
+GULPOLY.NS,Gulshan Polyols Limited,NSE equity
+GYFTR.NS,Gyftr Limited,NSE equity
+HBESD.NS,H B Estate Developers L,NSE equity
+HGINFRA.NS,H.G.Infra Engineering Ltd,NSE equity
+HALDER.NS,Halder Venture Limited,NSE equity
+HALDYNGL.NS,Haldyn Glass Ltd.,NSE equity
+HALEOSLABS.NS,Haleos Labs Limited,NSE equity
+HAMPTON.NS,Hampton Sky Realty Ltd.,NSE equity
+HGM.NS,Handson Gbl Mngmnt Ltd,NSE equity
+HAPPSTMNDS.NS,Happiest Minds Techno Ltd,NSE equity
+HAPPYFORGE.NS,Happy Forgings Limited,NSE equity
+HARDWYN.NS,Hardwyn India Limited,NSE equity
+HARIOMPIPE.NS,Hariom Pipe Industries L,NSE equity
+HRYNSHP.NS,Hariyana Ship Breakers L,NSE equity
+HARRMALAYA.NS,Harrison Malayalam Ltd,NSE equity
+HARSHA.NS,Harsha Engineers Int Ltd,NSE equity
+HATHWAY.NS,Hathway Cable & Datacom,NSE equity
+HATSUN.NS,Hatsun Agro Product Ltd.,NSE equity
+HAVELLS.NS,Havells India Limited,NSE equity
+HAWKINCOOK.NS,Hawkins Cookers Ltd,NSE equity
+HAZOOR.NS,Hazoor Multi Projects Ltd,NSE equity
+HBPOR.NS,Hb Portfolio Ltd.,NSE equity
+HBSL.NS,Hb Stockholdings Limited,NSE equity
+HBLENGINE.NS,Hbl Engineering Ltd,NSE equity
+HCL-INSYS.NS,Hcl Infosystems Ltd,NSE equity
+HCLTECH.NS,Hcl Technologies Ltd,NSE equity
+HDBFS.NS,Hdb Financial Services L,NSE equity
+HDFCAMC.NS,Hdfc Amc Limited,NSE equity
+HDFCBANK.NS,Hdfc Bank Ltd,NSE equity
+HDFCGOLD.NS,Hdfc Gold Etf,NSE equity
+HDFCLIFE.NS,Hdfc Life Ins Co Ltd,NSE equity
+HDFCBSE500.NS,Hdfcamc - Hdfcbse500,NSE equity
+HDFCGROWTH.NS,Hdfcamc - Hdfcgrowth,NSE equity
+HDFCLIQUID.NS,Hdfcamc - Hdfcliquid,NSE equity
+HDFCLOWVOL.NS,Hdfcamc - Hdfclowvol,NSE equity
+HDFCMID150.NS,Hdfcamc - Hdfcmid150,NSE equity
+HDFCMOMENT.NS,Hdfcamc - Hdfcmoment,NSE equity
+HDFCNEXT50.NS,Hdfcamc - Hdfcnext50,NSE equity
+HDFCNIF100.NS,Hdfcamc - Hdfcnif100,NSE equity
+HDFCNIFBAN.NS,Hdfcamc - Hdfcnifban,NSE equity
+HDFCNIFIT.NS,Hdfcamc - Hdfcnifit,NSE equity
+HDFCNIFTY.NS,Hdfcamc - Hdfcnifty,NSE equity
+HDFCNIMEG.NS,Hdfcamc - Hdfcnimeg,NSE equity
+HDFCPVTBAN.NS,Hdfcamc - Hdfcpvtban,NSE equity
+HDFCQUAL.NS,Hdfcamc - Hdfcqual,NSE equity
+HDFCSENSEX.NS,Hdfcamc - Hdfcsensex,NSE equity
+HDFCSILVER.NS,Hdfcamc - Hdfcsilver,NSE equity
+HDFCSML250.NS,Hdfcamc - Hdfcsml250,NSE equity
+HDFCVALUE.NS,Hdfcamc - Hdfcvalue,NSE equity
+HDFCPSUBK.NS,Hdfcamc Hdfcpsubk,NSE equity
+HEADSUP.NS,Heads Up Ventures Limited,NSE equity
+HEALTHX.NS,Health X Platform Limited,NSE equity
+HCG.NS,Healthcare Glob. Ent. Ltd,NSE equity
+HECPROJECT.NS,Hec Infra Projects Ltd,NSE equity
+HEGAM.NS,Heg Advanced Material Ltd,NSE equity
+HEIDELBERG.NS,Heidelbergcement (I) Ltd,NSE equity
+HEMIPROP.NS,Hemisphere Prop Ind Ltd,NSE equity
+HERANBA.NS,Heranba Industries Ltd,NSE equity
+HERITGFOOD.NS,Heritage Foods Ltd,NSE equity
+HEROMOTOCO.NS,Hero Motocorp Limited,NSE equity
+HEROMOTORS.NS,Hero Motors Limited,NSE equity
+HESTERBIO.NS,Hester Biosciences Ltd,NSE equity
+HEXATRADEX.NS,Hexa Tradex Limited,NSE equity
+HEXT.NS,Hexaware Technologies Ltd,NSE equity
+HITECH.NS,Hi-Tech Pipes Limited,NSE equity
+HILINFRA.NS,Highway Infrastructure L,NSE equity
+HIKAL.NS,Hikal Limited,NSE equity
+HILTON.NS,Hilton Metal Forging Ltd,NSE equity
+HSCL.NS,Himadri Speciality Chem L,NSE equity
+HIMATSEIDE.NS,Himatsingka Seide Ltd,NSE equity
+HINDALUMI.NS,Hind Aluminium Inds. Ltd.,NSE equity
+HINDALCO.NS,Hindalco  Industries  Ltd,NSE equity
+HINDCON.NS,Hindcon Chemicals Limited,NSE equity
+HPIL.NS,Hindprakash Industry Ltd,NSE equity
+HGS.NS,Hinduja Global Sols. Ltd.,NSE equity
+HINDADH.NS,Hindustan Adhesives Ltd.,NSE equity
+HAL.NS,Hindustan Aeronautics Ltd,NSE equity
+HINDCOMPOS.NS,Hindustan Composites Ltd.,NSE equity
+HCC.NS,Hindustan Construction Co,NSE equity
+HINDCOPPER.NS,Hindustan Copper Ltd,NSE equity
+HNDFDS.NS,Hindustan Foods Limited,NSE equity
+HINDOILEXP.NS,Hindustan Oil Exploration,NSE equity
+HINDPETRO.NS,Hindustan Petroleum Corp,NSE equity
+HINDUNILVR.NS,Hindustan Unilever Ltd.,NSE equity
+HINDZINC.NS,Hindustan Zinc Limited,NSE equity
+HINDWAREAP.NS,Hindware Hme Inovaton Ltd,NSE equity
+HIRECT.NS,Hirect Limited,NSE equity
+HISARMETAL.NS,Hisar Metal Ind. Limited,NSE equity
+POWERINDIA.NS,Hitachi Energy India Ltd,NSE equity
+HLEGLAS.NS,Hle Glascoat Limited,NSE equity
+HLVLTD.NS,Hlv Limited,NSE equity
+HMAAGRO.NS,Hma Agro Industries Ltd,NSE equity
+HOMEFIRST.NS,Home First Fin Co Ind Ltd,NSE equity
+HONASA.NS,Honasa Consumer Limited,NSE equity
+HONDAPOWER.NS,Honda I Power Product Ltd,NSE equity
+HONAUT.NS,Honeywell Automation Ind,NSE equity
+HORIZONIND.NS,Horizon Industrial Prks L,NSE equity
+HPAL.NS,Hp Adhesives Limited,NSE equity
+HPL.NS,Hpl Electric & Power Ltd,NSE equity
+HSBCGOLD.NS,Hsbcamc - Hsbcgold,NSE equity
+HUDCO.NS,Hsg & Urban Dev Corpn Ltd,NSE equity
+HTMEDIA.NS,Ht Media Limited,NSE equity
+HUBTOWN.NS,Hubtown Limited,NSE equity
+HUHTAMAKI.NS,Huhtamaki India Limited,NSE equity
+HTEL.NS,Hy-Tech Engineers Limited,NSE equity
+HYBRIDFIN.NS,Hybrid Financial Service,NSE equity
+HYUNDAI.NS,Hyundai Motor India Ltd,NSE equity
+IGPL.NS,I G Petrochemicals Ltd,NSE equity
+ISTLTD.NS,I S T Ltd.,NSE equity
+ICEMAKE.NS,Ice Make Refrigerat Ltd,NSE equity
+ICICIBANK.NS,Icici Bank Ltd.,NSE equity
+ICICIGI.NS,Icici Lombard Gic Limited,NSE equity
+LOWVOLIETF.NS,Icici Pr Nif Lw Vl 30 Etf,NSE equity
+ICICIPRULI.NS,Icici Pru Life Ins Co Ltd,NSE equity
+MIDSELIETF.NS,Icici Prud Midcap Sel Etf,NSE equity
+NIF100IETF.NS,Icici Prud Nifty 100 Etf,NSE equity
+NIFTYIETF.NS,Icici Prud Nifty Etf,NSE equity
+SENSEXIETF.NS,Icici Prud Sensex Etf,NSE equity
+ICICIAMC.NS,Icici Prudential Amc Ltd,NSE equity
+GOLDIETF.NS,Icici Prudential Gold Etf,NSE equity
+NV20IETF.NS,Icici Prudential Nv20 Etf,NSE equity
+ICICIB22.NS,Icicipramc - Bharatiwin,NSE equity
+CASHIETF.NS,Icicipramc - Cashietf,NSE equity
+EVIETF.NS,Icicipramc - Evietf,NSE equity
+GSEC10IETF.NS,Icicipramc - Icici10Gs,NSE equity
+BSE500IETF.NS,Icicipramc - Icici500,NSE equity
+GSEC5IETF.NS,Icicipramc - Icici5Gsec,NSE equity
+ALPL30IETF.NS,Icicipramc - Icicialplv,NSE equity
+AUTOIETF.NS,Icicipramc - Iciciauto,NSE equity
+PVTBANIETF.NS,Icicipramc - Icicibankp,NSE equity
+COMMOIETF.NS,Icicipramc - Icicicommo,NSE equity
+CONSUMIETF.NS,Icicipramc - Iciciconsu,NSE equity
+FMCGIETF.NS,Icicipramc - Icicifmcg,NSE equity
+INFRAIETF.NS,Icicipramc - Iciciinfra,NSE equity
+LIQUIDIETF.NS,Icicipramc - Iciciliq,NSE equity
+MIDCAPIETF.NS,Icicipramc - Icicim150,NSE equity
+MOM30IETF.NS,Icicipramc - Icicimom30,NSE equity
+NEXT50IETF.NS,Icicipramc - Icicinxt50,NSE equity
+HEALTHIETF.NS,Icicipramc - Icicipharm,NSE equity
+QUAL30IETF.NS,Icicipramc - Iciciqty30,NSE equity
+SILVERIETF.NS,Icicipramc - Icicisilve,NSE equity
+ITIETF.NS,Icicipramc - Icicitech,NSE equity
+INSUREIETF.NS,Icicipramc - Insureietf,NSE equity
+BANKIETF.NS,Icicipramc - Ipru5008,NSE equity
+METALIETF.NS,Icicipramc - Metalietf,NSE equity
+OILIETF.NS,Icicipramc - Oilietf,NSE equity
+PSUBNKIETF.NS,Icicipramc - Psubankici,NSE equity
+SMALLIETF.NS,Icicipramc - Smallietf,NSE equity
+TOP15IETF.NS,Icicipramc - Top15Ietf,NSE equity
+VAL30IETF.NS,Icicipramc - Val30Ietf,NSE equity
+FINIETF.NS,Icicipramc-Icicifin,NSE equity
+ICRA.NS,Icra Limited,NSE equity
+IDBI.NS,Idbi Bank Limited,NSE equity
+IDEAFORGE.NS,Ideaforge Techno Ltd,NSE equity
+IDFCFIRSTB.NS,Idfc First Bank Limited,NSE equity
+IFBAGRO.NS,Ifb Agro Industries Ltd,NSE equity
+IFBIND.NS,Ifb Industries Ltd,NSE equity
+IFCI.NS,Ifci Ltd,NSE equity
+IFGLEXPOR.NS,Ifgl Refractories Limited,NSE equity
+IGARASHI.NS,Igarashi Motors India Ltd,NSE equity
+IIFLCAPS.NS,Iifl Capital Services Ltd,NSE equity
+IIFL.NS,Iifl Finance Limited,NSE equity
+IKIO.NS,Ikio Technologies Limited,NSE equity
+IVC.NS,Il&Fs Investment Managers,NSE equity
+IMAGICAA.NS,Imagicaaworld Ent Ltd,NSE equity
+INCREDIBLE.NS,Incredible Industries Ltd,NSE equity
+IMPAL.NS,Ind Motor Part & Acc Ltd,NSE equity
+INDSWFTLAB.NS,Ind Swift Laboratories Lt,NSE equity
+INDTERRAIN.NS,Ind Terrain Fashions Ltd,NSE equity
+INDBANK.NS,Indbank Merch Bank,NSE equity
+BAJAJINDEF.NS,Indef Manufacturing Ltd,NSE equity
+INDGN.NS,Indegene Limited,NSE equity
+INDIAGLYCO.NS,India Glycols Ltd,NSE equity
+INDNIPPON.NS,India Nippon Elect  Ltd,NSE equity
+IPL.NS,India Pesticides Limited,NSE equity
+INDIASHLTR.NS,India Shelter Fin Corp L,NSE equity
+ITDC.NS,India Tour. Dev. Co. Ltd.,NSE equity
+IBULLSLTD.NS,Indiabulls Limited,NSE equity
+INDIAMART.NS,Indiamart Intermesh Ltd,NSE equity
+INDIANB.NS,Indian Bank,NSE equity
+INDIANCARD.NS,Indian Card Clothing Co.,NSE equity
+IEX.NS,Indian Energy Exc Ltd,NSE equity
+INDIANHUME.NS,Indian Hume Pipe Co. Ltd.,NSE equity
+IMFA.NS,Indian Metals & Ferro,NSE equity
+IOC.NS,Indian Oil Corp Ltd,NSE equity
+IOB.NS,Indian Overseas Bank,NSE equity
+IRCTC.NS,Indian Rail Tour Corp Ltd,NSE equity
+IRFC.NS,Indian Railway Fin Corp L,NSE equity
+IREDA.NS,Indian Renewable Energy,NSE equity
+IWP.NS,Indian Wood Products Co L,NSE equity
+INDIGOPNTS.NS,Indigo Paints Limited,NSE equity
+INDIQUBE.NS,Indiqube Spaces Limited,NSE equity
+INDOAMIN.NS,Indo Amines Limited,NSE equity
+INDOBORAX.NS,Indo Borax & Chemical Ltd,NSE equity
+ICIL.NS,Indo Count Industries Ltd,NSE equity
+INDOFARM.NS,Indo Farm Equipment Ltd,NSE equity
+INDORAMA.NS,Indo Rama Synthetics Ltd,NSE equity
+INDOTECH.NS,Indo Tech Transform Ltd.,NSE equity
+INDOTHAI.NS,Indo Thai Sec Ltd,NSE equity
+INDOUS.NS,Indo Us Biotech Ltd,NSE equity
+INDOMIM.NS,Indo-Mim Limited,NSE equity
+NIPPOBATRY.NS,Indo-National Limited,NSE equity
+INDOCO.NS,Indoco Remedies Ltd.,NSE equity
+IGCL.NS,Indogulf Cropsciences Ltd,NSE equity
+INDOKEM.NS,Indokem Ltd.,NSE equity
+WAAREEINDO.NS,Indosolar Limited,NSE equity
+INDOSTAR.NS,Indostar Capital Fin Ltd,NSE equity
+INDOWIND.NS,Indowind Energy Ltd,NSE equity
+IGL.NS,Indraprastha Gas Ltd,NSE equity
+INDRAMEDCO.NS,Indraprastha Medical Corp,NSE equity
+INDUSTOWER.NS,Indus Towers Limited,NSE equity
+INDUSINDBK.NS,Indusind Bank Limited,NSE equity
+INDPRUD.NS,Industrial & Pru Inv Co L,NSE equity
+IITL.NS,Industrial Inv Trust Ltd,NSE equity
+NAUKRI.NS,Info Edge (I) Ltd,NSE equity
+INFOBEAN.NS,Infobeans Techno. Ltd.,NSE equity
+INFOMEDIA.NS,Infomedia Press Limited,NSE equity
+INFY.NS,Infosys Limited,NSE equity
+INGERRAND.NS,Ingersoll-Rand India Ltd,NSE equity
+INNOVACAP.NS,Innova Captab Limited,NSE equity
+INNOVANA.NS,Innovana Thinklabs Ltd,NSE equity
+INNOVISION.NS,Innovision Limited,NSE equity
+INOXGREEN.NS,Inox Green Energy Ser Ltd,NSE equity
+INOXINDIA.NS,Inox India Limited,NSE equity
+INOXWIND.NS,Inox Wind Limited,NSE equity
+INSECTICID.NS,Insecticides (I) Ltd,NSE equity
+INA.NS,Insolation Energy Limited,NSE equity
+INSPIRISYS.NS,Inspirisys Solutions Ltd,NSE equity
+ESSENTIA.NS,Integra Essentia Limited,NSE equity
+INTELLECT.NS,Intellect Design Arena,NSE equity
+INTENTECH.NS,Intense Technologies Ltd,NSE equity
+INTERARCH.NS,Interarch Bldng Soltn Ltd,NSE equity
+INDIGO.NS,Interglobe Aviation Ltd,NSE equity
+INTLCONV.NS,Intl Conveyors Limited,NSE equity
+IGIL.NS,Intl Gemological Inst Ltd,NSE equity
+INVENTURE.NS,Inventure Gro & Sec Ltd,NSE equity
+IKS.NS,Inventurus Knowledge So L,NSE equity
+IVZINGOLD.NS,Invesco India Gold Etf,NSE equity
+IVZINNIFTY.NS,Invesco India Nifty Etf,NSE equity
+IOLCP.NS,Iol Chem And Pharma Ltd,NSE equity
+IONEXCHANG.NS,Ion Exchange (India) Ltd,NSE equity
+IPRINGLTD.NS,Ip Rings Ltd.,NSE equity
+IPCALAB.NS,Ipca Laboratories Ltd,NSE equity
+IRB.NS,Irb Infra Dev Ltd.,NSE equity
+IRCON.NS,Ircon International Ltd,NSE equity
+IRISDOREME.NS,Iris Clothings Limited,NSE equity
+IRIS.NS,Iris Regtech Solution Ltd,NSE equity
+IRMENERGY.NS,Irm Energy Limited,NSE equity
+ISGEC.NS,Isgec Heavy Eng Ltd,NSE equity
+ISHANCH.NS,Ishan Dyes N Chemicals L,NSE equity
+ITCHOTELS.NS,Itc Hotels Limited,NSE equity
+ITC.NS,Itc Ltd,NSE equity
+ITI.NS,Iti Ltd,NSE equity
+ITL.NS,Itl Industries Ltd.,NSE equity
+IVALUE.NS,Ivalue Infosolutions Ltd,NSE equity
+IZMO.NS,Izmo Limited,NSE equity
+J&KBANK.NS,J & K Bank Ltd.,NSE equity
+JGCHEM.NS,J.G.Chemicals Limited,NSE equity
+JAGRAN.NS,Jagran Prakashan Limited,NSE equity
+JAGSNPHARM.NS,Jagsonpal Pharmaceuticals,NSE equity
+JAIBALAJI.NS,Jai Balaji Industries Ltd,NSE equity
+JAICORPLTD.NS,Jai Corp Limited,NSE equity
+JISLDVREQS.NS,Jain Dvr Equity Shares,NSE equity
+JISLJALEQS.NS,Jain Irrigation Systems,NSE equity
+JAINREC.NS,Jain Resource Recycling L,NSE equity
+JPPOWER.NS,Jaiprakash Power Ven. Ltd,NSE equity
+JAMNAAUTO.NS,Jamna Auto Ind Ltd,NSE equity
+JSFB.NS,Jana Small Fin Bank Ltd,NSE equity
+JARO.NS,Jaro Ins Of Tec Mg N Re L,NSE equity
+JASH.NS,Jash Engineering Limited,NSE equity
+JAYBARMARU.NS,Jay Bharat Maruti Ltd,NSE equity
+JAYAGROGN.NS,Jayant Agro Organics Ltd,NSE equity
+JAYNECOIND.NS,Jayaswal Neco Industr Ltd,NSE equity
+JAYKAY.NS,Jaykay Enterprises Ltd,NSE equity
+JAYSREETEA.NS,Jayshree Tea & Industries,NSE equity
+JBMA.NS,Jbm Auto Limited,NSE equity
+JSLL.NS,Jeena Sikho Lifecare Ltd,NSE equity
+JENBURPH.NS,Jenburkt Pharmaceutical L,NSE equity
+JETFREIGHT.NS,Jet Freight Logistics Ltd,NSE equity
+JHS.NS,Jhs Svend. Lab. Ltd,NSE equity
+RETAIL.NS,Jhs Svendgaard Retail V L,NSE equity
+JPOLYINVST.NS,Jind Pol Inv & Fin Co Ltd,NSE equity
+JINDRILL.NS,Jindal Drilling Ind. Ltd,NSE equity
+JINDALPHOT.NS,Jindal Photo Limited,NSE equity
+JINDALPOLY.NS,Jindal Poly Films Limited,NSE equity
+JINDALSAW.NS,Jindal Saw Limited,NSE equity
+JSL.NS,Jindal Stainless Limited,NSE equity
+JINDALSTEL.NS,Jindal Steel Limited,NSE equity
+JINDWORLD.NS,Jindal Worldwide Ltd,NSE equity
+JKIPL.NS,Jinkushal Industries Ltd,NSE equity
+JIOFIN.NS,Jio Fin Services Ltd,NSE equity
+NIFTYJBLK.NS,Jioblackrockamc-Niftyjblk,NSE equity
+JITFINFRA.NS,Jitf Infralogistics Ltd,NSE equity
+JKCEMENT.NS,Jk Cement Limited,NSE equity
+JKLAKSHMI.NS,Jk Lakshmi Cement Ltd,NSE equity
+JKPAPER.NS,Jk Paper Limited,NSE equity
+JKTYRE.NS,Jk Tyre & Industries Ltd,NSE equity
+JKIL.NS,Jkumar Infr.Ltd.,NSE equity
+JMFINANCIL.NS,Jm Financial Limited,NSE equity
+JNKINDIA.NS,Jnk India Limited,NSE equity
+JOCIL.NS,Jocil Limited,NSE equity
+COCKERILL.NS,John Cockerill India Ltd.,NSE equity
+JSWCEMENT.NS,Jsw Cement Limited,NSE equity
+JSWDULUX.NS,Jsw Dulux Limited,NSE equity
+JSWENERGY.NS,Jsw Energy Limited,NSE equity
+JSWHL.NS,Jsw Holdings Limited,NSE equity
+JSWINFRA.NS,Jsw Infrastructure Ltd,NSE equity
+JSWSTEEL.NS,Jsw Steel Limited,NSE equity
+JTEKTINDIA.NS,Jtekt India Limited,NSE equity
+JTLIND.NS,Jtl Industries Limited,NSE equity
+JUBLCPL.NS,Jubilant Agri N Con Pro L,NSE equity
+JUBLFOOD.NS,Jubilant Foodworks Ltd,NSE equity
+JUBLINGREA.NS,Jubilant Ingrevia Limited,NSE equity
+JUBLPHARMA.NS,Jubilant Pharmova Ltd,NSE equity
+JMA.NS,Jullundur Mot Agency Ltd,NSE equity
+JNPR.NS,Juniper Green Energy Ltd,NSE equity
+JUNIPER.NS,Juniper Hotels Limited,NSE equity
+JLHL.NS,Jupiter Life Line Hosp L,NSE equity
+JWL.NS,Jupiter Wagons Limited,NSE equity
+JUSTDIAL.NS,Justdial Ltd.,NSE equity
+JYOTHYLAB.NS,Jyothy Labs Limited,NSE equity
+JYOTICNC.NS,Jyoti Cnc Automation Ltd,NSE equity
+JYOTIRES.NS,Jyoti Resins & Adhesive L,NSE equity
+JYOTISTRUC.NS,Jyoti Structures Ltd,NSE equity
+KJMCFIN.NS,K J M C Financial Serv L,NSE equity
+KMCSHIL.NS,K M C Speciality Hosp I L,NSE equity
+KPEL.NS,K.P. Energy Limited,NSE equity
+KAJARIACER.NS,Kajaria Ceramics Ltd,NSE equity
+KAKATCEM.NS,Kakatiya Cem Sugar &Ind L,NSE equity
+KALPATARU.NS,Kalpataru Limited,NSE equity
+KPIL.NS,Kalpataru Project Int Ltd,NSE equity
+KALYANKJIL.NS,Kalyan Jewellers Ind Ltd,NSE equity
+KICL.NS,Kalyani Invest Co Ltd,NSE equity
+KSL.NS,Kalyani Steels Limited,NSE equity
+KAMAHOLD.NS,Kama Holdings Ltd.,NSE equity
+KAMANWALA.NS,Kamanwala Housing Const L,NSE equity
+KAMATHOTEL.NS,Kamat Hotels (I) Ltd,NSE equity
+KAMDHENU.NS,Kamdhenu Limited,NSE equity
+KAMOPAINTS.NS,Kamdhenu Ventures Limited,NSE equity
+KANANIIND.NS,Kanani Industries Ltd,NSE equity
+KANCHI.NS,Kanchi Karpooram Ltd.,NSE equity
+KANCOTEA.NS,Kanco Tea & Inds. Ltd.,NSE equity
+KANOHAR.NS,Kanohar Electricals Ltd,NSE equity
+KANPRPLA.NS,Kanpur Plastipack Limited,NSE equity
+KANSAINER.NS,Kansai Nerolac Paints Ltd,NSE equity
+KAPSTON.NS,Kapston Services Limited,NSE equity
+KARAMTARA.NS,Karamtara Engineering L,NSE equity
+KARMAENG.NS,Karma Energy Limited,NSE equity
+KTKBANK.NS,Karnataka Bank Limited,NSE equity
+KARURVYSYA.NS,Karur Vysya Bank Ltd,NSE equity
+KSCL.NS,Kaveri Seed Co. Ltd.,NSE equity
+KAYNES.NS,Kaynes Technology Ind Ltd,NSE equity
+KCP.NS,Kcp Ltd,NSE equity
+KDGREEN.NS,Kd Green Industries Ltd,NSE equity
+KDDL.NS,Kddl Limited,NSE equity
+KEC.NS,Kec Intl. Limited,NSE equity
+KEI.NS,Kei Industries Ltd.,NSE equity
+KELLTONTEC.NS,Kellton Tech Sol Ltd,NSE equity
+KENNAMET.NS,Kennametal India Limited,NSE equity
+KERNEX.NS,Kernex Microsys(I) Ltd,NSE equity
+KESORAMIND.NS,Kesoram Industries Ltd,NSE equity
+KKCL.NS,Kewal Kiran Clothing Ltd,NSE equity
+KEYFINSERV.NS,Keynote Fin Serv Ltd.,NSE equity
+RUSTOMJEE.NS,Keystone Realtors Limited,NSE equity
+KFINTECH.NS,Kfin Technologies Limited,NSE equity
+KHAITANLTD.NS,Khaitan (India)Ltd.,NSE equity
+KHAICHEM.NS,Khaitan Chem & Fert Ltd,NSE equity
+KHANDSE.NS,Khandwala Securities Ltd,NSE equity
+KLBRENG-B.NS,Kilburn Engineering Ltd.,NSE equity
+KINGFA.NS,Kingfa Sci & Tec Ind Ltd.,NSE equity
+KIOCL.NS,Kiocl Limited,NSE equity
+KIRANVYPAR.NS,Kiran Vyapar Ltd.,NSE equity
+KIRIINDUS.NS,Kiri Industries Limited,NSE equity
+KIRLOSBROS.NS,Kirloskar Brothers Ltd,NSE equity
+KECL.NS,Kirloskar Electric Co Ltd,NSE equity
+KIRLFER.NS,Kirloskar Ferrous Ind Ltd,NSE equity
+KIRLOSIND.NS,Kirloskar Industries Ltd,NSE equity
+KIRLOSENG.NS,Kirloskar Oil Eng Ltd,NSE equity
+KIRLPNU.NS,Kirloskar Pneumatic Com L,NSE equity
+KITEX.NS,Kitex Garments Ltd,NSE equity
+KNAGRI.NS,Kn Agri Resources Limited,NSE equity
+KNACK.NS,Knack Packaging Limited,NSE equity
+KMEW.NS,Knowledge Marine & En W L,NSE equity
+KNRCON.NS,Knr Constru Ltd.,NSE equity
+KOHINOOR.NS,Kohinoor Foods Limited,NSE equity
+KOKUYOCMLN.NS,Kokuyo Camlin Limited,NSE equity
+KOLTEPATIL.NS,Kolte Patil Dev. Ltd.,NSE equity
+KOPRAN.NS,Kopran Ltd,NSE equity
+GOLD1.NS,Kotak Gold Etf,NSE equity
+KOTAKBANK.NS,Kotak Mahindra Bank Ltd,NSE equity
+NIFTY1.NS,Kotak Nifty Etf,NSE equity
+PSUBANK.NS,Kotak Psu Bank,NSE equity
+CHEMICAL.NS,Kotakmamc - Chemical,NSE equity
+ALPHA.NS,Kotakmamc - Kotakalpha,NSE equity
+CONS.NS,Kotakmamc - Kotakcons,NSE equity
+IT.NS,Kotakmamc - Kotakit,NSE equity
+LIQUID1.NS,Kotakmamc - Kotakliq,NSE equity
+LOWVOL1.NS,Kotakmamc - Kotaklovol,NSE equity
+MIDCAP.NS,Kotakmamc - Kotakmid50,NSE equity
+MNC.NS,Kotakmamc - Kotakmnc,NSE equity
+SILVER1.NS,Kotakmamc - Kotaksilve,NSE equity
+NV20.NS,Kotakmamc - Ktknv20Etf,NSE equity
+MID150.NS,Kotakmamc - Mid150,NSE equity
+MOMENTUM30.NS,Kotakmamc - Momentum30,NSE equity
+MSCIINDIA.NS,Kotakmamc - Msciindia,NSE equity
+NEXT50ETF.NS,Kotakmamc - Next50Etf,NSE equity
+NIFTY100EW.NS,Kotakmamc - Nifty100Ew,NSE equity
+PVTBANK.NS,Kotakmamc - Pvtbank,NSE equity
+QUALITY30.NS,Kotakmamc - Quality30,NSE equity
+BANKNIFTY1.NS,Kotakmamc-Kotakbketf,NSE equity
+KOTIC.NS,Kothari Industrial Corp L,NSE equity
+KOTHARIPET.NS,Kothari Petrochem Ltd,NSE equity
+KOTHARIPRO.NS,Kothari Products Ltd,NSE equity
+KOTYARK.NS,Kotyark Industries Ltd,NSE equity
+KOVAI.NS,Kovai Medical Center & Ho,NSE equity
+KPIGREEN.NS,Kpi Green Energy Limited,NSE equity
+KPITTECH.NS,Kpit Technologies Limited,NSE equity
+KPRMILL.NS,Kpr Mill Ltd.,NSE equity
+KRBL.NS,Krbl Limited,NSE equity
+KREBSBIO.NS,Krebs Biochemicals & Ind,NSE equity
+KRIDHANINF.NS,Kridhan Infra Limited,NSE equity
+KRISHANA.NS,Krishana Phoschem Limited,NSE equity
+KRISHIVAL.NS,Krishival Foods Limited,NSE equity
+KRISHNADEF.NS,Krishna Def And Ald Ind L,NSE equity
+KIMS.NS,Krishna Inst Of Med Sci L,NSE equity
+KRITI.NS,Kriti Industries Ind Ltd,NSE equity
+KRITINUT.NS,Kriti Nutrients Limited,NSE equity
+KRITIKA.NS,Kritika Wires Limited,NSE equity
+KRN.NS,Krn Heat Exchange N Ref L,NSE equity
+KROSS.NS,Kross Limited,NSE equity
+KRSNAA.NS,Krsnaa Diagnostics Ltd,NSE equity
+KRYSTAL.NS,Krystal Integrated Ser L,NSE equity
+KSB.NS,Ksb Limited,NSE equity
+KSE.NS,Kse Ltd.,NSE equity
+KSHINTL.NS,Ksh International Limited,NSE equity
+KSOLVES.NS,Ksolves India Limited,NSE equity
+KUANTUM.NS,Kuantum Papers Limited,NSE equity
+KUSUMGAR.NS,Kusumgar Limited,NSE equity
+KPL.NS,Kwality Pharmaceuticals L,NSE equity
+KWIL.NS,Kwality Wall'S (India) L,NSE equity
+LKPSEC.NS,L K P Securities Ltd.,NSE equity
+LTF.NS,L&T Finance Limited,NSE equity
+LTTS.NS,L&T Technology Ser. Ltd.,NSE equity
+LAOPALA.NS,La Opala Rg Limited,NSE equity
+LAGNAM.NS,Lagnam Spintex Limited,NSE equity
+LAHOTIOV.NS,Lahoti Overseas Ltd.,NSE equity
+LFIC.NS,Lakshmi Fin Ind Corp Ltd,NSE equity
+LAKSHMIMIL.NS,Lakshmi Mills Co. Ltd.,NSE equity
+LALITHAA.NS,Lalithaa Jewellery Mart L,NSE equity
+LAMBODHARA.NS,Lambodhara Textiles Ltd.,NSE equity
+LANCER.NS,Lancer Container Lines L,NSE equity
+LANDMARK.NS,Landmark Cars Limited,NSE equity
+LPDC.NS,Landmark Pr.Dev.Co.Ltd,NSE equity
+LANDSMILL.NS,Landsmill Green Limited,NSE equity
+LT.NS,Larsen & Toubro Ltd.,NSE equity
+LASERPOWER.NS,Laser Power & Infra Ltd,NSE equity
+LATENTVIEW.NS,Latent View Analytics Ltd,NSE equity
+LATTEYS.NS,Latteys Industries Ltd,NSE equity
+LAURUSLABS.NS,Laurus Labs Limited,NSE equity
+LAXMICOT.NS,Laxmi Cotspin Limited,NSE equity
+LAXMIDENTL.NS,Laxmi Dental Limited,NSE equity
+LGHL.NS,Laxmi Goldorna House Ltd,NSE equity
+LAXMIINDIA.NS,Laxmi India Finance Ltd,NSE equity
+LXCHEM.NS,Laxmi Organic Indus Ltd,NSE equity
+LCCPROJECT.NS,Lcc Projects Limited,NSE equity
+LEMERITE.NS,Le Merite Exports Limited,NSE equity
+IXIGO.NS,Le Travenues Technology L,NSE equity
+LEAPIND.NS,Leap India Limited,NSE equity
+THELEELA.NS,Leela Palaces Hotel Ltd,NSE equity
+LEMONTREE.NS,Lemon Tree Hotels Ltd,NSE equity
+LENSKART.NS,Lenskart Solutions Ltd,NSE equity
+LEXUS.NS,Lexus Granito (India) Ltd,NSE equity
+LGBBROSLTD.NS,Lg Balakrishnan & Bros,NSE equity
+LGEINDIA.NS,Lg Electronics India Ltd,NSE equity
+LIBAS.NS,Libas Consu Products Ltd,NSE equity
+LIBERTSHOE.NS,Liberty Shoes Ltd,NSE equity
+LICHSGFIN.NS,Lic Housing Finance Ltd,NSE equity
+LICMFGOLD.NS,Lic Mf - Lic Gold Etf,NSE equity
+LICNETFN50.NS,Licnamc - Licnfengp,NSE equity
+LICNETFSEN.NS,Licnamc - Licnfesgp,NSE equity
+LICNFNHGP.NS,Licnamc - Licnfnhgp,NSE equity
+LICNETFGSC.NS,Licnamc - Licnmfet,NSE equity
+LICNMID100.NS,Licnamc - Licnmid100,NSE equity
+LICI.NS,Life Insura Corp Of India,NSE equity
+LIKHITHA.NS,Likhitha Infrastruc Ltd,NSE equity
+LINC.NS,Linc Limited,NSE equity
+LINCOLN.NS,Lincoln Pharma Ltd,NSE equity
+LINDEINDIA.NS,Linde India Limited,NSE equity
+LLOYDSENGG.NS,Lloyds Engg Work Limited,NSE equity
+LLOYDSENT.NS,Lloyds Enterprises Ltd,NSE equity
+LLOYDSME.NS,Lloyds Metals N Energy L,NSE equity
+LMW.NS,Lmw Limited,NSE equity
+LODHA.NS,Lodha Developers Limited,NSE equity
+LCL.NS,Lohia Corp Limited,NSE equity
+LOKESHMACH.NS,Lokesh Machines Ltd,NSE equity
+LORDSCHLO.NS,Lords Chloro Alkali Ltd,NSE equity
+LAL.NS,Lorenzini Apparels Ltd,NSE equity
+LOTUSCHO.NS,Lotus Chocolate Co. Ltd.,NSE equity
+LOTUSEYE.NS,Lotus Eye Hosp & Inst L,NSE equity
+LOVABLE.NS,Lovable Lingerie Ltd,NSE equity
+LOYALTEX.NS,Loyal Textile Mills Ltd,NSE equity
+LTFOODS.NS,Lt Foods Limited,NSE equity
+LTM.NS,Ltm Limited,NSE equity
+LUMAXTECH.NS,Lumax Auto Tech Ltd,NSE equity
+LUMAXIND.NS,Lumax Industries Ltd,NSE equity
+LUMINO.NS,Lumino Industries Limited,NSE equity
+LUPIN.NS,Lupin Limited,NSE equity
+LUXIND.NS,Lux Industries Limited,NSE equity
+MBEL.NS,M And B Engineering Ltd,NSE equity
+MKEXIM.NS,M K Exim (India) Ltd.,NSE equity
+MKPL.NS,M K Proteins Limited,NSE equity
+MCL.NS,M Tek Copper Limited,NSE equity
+M&MFIN.NS,M&M Fin. Services Ltd,NSE equity
+MAANALU.NS,Maan Aluminium Limited,NSE equity
+MCCHRLS-B.NS,Mac Charles (India) Ltd.,NSE equity
+MACPOWER.NS,Macpower Cnc Machines Ltd,NSE equity
+MADHAVIPL.NS,Madhav Infra Projects L,NSE equity
+MADHAV.NS,Madhav Marble & Granite,NSE equity
+MADHUCON.NS,Madhucon Projects Ltd.,NSE equity
+MBAPL.NS,Madhya Bharat Agro P. Ltd,NSE equity
+MADRASFERT.NS,Madras Fertilisers Ltd,NSE equity
+MAFATIND.NS,Mafatlal Industries Ltd.,NSE equity
+MAGADSUGAR.NS,Magadh Sugar & Energy Ltd,NSE equity
+MCLOUD.NS,Magellanic Cloud Limited,NSE equity
+MAGNUM.NS,Magnum Ventures Ltd.,NSE equity
+MAHAPEXLTD.NS,Maha Rashtra Apex Copr. L,NSE equity
+MFML.NS,Mahalaxmi Fabric Mills Lt,NSE equity
+MGL.NS,Mahanagar Gas Ltd.,NSE equity
+MTNL.NS,Mahanagar Telephone Nigam,NSE equity
+MAHSCOOTER.NS,Maharashtra Scooters Ltd,NSE equity
+MAHSEAMLES.NS,Maharashtra Seamless Ltd,NSE equity
+MAHESHWARI.NS,Maheshwari Logistics Ltd.,NSE equity
+M&M.NS,Mahindra & Mahindra Ltd,NSE equity
+MAHEPC.NS,Mahindra Epc Irrig Ltd,NSE equity
+MHRIL.NS,Mahindra Holidays Ltd,NSE equity
+MAHLIFE.NS,Mahindra Lifespace Devltd,NSE equity
+MAHLOG.NS,Mahindra Logistic Limited,NSE equity
+MAITHANALL.NS,Maithan Alloys Ltd,NSE equity
+MAKERSL.NS,Makers Laboratories Ltd.,NSE equity
+MALLCOM.NS,Mallcom (India) Limited,NSE equity
+MALUPAPER.NS,Malu Paper Mills Limited,NSE equity
+MAMATA.NS,Mamata Machinery Limited,NSE equity
+MANAKCOAT.NS,Man Coat Metal & Ind Ltd,NSE equity
+MANINDS.NS,Man Industries (I) Ltd.,NSE equity
+MANINFRA.NS,Man Infra Ltd,NSE equity
+MANAKALUCO.NS,Manak Aluminium Co. Ltd.,NSE equity
+MANAKSIA.NS,Manaksia Ltd.,NSE equity
+MANALIPETC.NS,Manali Petrochemicals Lt,NSE equity
+MANAPPURAM.NS,Manappuram Finance Ltd,NSE equity
+MANBA.NS,Manba Finance Limited,NSE equity
+MANCREDIT.NS,Mangal Credit N Fincorp L,NSE equity
+MEIL.NS,Mangal Electrical Ind L,NSE equity
+MANGLMCEM.NS,Mangalam Cement Ltd,NSE equity
+MANGALAM.NS,Mangalam Drug & Chem Ltd,NSE equity
+MGEL.NS,Mangalam Global Ent Ltd,NSE equity
+MANORG.NS,Mangalam Organics Limited,NSE equity
+MSL.NS,Mangalam Seeds Ltd.,NSE equity
+MWL.NS,Mangalam Worldwide Ltd,NSE equity
+MANIPALHOS.NS,Manipal Health Enterpri L,NSE equity
+MPIMANIPAL.NS,Manipal Payment & Ide S L,NSE equity
+MANKIND.NS,Mankind Pharma Limited,NSE equity
+MVGJL.NS,Manoj Vaibhav Gem N Jew L,NSE equity
+MANOMAY.NS,Manomay Tex India Ltd,NSE equity
+MANORAMA.NS,Manorama Industries Ltd,NSE equity
+MARALOVER.NS,Maral Overseas Ltd,NSE equity
+MARATHON.NS,Marathon Nxtgen Realt Ltd,NSE equity
+MARICO.NS,Marico Limited,NSE equity
+MARINE.NS,Marine Electrical (I) Ltd,NSE equity
+MARKOLINES.NS,Markolines Pavement Tec L,NSE equity
+MARKSANS.NS,Marksans Pharma Limited,NSE equity
+MARSONS.NS,Marsons Limited,NSE equity
+MARUTI.NS,Maruti Suzuki India Ltd.,NSE equity
+MASFIN.NS,Mas Financial Serv Ltd,NSE equity
+MASKINVEST.NS,Mask Investments Limited,NSE equity
+MASTEK.NS,Mastek Ltd,NSE equity
+MASTERTR.NS,Master Trust Limited,NSE equity
+MATRIMONY.NS,Matrimony.Com Limited,NSE equity
+MAWANASUG.NS,Mawana Sugars Limited,NSE equity
+MAXESTATES.NS,Max Estates Limited,NSE equity
+MFSL.NS,Max Financial Serv Ltd,NSE equity
+MAXHEALTH.NS,Max Healthcare Ins Ltd,NSE equity
+MAXIND.NS,Max India Limited,NSE equity
+MAYURUNIQ.NS,Mayur Uniquoters Ltd,NSE equity
+MAZDOCK.NS,Mazagon Dock Shipbuil Ltd,NSE equity
+MBLINFRA.NS,Mbl Infrastructure Ltd,NSE equity
+MCLEODRUSS.NS,Mcleod Russel India Ltd.,NSE equity
+MEDIASSIST.NS,Medi Assist Health Ser L,NSE equity
+MMWL.NS,Media Matrix Worldwide L,NSE equity
+MEDICO.NS,Medico Remedies Limited,NSE equity
+MEDPLUS.NS,Medplus Health Serv Ltd,NSE equity
+MEESHO.NS,Meesho Limited,NSE equity
+MEGASTAR.NS,Megastar Foods Limited,NSE equity
+MOL.NS,Meghmani Organics Limited,NSE equity
+MIIL.NS,Meghna Infracon Infra L,NSE equity
+MENONBE.NS,Menon Bearings Limited,NSE equity
+MERCANTILE.NS,Mercantile Ventures Ltd.,NSE equity
+MERCURYEV.NS,Mercury Ev-Tech Limited,NSE equity
+METROBRAND.NS,Metro Brands Limited,NSE equity
+METROGLOBL.NS,Metroglobal Ltd.,NSE equity
+METROPOLIS.NS,Metropolis Healthcare Ltd,NSE equity
+MIDWESTLTD.NS,Midwest Limited,NSE equity
+MLKFOOD.NS,Milkfood Ltd.,NSE equity
+MINDACORP.NS,Minda Corporation Ltd,NSE equity
+MINDTECK.NS,Mindteck (India) Limited,NSE equity
+ALPHAETF.NS,Miraeamc - Alphaetf,NSE equity
+BANKETF.NS,Miraeamc - Banketf,NSE equity
+BANKPSU.NS,Miraeamc - Bankpsu,NSE equity
+CONSUMER.NS,Miraeamc - Consumer,NSE equity
+DEFENCE.NS,Miraeamc - Defence,NSE equity
+DIVIDEND.NS,Miraeamc - Dividend,NSE equity
+ENERGY.NS,Miraeamc - Energy,NSE equity
+EQUAL200.NS,Miraeamc - Equal200,NSE equity
+EQUAL50.NS,Miraeamc - Equal50,NSE equity
+EVINDIA.NS,Miraeamc - Evindia,NSE equity
+HEALTHCARE.NS,Miraeamc - Healthcare,NSE equity
+HYBRIDETF.NS,Miraeamc - Hybridetf,NSE equity
+INFRA.NS,Miraeamc - Infra,NSE equity
+INTERNET.NS,Miraeamc - Internet,NSE equity
+ITETF.NS,Miraeamc - Itetf,NSE equity
+LARGEMID50.NS,Miraeamc - Largemid50,NSE equity
+LIQUID.NS,Miraeamc - Liquid,NSE equity
+LIQUIDPLUS.NS,Miraeamc - Liquidplus,NSE equity
+ESG.NS,Miraeamc - Maesgetf,NSE equity
+MAFANG.NS,Miraeamc - Mafang,NSE equity
+BFSI.NS,Miraeamc - Mafsetf,NSE equity
+GOLDETF.NS,Miraeamc - Magoldetf,NSE equity
+GSEC10YEAR.NS,Miraeamc - Mags813Etf,NSE equity
+MAHKTECH.NS,Miraeamc - Mahktech,NSE equity
+MIDCAPETF.NS,Miraeamc - Mam150Etf,NSE equity
+MAKEINDIA.NS,Miraeamc - Mamfgetf,NSE equity
+NIFTYETF.NS,Miraeamc - Man50Etf,NSE equity
+LOWVOL.NS,Miraeamc - Manv30F,NSE equity
+NEXT50.NS,Miraeamc - Manxt50,NSE equity
+SILVERAG.NS,Miraeamc - Masilver,NSE equity
+MASPTOP50.NS,Miraeamc - Masptop50,NSE equity
+METAL.NS,Miraeamc - Metal,NSE equity
+MIDSMALL.NS,Miraeamc - Midsmall,NSE equity
+MOMMIDCAP.NS,Miraeamc - Mommidcap,NSE equity
+MULTICAP.NS,Miraeamc - Multicap,NSE equity
+SELECTIPO.NS,Miraeamc - Selectipo,NSE equity
+SENSEXETF.NS,Miraeamc - Sensexetf,NSE equity
+SMALL250.NS,Miraeamc - Small250,NSE equity
+SMALLCAP.NS,Miraeamc - Smallcap,NSE equity
+TOP20.NS,Miraeamc - Top20,NSE equity
+VALUE.NS,Miraeamc - Value,NSE equity
+MIRZAINT.NS,Mirza International Limit,NSE equity
+MIDHANI.NS,Mishra Dhatu Nigam Ltd,NSE equity
+MITCON.NS,Mitcon Con & Eng Ser Ltd,NSE equity
+MITTAL.NS,Mittal Life Style Limited,NSE equity
+MMFL.NS,Mm Forgings Ltd,NSE equity
+MMP.NS,Mmp Industries Limited,NSE equity
+MMTC.NS,Mmtc Limited,NSE equity
+MODTHREAD.NS,Modern Threads India Ltd,NSE equity
+MODINATUR.NS,Modi Naturals Limited,NSE equity
+MODIRUBBER.NS,Modi Rubber Ltd,NSE equity
+MODIS.NS,Modis Navnirman Ltd,NSE equity
+MOHITIND.NS,Mohit Industries Ltd,NSE equity
+MOHITE.NS,Mohite Industries Ltd.,NSE equity
+MOIL.NS,Moil Limited,NSE equity
+MOKSH.NS,Moksh Ornaments Limited,NSE equity
+MOLBIO.NS,Molbio Diagnostics Ltd,NSE equity
+MOLDTKPAC.NS,Mold-Tek Packaging Ltd,NSE equity
+MONARCH.NS,Monarch Networth Cap Ltd,NSE equity
+MONEYVIEW.NS,Moneyview Limited,NSE equity
+MONTECARLO.NS,Monte Carlo Fashions Ltd.,NSE equity
+MOREPENLAB.NS,Morepen Lab. Ltd,NSE equity
+MOSCHIP.NS,Moschip Technologies Ltd,NSE equity
+MSUMI.NS,Motherson Sumi Wrng Ind L,NSE equity
+MOM100.NS,Motilal Os Midcap100 Etf,NSE equity
+MON100.NS,Motilal Os Nasdaq100 Etf,NSE equity
+MOTILALOFS.NS,Motilal Oswal Fin Ltd,NSE equity
+MOM50.NS,Motilal Oswal M50 Etf,NSE equity
+MOGSEC.NS,Motilalamc - G5,NSE equity
+MOALPHA50.NS,Motilalamc - Moalpha50,NSE equity
+MOBANK10.NS,Motilalamc - Mobank10,NSE equity
+MOCAPITAL.NS,Motilalamc - Mocapital,NSE equity
+MODEFENCE.NS,Motilalamc - Modefence,NSE equity
+MOENERGY.NS,Motilalamc - Moenergy,NSE equity
+MOGOLD.NS,Motilalamc - Mogold,NSE equity
+MOHEALTH.NS,Motilalamc - Mohealth,NSE equity
+MOINFRA.NS,Motilalamc - Moinfra,NSE equity
+MOIPO.NS,Motilalamc - Moipo,NSE equity
+MOLOWVOL.NS,Motilalamc - Molowvol,NSE equity
+MOMENTUM50.NS,Motilalamc - Momentum50,NSE equity
+MOMETAL.NS,Motilalamc - Mometal,NSE equity
+MOMGF.NS,Motilalamc - Momgf,NSE equity
+MOMIDMTM.NS,Motilalamc - Momidmtm,NSE equity
+MOMNC.NS,Motilalamc - Momnc,NSE equity
+MOMOMENTUM.NS,Motilalamc - Momomentum,NSE equity
+MON50EQUAL.NS,Motilalamc - Mon50Equal,NSE equity
+MONEXT50.NS,Motilalamc - Monext50,NSE equity
+MONIFTY100.NS,Motilalamc - Monifty100,NSE equity
+MONIFTY500.NS,Motilalamc - Monifty500,NSE equity
+MONQ50.NS,Motilalamc - Monq50,NSE equity
+MOOILGAS.NS,Motilalamc - Mooilgas,NSE equity
+MOPSE.NS,Motilalamc - Mopse,NSE equity
+MOQUALITY.NS,Motilalamc - Moquality,NSE equity
+MOREALTY.NS,Motilalamc - Morealty,NSE equity
+MOSERVICE.NS,Motilalamc - Moservice,NSE equity
+MOSILVER.NS,Motilalamc - Mosilver,NSE equity
+MOSMALL250.NS,Motilalamc - Mosmall250,NSE equity
+MOTOUR.NS,Motilalamc - Motour,NSE equity
+MOVALUE.NS,Motilalamc - Movalue,NSE equity
+MOTISONS.NS,Motisons Jewellers Ltd,NSE equity
+MOTOGENFIN.NS,Motor & General Finance L,NSE equity
+MPHASIS.NS,Mphasis Limited,NSE equity
+MPSLTD.NS,Mps Limited,NSE equity
+MRF.NS,Mrf Ltd,NSE equity
+MRPL.NS,Mrpl,NSE equity
+BECTORFOOD.NS,Mrs Bectors Food Spe Ltd,NSE equity
+MSPL.NS,Msp Steel & Power Ltd.,NSE equity
+MSTCLTD.NS,Mstc Limited,NSE equity
+MUFIN.NS,Mufin Green Finance Ltd,NSE equity
+MUKANDLTD.NS,Mukand Ltd.,NSE equity
+MUKESHB.NS,Mukesh Babu Financ Ser L,NSE equity
+MUKTAARTS.NS,Mukta Arts Limited,NSE equity
+MCX.NS,Multi Commodity Exchange,NSE equity
+MUNJALAU.NS,Munjal Auto Ind. Ltd.,NSE equity
+MUNJALSHOW.NS,Munjal Showa Ltd,NSE equity
+MURUDCERA.NS,Murudeshwar Ceramics Ltd,NSE equity
+RADIOCITY.NS,Music Broadcast Limited,NSE equity
+MUTHOOTCAP.NS,Muthoot Cap Serv Ltd,NSE equity
+MUTHOOTFIN.NS,Muthoot Finance Limited,NSE equity
+MUTHOOTMF.NS,Muthoot Microfin Limited,NSE equity
+MVELECTRO.NS,Mv Electrosystems Limited,NSE equity
+NRAIL.NS,N R Agarwal Inds Ltd,NSE equity
+NTCIND.NS,N T C Industries Ltd.,NSE equity
+NBIFIN.NS,N.B.I. Ind. Fin. Co. Ltd,NSE equity
+NACLIND.NS,Nacl Industries Limited,NSE equity
+NDGL.NS,Naga Dhunseri Group Ltd,NSE equity
+NAGREEKCAP.NS,Nagreeka Cap & Infr.Ltd,NSE equity
+NAGREEKEXP.NS,Nagreeka Exports Ltd.,NSE equity
+NAHARCAP.NS,Nahar Cap & Fin.,NSE equity
+NAHARINDUS.NS,Nahar Inds Ent Ltd,NSE equity
+NAHARPOLY.NS,Nahar Poly Films Limited,NSE equity
+NAHARSPING.NS,Nahar Spinning Mills Ltd.,NSE equity
+NGIL.NS,Nakoda Group Of Ind. Ltd,NSE equity
+NSIL.NS,Nalwa Sons Investment Ltd,NSE equity
+NDL.NS,Nandan Denim Limited,NSE equity
+JAIPURKURT.NS,Nandani Creation Limited,NSE equity
+NH.NS,Narayana Hrudayalaya Ltd.,NSE equity
+NARMADA.NS,Narmada Agrobase Limited,NSE equity
+NATCOPHARM.NS,Natco Pharma Ltd.,NSE equity
+NATHBIOGEN.NS,Nath Bio-Genes (I) Ltd,NSE equity
+NATIONALUM.NS,National Aluminium Co Ltd,NSE equity
+NFL.NS,National Fert. Ltd,NSE equity
+NATIONSTD.NS,National Stand (India) L,NSE equity
+NAVA.NS,Nava Limited,NSE equity
+NAVINFLUOR.NS,Navin Fluorine Int. Ltd,NSE equity
+NAVKARCORP.NS,Navkar Corporation Ltd.,NSE equity
+NAVKARURB.NS,Navkar Urbanstructure Ltd,NSE equity
+NAVNETEDUL.NS,Navneet Education Ltd,NSE equity
+NAZARA.NS,Nazara Technologies Ltd,NSE equity
+NBCC.NS,Nbcc (India) Limited,NSE equity
+NCC.NS,Ncc Limited,NSE equity
+NCLIND.NS,Ncl Industries Limited,NSE equity
+NDLVENTURE.NS,Ndl Ventures Limited,NSE equity
+NDRAUTO.NS,Ndr Auto Components Ltd,NSE equity
+NDTV.NS,Ndtv Ltd,NSE equity
+NECLIFE.NS,Nectar Lifesciences Ltd.,NSE equity
+NEAGI.NS,Neelamalai Agro Inds. L,NSE equity
+NELCAST.NS,Nelcast Limited,NSE equity
+NELCO.NS,Nelco Ltd,NSE equity
+NEOGEN.NS,Neogen Chemicals Limited,NSE equity
+NEPHROPLUS.NS,Nephrocare Health Serv L,NSE equity
+NESCO.NS,Nesco Ltd.,NSE equity
+NESTLEIND.NS,Nestle India Limited,NSE equity
+NETWEB.NS,Netweb Tech India Ltd,NSE equity
+NPST.NS,Network People Srv Tech L,NSE equity
+NETWORK18.NS,Network18 Media & Inv Ltd,NSE equity
+NEULANDLAB.NS,Neuland Lab Ltd.,NSE equity
+NEWGEN.NS,Newgen Software Tech Ltd,NSE equity
+NEXTMEDIA.NS,Next Mediaworks Limited,NSE equity
+NGLFINE.NS,Ngl Fine Chem Limited,NSE equity
+NHPC.NS,Nhpc Ltd,NSE equity
+NIBE.NS,Nibe Limited,NSE equity
+NICCOPAR.NS,Nicco Parks & Resorts Ltd,NSE equity
+NIITMTS.NS,Niit Learning Systems Ltd,NSE equity
+NIITLTD.NS,Niit Limited,NSE equity
+NILAINFRA.NS,Nila Infrastructures Ltd,NSE equity
+NILASPACES.NS,Nila Spaces Limited,NSE equity
+NILE.NS,Nile Ltd.,NSE equity
+NILKAMAL.NS,Nilkamal Limited,NSE equity
+NIMBSPROJ.NS,Nimbus Projects Limited,NSE equity
+NINSYS.NS,Nintec Systems Limited,NSE equity
+BANKBEES.NS,Nip Ind Etf Bank Bees,NSE equity
+CONSUMBEES.NS,Nip Ind Etf Consumption,NSE equity
+DIVOPPBEES.NS,Nip Ind Etf Div Opp,NSE equity
+NV20BEES.NS,Nip Ind Etf Etf Nv20,NSE equity
+GOLDBEES.NS,Nip Ind Etf Gold Bees,NSE equity
+HNGSNGBEES.NS,Nip Ind Etf Hangseng Bees,NSE equity
+INFRABEES.NS,Nip Ind Etf Infra Bees,NSE equity
+ITBEES.NS,Nip Ind Etf It,NSE equity
+JUNIORBEES.NS,Nip Ind Etf Junior Bees,NSE equity
+LIQUIDBEES.NS,Nip Ind Etf Liquid Bees,NSE equity
+LTGILTBEES.NS,Nip Ind Etf Longterm Gilt,NSE equity
+MID150BEES.NS,Nip Ind Etf Midcap 150,NSE equity
+NIF100BEES.NS,Nip Ind Etf Nifty 100,NSE equity
+NIFTYBEES.NS,Nip Ind Etf Nifty Bees,NSE equity
+PSUBNKBEES.NS,Nip Ind Etf Psu Bank Bees,NSE equity
+SHARIABEES.NS,Nip Ind Etf Shariah Bees,NSE equity
+NAM-INDIA.NS,Nippon L I A M Ltd,NSE equity
+LIQGRWBEES.NS,Nipponamc - Liqgrwbees,NSE equity
+MANUFGBEES.NS,Nipponamc - Manufgbees,NSE equity
+AUTOBEES.NS,Nipponamc - Netfauto,NSE equity
+PHARMABEES.NS,Nipponamc - Netfpharma,NSE equity
+SILVERBEES.NS,Nipponamc - Netfsilver,NSE equity
+SNXT30BEES.NS,Nipponamc - Snxt30Bees,NSE equity
+NIRAJ.NS,Niraj Cement Struc Ltd,NSE equity
+NIRLON.NS,Nirlon Ltd,NSE equity
+NITCO.NS,Nitco Limited,NSE equity
+NITINSPIN.NS,Nitin Spinners Limited,NSE equity
+NITIRAJ.NS,Nitiraj Engineers Ltd,NSE equity
+NITTAGELA.NS,Nitta Gelatin India Ltd.,NSE equity
+NIVABUPA.NS,Niva Bupa Health Ins Co L,NSE equity
+NKIND.NS,Nk Industries Ltd,NSE equity
+NLCINDIA.NS,Nlc India Limited,NSE equity
+NMDC.NS,Nmdc Ltd.,NSE equity
+NSLNISP.NS,Nmdc Steel Limited,NSE equity
+NOCIL.NS,Nocil Limited,NSE equity
+NOIDATOLL.NS,Noida Toll Bridge Co Ltd,NSE equity
+NORBTEAEXP.NS,Norben Tea & Exports Ltd,NSE equity
+NORTHARC.NS,Northern Arc Capital Ltd,NSE equity
+NOVAAGRI.NS,Nova Agritech Limited,NSE equity
+NOVARTIND.NS,Novartis India Limited,NSE equity
+NRBBEARING.NS,Nrb Bearing Limited,NSE equity
+NIBL.NS,Nrb Indus. Bearings Ltd.,NSE equity
+NTPCGREEN.NS,Ntpc Green Energy Limited,NSE equity
+NTPC.NS,Ntpc Ltd,NSE equity
+NUCLEUS.NS,Nucleus Software Exports,NSE equity
+NUVAMA.NS,Nuvama Wealth Manage Ltd,NSE equity
+NUVOCO.NS,Nuvoco Vistas Corp Ltd,NSE equity
+OBCL.NS,Obcl Limited,NSE equity
+OBEROIRLTY.NS,Oberoi Realty Limited,NSE equity
+ODIGMA.NS,Odigma Consultancy Sol L,NSE equity
+ODYCORP.NS,Odyssey Corporation Ltd.,NSE equity
+ONGC.NS,Oil And Natural Gas Corp.,NSE equity
+OIL.NS,Oil India Ltd,NSE equity
+OLAELEC.NS,Ola Electric Mobility Ltd,NSE equity
+OLECTRA.NS,Olectra Greentech Limited,NSE equity
+OMINFRAL.NS,Om Infra Limited,NSE equity
+OMPOWER.NS,Om Power Transmission Ltd,NSE equity
+OMAXAUTO.NS,Omax Autos Ltd,NSE equity
+OMAXE.NS,Omaxe Limited,NSE equity
+OMNI.NS,Omnitech Engineering Ltd,NSE equity
+PAYTM.NS,One 97 Communications Ltd,NSE equity
+ONEGLOBAL.NS,One Global Service Prov L,NSE equity
+MOBIKWIK.NS,One Mobikwik Systems Ltd,NSE equity
+ONEPOINT.NS,One Point One Sol Ltd,NSE equity
+KISSHT.NS,Onemi Technology Sol Ltd,NSE equity
+ONESOURCE.NS,Onesource Specl Pharma L,NSE equity
+ONIDA.NS,Onida Electronics Limited,NSE equity
+ONIXSOLAR.NS,Onix Solar Energy Ltd.,NSE equity
+ONWARDTEC.NS,Onward Technologies Ltd,NSE equity
+OPTIEMUS.NS,Optiemus Infracom Ltd,NSE equity
+OPTIFIN.NS,Optimus Finance Ltd.,NSE equity
+OFSS.NS,Oracle Fin Serv Soft Ltd.,NSE equity
+ORBTEXP.NS,Orbit Exports Limited,NSE equity
+ORCHASP.NS,Orchasp Limited,NSE equity
+ORCHPHARMA.NS,Orchid Pharma Limited,NSE equity
+ORICONENT.NS,Oricon Enterprises Ltd,NSE equity
+ORIENTBELL.NS,Orient Bell Limited,NSE equity
+ORIENTCEM.NS,Orient Cement Ltd.,NSE equity
+ORIENTCER.NS,Orient Ceratech Limited,NSE equity
+ORIENTELEC.NS,Orient Electric Limited,NSE equity
+GREENPOWER.NS,Orient Green Power Co Ltd,NSE equity
+ORIENTHOT.NS,Orient Hotels Ltd,NSE equity
+ORIENTPPR.NS,Orient Paper And Inds Ltd,NSE equity
+ORIENTTECH.NS,Orient Technologies Ltd,NSE equity
+OAL.NS,Oriental Aromatics Ltd,NSE equity
+ORIRAIL.NS,Oriental Rail Infra L,NSE equity
+ORIENTALTL.NS,Oriental Trimex Ltd,NSE equity
+ORISSAMINE.NS,Orissa Min Dev Co Ltd,NSE equity
+ORKLAINDIA.NS,Orkla India Limited,NSE equity
+ORTINGLOBE.NS,Ortin Global Limited,NSE equity
+OSWALAGRO.NS,Oswal Agro Mills Ltd,NSE equity
+OSWALGREEN.NS,Oswal Greentech Limited,NSE equity
+OSWALPUMPS.NS,Oswal Pumps Limited,NSE equity
+PBMPOLY.NS,P B M Polytex Ltd.,NSE equity
+PNGJL.NS,P N Gadgil Jewellers Ltd,NSE equity
+POEL.NS,P O C L Enterprises Ltd.,NSE equity
+PGHH.NS,P&G Hygiene & Health Care,NSE equity
+PACEDIGITK.NS,Pace Digitek Limited,NSE equity
+PACIFICI.NS,Pacific Industries Ltd.,NSE equity
+PAGEIND.NS,Page Industries Ltd,NSE equity
+PAISALO.NS,Paisalo Digital Limited,NSE equity
+PAKKA.NS,Pakka Limited,NSE equity
+PALASHSECU.NS,Palash Securities Ltd,NSE equity
+PALREDTEC.NS,Palred Technologies Ltd,NSE equity
+PANACEABIO.NS,Panacea Biotec Ltd,NSE equity
+PANAMAPET.NS,Panama Petrochem Ltd,NSE equity
+PANCHMAHQ.NS,Panchmahal Steel Ltd.,NSE equity
+PANORAMA.NS,Panorama Studios Intl. L,NSE equity
+PANSARI.NS,Pansari Developers Ltd,NSE equity
+PARADEEP.NS,Paradeep Phosphates Ltd,NSE equity
+PARAGMILK.NS,Parag Milk Foods Ltd.,NSE equity
+PARACABLES.NS,Paramount Comm Ltd,NSE equity
+PARAS.NS,Paras Def And Spce Tech L,NSE equity
+PARASPETRO.NS,Paras Petrofils Ltd.,NSE equity
+PARIN.NS,Parin Enterprises Limited,NSE equity
+PARKHOSPS.NS,Park Medi World Limited,NSE equity
+PARKHOTELS.NS,Parkhotels,NSE equity
+PARNAXLAB.NS,Parnax Lab Ltd.,NSE equity
+PASHUPATI.NS,Pashupati Cotspin Limited,NSE equity
+PASUPTAC.NS,Pasupati Acrylon Limited,NSE equity
+PATANJALI.NS,Patanjali Foods Limited,NSE equity
+PATELENG.NS,Patel Engineering Ltd.,NSE equity
+PATINTLOG.NS,Patel Int. Log. Ltd,NSE equity
+PATELRMART.NS,Patel Retail Limited,NSE equity
+PML.NS,Paul Merchants Ltd.,NSE equity
+PAUSHAKLTD.NS,Paushak Limited,NSE equity
+PAVNAIND.NS,Pavna Industries Limited,NSE equity
+POLICYBZR.NS,Pb Fintech Limited,NSE equity
+PCJEWELLER.NS,Pc Jeweller Ltd,NSE equity
+PCBL.NS,Pcbl Chemical Limited,NSE equity
+PDSL.NS,Pds Limited,NSE equity
+PGIL.NS,Pearl Global Ind Limited,NSE equity
+PEARLPOLY.NS,Pearl Polymers Ltd,NSE equity
+PENINLAND.NS,Peninsula Land Limited,NSE equity
+PENIND.NS,Pennar Industries Ltd,NSE equity
+PERMAGN.NS,Permanent Magnets Ltd.,NSE equity
+PERSISTENT.NS,Persistent Systems Ltd,NSE equity
+PETRONET.NS,Petronet Lng Limited,NSE equity
+PFIZER.NS,Pfizer Ltd,NSE equity
+PGEL.NS,Pg Electroplast Ltd,NSE equity
+PHOENXINTL.NS,Phoenix International Ltd,NSE equity
+PWL.NS,Physicswallah Limited,NSE equity
+PIIND.NS,Pi Industries Ltd,NSE equity
+PICCADIL.NS,Piccadily Agro Industri L,NSE equity
+PIDILITIND.NS,Pidilite Industries Ltd,NSE equity
+PILITA.NS,Pil Italica Lifestyle Ltd,NSE equity
+PILANIINVS.NS,Pilani Inv & Ind Cor Ltd,NSE equity
+PINELABS.NS,Pine Labs Limited,NSE equity
+PIONEEREMB.NS,Pioneer Embroideries Ltd,NSE equity
+PIRAMALFIN.NS,Piramal Finance Limited,NSE equity
+PPLPHARMA.NS,Piramal Pharma Limited,NSE equity
+PITTIENG.NS,Pitti Engineering Limited,NSE equity
+PIXTRANS.NS,Pix Transmissions Limited,NSE equity
+PLASTIBLEN.NS,Plastiblends India Ltd,NSE equity
+PLATIND.NS,Platinum Industries Ltd,NSE equity
+PLAZACABLE.NS,Plaza Wires Limited,NSE equity
+PNBGILTS.NS,Pnb Gilts Limited,NSE equity
+PNBHOUSING.NS,Pnb Housing Fin Ltd.,NSE equity
+PNCINFRA.NS,Pnc Infratech Ltd.,NSE equity
+PNC.NS,Pnc Media And Ent Ltd,NSE equity
+PNGSREVA.NS,Pngs Reva Diamond Jewel L,NSE equity
+PODDARMENT.NS,Poddar Pigments Limited,NSE equity
+POKARNA.NS,Pokarna Limited,NSE equity
+POLYMED.NS,Poly Medicure Limited,NSE equity
+POLYCAB.NS,Polycab India Limited,NSE equity
+POLYPLEX.NS,Polyplex Corporation Ltd,NSE equity
+POLYSPIN.NS,Polyspin Exports Ltd.,NSE equity
+POCL.NS,Pondy Oxides & Chem Ltd,NSE equity
+PONNIERODE.NS,Ponnie Sugars (Erode) Ltd,NSE equity
+POONAWALLA.NS,Poonawalla Fincorp Ltd,NSE equity
+PVSL.NS,Popular Vehicles N Ser L,NSE equity
+PFC.NS,Power Fin Corp Ltd.,NSE equity
+POWERGRID.NS,Power Grid Corp. Ltd.,NSE equity
+PIGL.NS,Power Instrument (G) Ltd,NSE equity
+POWERMECH.NS,Power Mech Projects Ltd.,NSE equity
+POWERICA.NS,Powerica Limited,NSE equity
+PRABHA.NS,Prabha Energy Limited,NSE equity
+PRAJIND.NS,Praj Industries Ltd,NSE equity
+PRAENG.NS,Prajay Eng. Syn. Ltd.,NSE equity
+PRAKASH.NS,Prakash Industries Ltd,NSE equity
+PRAKASHSTL.NS,Prakash Steelage Ltd,NSE equity
+PRANAV.NS,Pranav Constructions Ltd,NSE equity
+PRASOLCHEM.NS,Prasol Chemicals Limited,NSE equity
+DIAMONDYD.NS,Prataap Snacks Limited,NSE equity
+PRAVEG.NS,Praveg Ltd.,NSE equity
+PRAXIS.NS,Praxis Home Retail Ltd,NSE equity
+PRECAM.NS,Precision Camshafts Ltd.,NSE equity
+PRECWIRE.NS,Precision Wires India Ltd,NSE equity
+PRECOT.NS,Precot Limited,NSE equity
+PREMCO.NS,Premco Global Ltd.,NSE equity
+PREMIERENE.NS,Premier Energies Limited,NSE equity
+PREMEXPLN.NS,Premier Explosives Ltd,NSE equity
+PREMIERPOL.NS,Premier Polyfilm Ltd,NSE equity
+PRESTIGE.NS,Prestige Estate Ltd,NSE equity
+PRICOLLTD.NS,Pricol Limited,NSE equity
+PFOCUS.NS,Prime Focus Limited,NSE equity
+PRIMESECU.NS,Prime Securities Limited,NSE equity
+PRIMO.NS,Primo Chemicals Limited,NSE equity
+PRINCEPIPE.NS,Prince Pipes Fittings Ltd,NSE equity
+PRIORITY.NS,Priority Jewels Limited,NSE equity
+PRSMJOHNSN.NS,Prism Johnson Limited,NSE equity
+PRISMX.NS,Prismx Global Ventures L,NSE equity
+PRITI.NS,Priti International Ltd,NSE equity
+PRITIKAUTO.NS,Pritika Auto Indus Ltd,NSE equity
+PRIVISCL.NS,Privi Speciality Che Ltd,NSE equity
+PGHL.NS,Procter & Gamble Health L,NSE equity
+PROSTARM.NS,Prostarm Info Systems Ltd,NSE equity
+PROTEAN.NS,Protean Egov Techno Ltd,NSE equity
+PROZONER.NS,Prozone Realty Limited,NSE equity
+PRUDENT.NS,Prudent Corp Adv Ser Ltd,NSE equity
+PRUDMOULI.NS,Prudential Sugar Corporat,NSE equity
+PSPPROJECT.NS,Psp Projects Limited,NSE equity
+PFS.NS,Ptc India Fin Serv Ltd,NSE equity
+PTC.NS,Ptc India Limited,NSE equity
+PTCIL.NS,Ptc Industries Limited,NSE equity
+PTL.NS,Ptl Enterprises Ltd,NSE equity
+PDMJEPAPER.NS,Pudumjee Paper Pro. Ltd,NSE equity
+PSB.NS,Punjab & Sind Bank,NSE equity
+PUNJABCHEM.NS,Punjab Chem & Crop Prot L,NSE equity
+PNB.NS,Punjab National Bank,NSE equity
+PURVA.NS,Puravankara Limited,NSE equity
+PERNIASPOP.NS,Purple Style Labs Limited,NSE equity
+PVP.NS,Pvp Ventures Limited,NSE equity
+PVRINOX.NS,Pvr Inox Limited,NSE equity
+PYRAMID.NS,Pyramid Technoplast Ltd,NSE equity
+QUADFUTURE.NS,Quadrant Future Tek Ltd,NSE equity
+QPOWER.NS,Quality Power Elec Equp L,NSE equity
+SILVER001.NS,Quant_Amc - Silver001,NSE equity
+QGOLDHALF.NS,Quantum Gold Etf,NSE equity
+QNIFTY.NS,Quantum Nifty 50 Etf,NSE equity
+QUESS.NS,Quess Corp Limited,NSE equity
+QUICKHEAL.NS,Quick Heal Tech Ltd,NSE equity
+QUINTEGRA.NS,Quintegra Solutions Ltd.,NSE equity
+RKSWAMY.NS,R K Swamy Limited,NSE equity
+RRIL.NS,R R I L Ltd.,NSE equity
+RRKABEL.NS,R R Kabel Limited,NSE equity
+RSYSTEMS.NS,R Sys International Ltd,NSE equity
+RTSPOWR.NS,R T S Power Corpn. Ltd.,NSE equity
+RSSOFTWARE.NS,R. S. Software (India) Li,NSE equity
+RPPINFRA.NS,R.P.P Infra Projects Ltd,NSE equity
+RACE.NS,Race Eco Chain Limited,NSE equity
+RACLGEAR.NS,Racl Geartech Limited,NSE equity
+RADAAN.NS,Radaan Mediaworks (I) Ltd,NSE equity
+RADIANTCMS.NS,Radiant Cash Mgmt Ser Ltd,NSE equity
+RADICO.NS,Radico Khaitan Ltd,NSE equity
+RPEL.NS,Raghav Productivity Enh L,NSE equity
+RVNL.NS,Rail Vikas Nigam Limited,NSE equity
+RAILTEL.NS,Railtel Corp Of Ind Ltd,NSE equity
+RAIN.NS,Rain Industries Limited,NSE equity
+RAINBOW.NS,Rainbow Childrens Med Ltd,NSE equity
+ROML.NS,Raj Oil Mills Limited,NSE equity
+RAJPALAYAM.NS,Rajapalayam Mills Ltd.,NSE equity
+ARENTERP.NS,Rajdarshan Industries Ltd,NSE equity
+RAJMET.NS,Rajnandini Metal Limited,NSE equity
+RSL.NS,Rajputana Stainless Ltd,NSE equity
+RAJRATAN.NS,Rajratan Global Wire Ltd,NSE equity
+RAJSREESUG.NS,Rajshree Sugar & Chemical,NSE equity
+RALLIS.NS,Rallis India Ltd,NSE equity
+RAMRAT.NS,Ram Ratna Wires Limited,NSE equity
+RAMAPHO.NS,Rama Phosphates Limited,NSE equity
+RAMCOIND.NS,Ramco Industries Limited,NSE equity
+RAMCOSYS.NS,Ramco Systems Ltd.,NSE equity
+RKFORGE.NS,Ramkrishna Forgings Ltd,NSE equity
+RAMKY.NS,Ramky Infra Ltd,NSE equity
+RANASUG.NS,Rana Sugars Ltd.,NSE equity
+RML.NS,Rane (Madras) Limited,NSE equity
+RANEHOLDIN.NS,Rane Holdings Limited,NSE equity
+RPTECH.NS,Rashi Peripherals Limited,NSE equity
+RCF.NS,Rashtriya Chemicals & Fer,NSE equity
+RATEGAIN.NS,Rategain Travel Techn Ltd,NSE equity
+RATNAMANI.NS,Ratnamani Met & Tub Ltd.,NSE equity
+RATNAVEER.NS,Ratnaveer Precision Eng L,NSE equity
+RTNINDIA.NS,Rattanindia Ent Limited,NSE equity
+RTNPOWER.NS,Rattanindia Power Limited,NSE equity
+RKDL.NS,Ravi Kumar Dist. Ltd.,NSE equity
+RVHL.NS,Ravinder Heights Limited,NSE equity
+RELTD.NS,Ravindra Energy Limited,NSE equity
+RAYMONDLSL.NS,Raymond Lifestyle Limited,NSE equity
+RAYMOND.NS,Raymond Ltd,NSE equity
+RAYMONDREL.NS,Raymond Realty Limited,NSE equity
+MOMSBELIEF.NS,Rays Of Belief Limited,NSE equity
+RBLBANK.NS,Rbl Bank Limited,NSE equity
+RRECL.NS,Rdb Real Estate Cons L,NSE equity
+RECLTD.NS,Rec Limited,NSE equity
+REDINGTON.NS,Redington Limited,NSE equity
+REDTAPE.NS,Redtape Limited,NSE equity
+REFEX.NS,Refex Industries Limited,NSE equity
+REGAAL.NS,Regaal Resources Limited,NSE equity
+REGENCERAM.NS,Regency Ceramics Ltd.,NSE equity
+RELAXO.NS,Relaxo Foot Ltd.,NSE equity
+GILT5YBEES.NS,Relcapamc - Netfgilt5Y,NSE equity
+RELIABLE.NS,Reliable Data Service Ltd,NSE equity
+RELCHEMQ.NS,Reliance Chemotex Ind Ltd,NSE equity
+RIIL.NS,Reliance Industrial Infra,NSE equity
+RELIANCE.NS,Reliance Industries Ltd,NSE equity
+RPOWER.NS,Reliance Power Ltd.,NSE equity
+IVZBANKNF.NS,Religaramc - Ivzbanknf,NSE equity
+IVZSENSEX.NS,Religaramc - Ivzsensex,NSE equity
+RELIGARE.NS,Religare Enter. Ltd.,NSE equity
+REMSONSIND.NS,Remsons Industries Ltd,NSE equity
+RGL.NS,Renaissance Global Ltd,NSE equity
+RENTOMOJO.NS,Rentomojo Limited,NSE equity
+REPCOHOME.NS,Repco Home Finance Ltd,NSE equity
+REPRO.NS,Repro India Limited,NSE equity
+RESPONIND.NS,Responsive Industries Ltd,NSE equity
+RBA.NS,Restaurant Brand Asia Ltd,NSE equity
+RVTH.NS,Revathi Equipment India L,NSE equity
+RHETAN.NS,Rhetan Tmt Limited,NSE equity
+RHIM.NS,Rhi Magnesita India Ltd,NSE equity
+RICOAUTO.NS,Rico Auto Industries Ltd,NSE equity
+RIR.NS,Rir Power Electronics L,NSE equity
+RISHABH.NS,Rishabh Instruments Ltd,NSE equity
+RITCO.NS,Ritco Logistics Limited,NSE equity
+RITES.NS,Rites Limited,NSE equity
+RMC.NS,Rmc Switchgears Limited,NSE equity
+RHL.NS,Robust Hotels Limited,NSE equity
+ROLEXRINGS.NS,Rolex Rings Limited,NSE equity
+ROSSARI.NS,Rossari Biotech Limited,NSE equity
+ROSSELLIND.NS,Rossell India Limited,NSE equity
+ROSSTECH.NS,Rossell Techsys Limited,NSE equity
+ROTO.NS,Roto Pumps Limited,NSE equity
+ROUTE.NS,Route Mobile Limited,NSE equity
+ROHLTD.NS,Royal Orchid Hotels Ltd,NSE equity
+RPGLIFE.NS,Rpg Life Sciences Ltd,NSE equity
+RPSGVENT.NS,Rpsg Ventures Limited,NSE equity
+RSWM.NS,Rswm Limited,NSE equity
+RUBFILA.NS,Rubfila International Ltd,NSE equity
+RUBICON.NS,Rubicon Research Limited,NSE equity
+RUCHINFRA.NS,Ruchi Infrastructure Ltd,NSE equity
+RUCHIRA.NS,Ruchira Papers Limited,NSE equity
+RUDRA.NS,Rudra Global Infra Prod L,NSE equity
+REPL.NS,Rudrabhishek Enterp Ltd,NSE equity
+RUPA.NS,Rupa & Company Ltd,NSE equity
+RUSHIL.NS,Rushil Decor Limited,NSE equity
+SCHAND.NS,S Chand And Company Ltd,NSE equity
+SHK.NS,S H Kelkar And Co. Ltd.,NSE equity
+SVGLOBAL.NS,S V Global Mill Ltd.,NSE equity
+S&SPOWER.NS,S&S Power Switchgears Ltd,NSE equity
+SPAL.NS,S. P. Apparels Limited,NSE equity
+SALSTEEL.NS,S.A.L. Steel Ltd.,NSE equity
+SAATVIKGL.NS,Saatvik Green Energy Ltd,NSE equity
+SADBHAV.NS,Sadbhav Engineering Ltd,NSE equity
+SADBHIN.NS,Sadbhav Infra Proj Ltd.,NSE equity
+SAFARI.NS,Safari Ind (India) Ltd,NSE equity
+SAGCEM.NS,Sagar Cements Limited,NSE equity
+SAGARDEEP.NS,Sagardeep Alloys Limited,NSE equity
+SAGILITY.NS,Sagility Limited,NSE equity
+SAHYADRI.NS,Sahyadri Industries Ltd,NSE equity
+SAICAPI.NS,Sai Capital Ltd.,NSE equity
+SAILIFE.NS,Sai Life Sciences Limited,NSE equity
+SAIPARENT.NS,Sai Parenterals Limited,NSE equity
+KALAMANDIR.NS,Sai Silks (Kalamandir) L,NSE equity
+SEKURITIND.NS,Saint Gobain Sekur Ind L,NSE equity
+SAKAR.NS,Sakar Healthcare Limited,NSE equity
+SAKSOFT.NS,Saksoft Limited,NSE equity
+SAKHTISUG.NS,Sakthi Sugars Ltd,NSE equity
+SAKUMA.NS,Sakuma Exports Limited,NSE equity
+SALASAR.NS,Salasar Techno Engg. Ltd.,NSE equity
+SALONA.NS,Salona Cotspin Ltd.,NSE equity
+SALZERELEC.NS,Salzer Electronics Ltd,NSE equity
+SAMBANDAM.NS,Sambandam Spinning Mill L,NSE equity
+SAMBHAAV.NS,Sambhaav Media Ltd,NSE equity
+SAMBHV.NS,Sambhv Steel Tubes Ltd,NSE equity
+SAMHI.NS,Samhi Hotels Limited,NSE equity
+SAMMAANCAP.NS,Sammaan Capital Limited,NSE equity
+SAMPANN.NS,Sampann Utpadan India Ltd,NSE equity
+MOTHERSON.NS,Samvrdhna Mthrsn Intl Ltd,NSE equity
+SANATHAN.NS,Sanathan Textiles Limited,NSE equity
+SANDESH.NS,Sandesh Ltd,NSE equity
+SANDHAR.NS,Sandhar Technologies Ltd,NSE equity
+SANDUMA.NS,Sandur Mang & Iron Ores L,NSE equity
+SANGAMIND.NS,Sangam (India) Ltd,NSE equity
+SANGHVIMOV.NS,Sanghvi Movers Ltd,NSE equity
+SANOFICONR.NS,Sanofi Cons Healthc Ind L,NSE equity
+SANOFI.NS,Sanofi India Limited,NSE equity
+SANSERA.NS,Sansera Engineering Ltd,NSE equity
+SANSTAR.NS,Sanstar Limited,NSE equity
+SAPPHIRE.NS,Sapphire Foods India Ltd,NSE equity
+ZSARACOM.NS,Saraswati Comm (India) L,NSE equity
+SSDL.NS,Saraswati Saree Depot Ltd,NSE equity
+SARDAEN.NS,Sarda Energy & Min Ltd,NSE equity
+SAREGAMA.NS,Saregama India Limited,NSE equity
+SARLAPOLY.NS,Sarla Perf. Fibers Ltd,NSE equity
+SMLT.NS,Sarthak Metals Limited,NSE equity
+SARVESHWAR.NS,Sarveshwar Foods Limited,NSE equity
+SASKEN.NS,Sasken Technologies Ltd,NSE equity
+SATIA.NS,Satia Industries Limited,NSE equity
+SATIN.NS,Satin Credit Net Ltd,NSE equity
+SAURASHCEM.NS,Saurashtra Cement Limited,NSE equity
+SOTL.NS,Savita Oil Technolo. Ltd,NSE equity
+SAYAJIIND.NS,Sayaji Industries Ltd.,NSE equity
+SBC.NS,Sbc Exports Limited,NSE equity
+SBFC.NS,Sbfc Finance Limited,NSE equity
+SBICARD.NS,Sbi Cards & Pay Ser Ltd,NSE equity
+SBIFUNDS.NS,Sbi Funds Management Ltd,NSE equity
+SBILIFE.NS,Sbi Life Insurance Co Ltd,NSE equity
+SETFGOLD.NS,Sbi-Etf Gold,NSE equity
+SETFNIF50.NS,Sbi-Etf Nifty 50,NSE equity
+SETFNIFBK.NS,Sbi-Etf Nifty Bank,NSE equity
+SETFNN50.NS,Sbi-Etf Nifty Next 50,NSE equity
+LIQUIDSBI.NS,Sbiamc - Liquidsbi,NSE equity
+SBIBPB.NS,Sbiamc - Sbibpb,NSE equity
+SBIETFCON.NS,Sbiamc - Sbietfcon,NSE equity
+SBIETFIT.NS,Sbiamc - Sbietfit,NSE equity
+SBIETFPB.NS,Sbiamc - Sbietfpb,NSE equity
+SBIETFQLTY.NS,Sbiamc - Sbietfqlty,NSE equity
+SBILIQETF.NS,Sbiamc - Sbiliqetf,NSE equity
+SBIMIDMOM.NS,Sbiamc - Sbimidmom,NSE equity
+SBINEQWETF.NS,Sbiamc - Sbineqwetf,NSE equity
+SBINMID150.NS,Sbiamc - Sbinmid150,NSE equity
+SBISILVER.NS,Sbiamc - Sbisilver,NSE equity
+SBISMLETF.NS,Sbiamc - Sbismletf,NSE equity
+SBIVALETF.NS,Sbiamc - Sbivaletf,NSE equity
+SETF10GILT.NS,Sbiamc - Setf10Gilt,NSE equity
+SCHAEFFLER.NS,Schaeffler India Limited,NSE equity
+SCHNEIDER.NS,Schneider Electric Infra,NSE equity
+SCODATUBES.NS,Scoda Tubes Limited,NSE equity
+SEAMECLTD.NS,Seamec Limited,NSE equity
+SECMARK.NS,Secmark Consultancy Ltd,NSE equity
+SECURKLOUD.NS,Securekloud Tech Limited,NSE equity
+SEDEMAC.NS,Sedemac Mechatronics Ltd,NSE equity
+SEJALLTD.NS,Sejal Glass Limited,NSE equity
+SEMAC.NS,Semac Construction Ltd,NSE equity
+SENCO.NS,Senco Gold Limited,NSE equity
+SENORES.NS,Senores Pharmaceuticals L,NSE equity
+SEPC.NS,Sepc Limited,NSE equity
+SERVOTECH.NS,Servotech Ren Pow Sys Ltd,NSE equity
+STYL.NS,Seshaasai Technologies L,NSE equity
+SESHAPAPER.NS,Seshasayee Paper & Boards,NSE equity
+SGFIN.NS,Sg Finserve Limited,NSE equity
+SGMART.NS,Sg Mart Limited,NSE equity
+SGLRES.NS,Sgl Resources Limited,NSE equity
+SHADOWFAX.NS,Shadowfax Technologies L,NSE equity
+SHAH.NS,Shah Metacorp Limited,NSE equity
+SHAILY.NS,Shaily Eng Plastics Ltd,NSE equity
+SHAKTIPUMP.NS,Shakti Pumps (I) Ltd,NSE equity
+SHALBY.NS,Shalby Limited,NSE equity
+SAHLIBHFI.NS,Shalibhadra Finance Ltd,NSE equity
+SRD.NS,Shankar Lal Rampal Ltd,NSE equity
+SHANKARA.NS,Shankara Bldg Product Ltd,NSE equity
+BUILDPRO.NS,Shankara Buildpro Limited,NSE equity
+SHANKESH.NS,Shankesh Jewellers Ltd,NSE equity
+SHANTIGEAR.NS,Shanthi Gears Ltd,NSE equity
+SEIL.NS,Shanti Edu Initiatives L,NSE equity
+SHANTIGOLD.NS,Shanti Gold Internation L,NSE equity
+SHANTI.NS,Shanti Overseas India Ltd,NSE equity
+SHINDL.NS,Sharat Industries Ltd.,NSE equity
+SHARDACROP.NS,Sharda Cropchem Ltd.,NSE equity
+SHARDAMOTR.NS,Sharda Motor Inds Ltd,NSE equity
+SHAREINDIA.NS,Share Ind. Securities Ltd,NSE equity
+SFL.NS,Sheela Foam Limited,NSE equity
+SHEMAROO.NS,Shemaroo Enter. Ltd.,NSE equity
+SHILCTECH.NS,Shilchar Technologies Ltd,NSE equity
+SHILGRAVQ.NS,Shilp Gravures Ltd.,NSE equity
+SHILPAMED.NS,Shilpa Medicare Ltd,NSE equity
+SCILAL.NS,Shipping Corp Of Ila Ltd,NSE equity
+SCI.NS,Shipping Corp Of India Lt,NSE equity
+SHIPROCKET.NS,Shiprocket Limited,NSE equity
+SHIVAUM.NS,Shiv Aum Steels Limited,NSE equity
+SHIVACEM.NS,Shiva Cement Ltd.,NSE equity
+SHIVAAGRO.NS,Shiva Global Agro Inds. L,NSE equity
+SHIVAMILLS.NS,Shiva Mills Limited,NSE equity
+SHIVATEX.NS,Shiva Texyarn Limited,NSE equity
+SBCL.NS,Shivalik Bimetal Con. Ltd,NSE equity
+SHIVALIK.NS,Shivalik Rasayan Limited,NSE equity
+SHIVAMAUTO.NS,Shivam Auto.Ltd,NSE equity
+SHOPERSTOP.NS,Shoppers Stop Limited,NSE equity
+SHRADDHA.NS,Shraddha Prime Projects L,NSE equity
+SHRADHA.NS,Shradha Realty Limited,NSE equity
+SHREEPUSHK.NS,Shre Push Chem & Fert Ltd,NSE equity
+SAPPL.NS,Shree Ajit Pulp & Paper L,NSE equity
+SHREECEM.NS,Shree Cement Limited,NSE equity
+SHREDIGCEM.NS,Shree Digvijay Cem Co Ltd,NSE equity
+SGRL.NS,Shree Ganesh Remedies Ltd,NSE equity
+SRTL.NS,Shree Ram Twistex Limited,NSE equity
+SHREERAMA.NS,Shree Rama Multi Tech Ltd,NSE equity
+RAMANEWS.NS,Shree Rama Newsprint Ltd,NSE equity
+RENUKA.NS,Shree Renuka Sugars Ltd,NSE equity
+BALAJEE.NS,Shree Tirupati Balajee L,NSE equity
+SVLL.NS,Shree Vasu Logistics Ltd,NSE equity
+SHREEJISPG.NS,Shreeji Shipping Global L,NSE equity
+OSWALSEEDS.NS,Shreeoswal S And Che Ltd,NSE equity
+SHREYANIND.NS,Shreyans Industries Ltd,NSE equity
+SHBAJRG.NS,Shri Bajrang Alliance L,NSE equity
+SHRJAGP.NS,Shri Jagdamba Polymers L,NSE equity
+SHRIKRISH.NS,Shri Krishna Devcon Ltd.,NSE equity
+VASUPRADA.NS,Shri Vasuprada Plantati L,NSE equity
+SHRINGARMS.NS,Shringar Hou Of Mangals L,NSE equity
+LIQUIDSHRI.NS,Shriram - Liquidshri,NSE equity
+SHRIRAMFIN.NS,Shriram Finance Limited,NSE equity
+SHRIRAMPPS.NS,Shriram Properties Ltd,NSE equity
+SHUKRAPHAR.NS,Shukra Pharmaceuticals L,NSE equity
+SHYAMMETL.NS,Shyam Metalics And Engy L,NSE equity
+SHYAMTEL.NS,Shyam Telecom Limited,NSE equity
+SICAGEN.NS,Sicagen India Limited,NSE equity
+ENRIN.NS,Siemens Energy India Ltd,NSE equity
+SIEMENS.NS,Siemens Ltd,NSE equity
+SIGACHI.NS,Sigachi Industries Ltd,NSE equity
+SIGMA.NS,Sigma Solve Limited,NSE equity
+SIGNATURE.NS,Signatureglobal India Ltd,NSE equity
+SIGNPOST.NS,Signpost India Limited,NSE equity
+SIKA.NS,Sika Interplant Systems L,NSE equity
+SILINV.NS,Sil Investments Limited,NSE equity
+SILGO.NS,Silgo Retail Limited,NSE equity
+SILVERTUC.NS,Silver Touch Techno Ltd,NSE equity
+SIMPLEXINF.NS,Simplex Infrastructures L,NSE equity
+SIMPLXREA.NS,Simplex Realty Ltd.,NSE equity
+SINCLAIR.NS,Sinclairs Hotels Limited,NSE equity
+SINDHUTRAD.NS,Sindhu Trade Links Ltd,NSE equity
+SINGERIND.NS,Singer India Limited,NSE equity
+SINTERCOM.NS,Sintercom India Limited,NSE equity
+SIRCA.NS,Sirca Paint India Limited,NSE equity
+SIS.NS,Sis Limited,NSE equity
+SIYSIL.NS,Siyaram Silk Mills Ltd,NSE equity
+SJS.NS,Sjs Enterprises Limited,NSE equity
+SJVN.NS,Sjvn Ltd,NSE equity
+SKFINDUS.NS,Skf Ind (Industrial) Ltd,NSE equity
+SKFINDIA.NS,Skf India Ltd,NSE equity
+SKIPPER.NS,Skipper Limited,NSE equity
+SKMEGGPROD.NS,Skm Egg Prod Export(I) Lt,NSE equity
+SKYGOLD.NS,Sky Gold And Diamonds Ltd,NSE equity
+SKYWAYS.NS,Skyways Air Services Ltd,NSE equity
+SMARTWORKS.NS,Smartworks Coworking Sp L,NSE equity
+SMCGLOBAL.NS,Smc Global Securities Ltd,NSE equity
+SMLMAH.NS,Sml Mahindra Limited,NSE equity
+SMSPHARMA.NS,Sms Pharmaceuticals Ltd.,NSE equity
+SNOWMAN.NS,Snowman Logistics Ltd.,NSE equity
+SOBHA.NS,Sobha Limited,NSE equity
+SOFTTECH.NS,Softtech Engineers Ltd,NSE equity
+SOLARINDS.NS,Solar Industries (I) Ltd,NSE equity
+SOLARA.NS,Solara Active Pha Sci Ltd,NSE equity
+SOLARWORLD.NS,Solarworld Energy Sol Ltd,NSE equity
+SOLEX.NS,Solex Energy Limited,NSE equity
+SDBL.NS,Som Dist & Brew Ltd,NSE equity
+SOMATEX.NS,Soma Textiles & Indust Lt,NSE equity
+SOMANYCERA.NS,Somany Ceramics Limited,NSE equity
+SOMICONVEY.NS,Somi Conveyor Belt. Ltd.,NSE equity
+SONACOMS.NS,Sona Blw Precision Frgs L,NSE equity
+SONATSOFTW.NS,Sonata Software Ltd,NSE equity
+SOUTHWEST.NS,South West Pinnacle Ltd,NSE equity
+SPCENET.NS,Spacenet Enters Ind Ltd,NSE equity
+SPANDANA.NS,Spandana Sphoorty Fin Ltd,NSE equity
+SPENCERS.NS,Spencer S Retail Limited,NSE equity
+SPIC.NS,Spic Ltd,NSE equity
+SPLIL.NS,Spl Industries Limited,NSE equity
+SPMLINFRA.NS,Spml Infra Limited,NSE equity
+SPORTKING.NS,Sportking India Limited,NSE equity
+SHRIPISTON.NS,Spr Auto Technologies Ltd,NSE equity
+SRHHYPOLTD.NS,Sree Rayalseema Hhp Ltd.,NSE equity
+SRF.NS,Srf Ltd,NSE equity
+SRGHFL.NS,Srg Housing Finance L,NSE equity
+HAVISHA.NS,Sri Havisha Hosp & Infr L,NSE equity
+SRM.NS,Srm Contractors Limited,NSE equity
+SSRETAIL.NS,Ss Retail Limited,NSE equity
+SETL.NS,Standard Engng Tcnlgy Ltd,NSE equity
+SIL.NS,Standard Industries Ltd.,NSE equity
+STANLEY.NS,Stanley Lifestyles Ltd,NSE equity
+STARCEMENT.NS,Star Cement Limited,NSE equity
+STARHEALTH.NS,Star Health & Al Ins Co L,NSE equity
+STARPAPER.NS,Star Paper Mills Ltd,NSE equity
+STARTECK.NS,Starteck Finance Limited,NSE equity
+SBIN.NS,State Bank Of India,NSE equity
+STEAMHOUSE.NS,Steamhouse India Limited,NSE equity
+SAIL.NS,Steel Authority Of India,NSE equity
+STEELCITY.NS,Steel City Securities Ltd,NSE equity
+STEELXIND.NS,Steel Exchange India Ltd,NSE equity
+STLSTRINF.NS,Steel Strips Infra L,NSE equity
+SSWL.NS,Steel Strips Wheels Ltd.,NSE equity
+STEELCAS.NS,Steelcast Limited,NSE equity
+STEL.NS,Stel Holdings Limited,NSE equity
+STERTOOLS.NS,Sterling Tools Limited,NSE equity
+SGL.NS,Stl Global Limited,NSE equity
+STLNETWORK.NS,Stl Networks Limited,NSE equity
+STOVEKRAFT.NS,Stove Kraft Limited,NSE equity
+STAR.NS,Strides Pharma Sci Ltd,NSE equity
+SWSOLAR.NS,Strlng & Wil Ren Ene Ltd,NSE equity
+STUDDS.NS,Studds Accessories Ltd,NSE equity
+STYLAMIND.NS,Stylam Industries Limited,NSE equity
+STYRENIX.NS,Styrenix Performance Ltd,NSE equity
+SUBEXLTD.NS,Subex Ltd,NSE equity
+SUBROS.NS,Subros Limited,NSE equity
+SUDARSCHEM.NS,Sudarshan Chemical Inds L,NSE equity
+SUDARCOLOR.NS,Sudarshan Colornt Ind Ltd,NSE equity
+SUDEEPPHRM.NS,Sudeep Pharma Limited,NSE equity
+SUKHJITS.NS,Sukhjit Starch & Chem Ltd,NSE equity
+SULA.NS,Sula Vineyards Limited,NSE equity
+SUMEDHA.NS,Sumedha Fiscal Services L,NSE equity
+SUMEETINDS.NS,Sumeet Ind Limited,NSE equity
+SUMIT.NS,Sumit Woods Limited,NSE equity
+SUMICHEM.NS,Sumitomo Chem India Ltd,NSE equity
+SUMMITSEC.NS,Summit Securities Ltd,NSE equity
+SPARC.NS,Sun Pharma Adv.Res.Co.Ltd,NSE equity
+SUNPHARMA.NS,Sun Pharmaceutical Ind L,NSE equity
+SUNTV.NS,Sun Tv Network Limited,NSE equity
+SUNDRMBRAK.NS,Sundaram Brak Linings Ltd,NSE equity
+SUNCLAY.NS,Sundaram Clayton Limited,NSE equity
+SUNDARMFIN.NS,Sundaram Finance Ltd,NSE equity
+SUNDARAM.NS,Sundaram Multi Pap Ltd,NSE equity
+SUNDRMFAST.NS,Sundram Fasteners Ltd,NSE equity
+SUNDROP.NS,Sundrop Brands Limited,NSE equity
+SUNFLAG.NS,Sunflag Iron And Steel Co,NSE equity
+SUNLOC.NS,Sunil Healthcare Ltd.,NSE equity
+SUNRAKSHAK.NS,Sunrakshakk Indus Ind L,NSE equity
+SUNSHIEL.NS,Sunshield Chemicals Ltd.,NSE equity
+SUNSHINE.NS,Sunshine Pictures Limited,NSE equity
+SUNTECK.NS,Sunteck Realty Limited,NSE equity
+SUPERHOUSE.NS,Superhouse Limited,NSE equity
+SIEL.NS,Superior Industrial Ent L,NSE equity
+SUPRAJIT.NS,Suprajit Engineering Ltd,NSE equity
+SUPREME.NS,Supreme Holdin N Hosp I L,NSE equity
+SUPREMEIND.NS,Supreme Industries Ltd,NSE equity
+SUPREMEINF.NS,Supreme Infra. Ltd.,NSE equity
+SPLPETRO.NS,Supreme Petrochem Limited,NSE equity
+SUPRIYA.NS,Supriya Lifescience Ltd,NSE equity
+SURAJEST.NS,Suraj Estate Developers L,NSE equity
+SURAJLTD.NS,Suraj Limited,NSE equity
+SURAKSHA.NS,Suraksha Diagnostic Ltd,NSE equity
+SURANASOL.NS,Surana Solar Limited,NSE equity
+SURANAT&P.NS,Surana Telecom And Pow Lt,NSE equity
+SBGLP.NS,Suratwwala Bus Group Ltd,NSE equity
+SURYAROSNI.NS,Surya Roshni Ltd,NSE equity
+SURYALAXMI.NS,Suryalakshmi Cot Mil Ltd,NSE equity
+SURYALA.NS,Suryalata Spinning Mill L,NSE equity
+SURYODAY.NS,Suryoday Small Fin Bk Ltd,NSE equity
+SUVEN.NS,Suven Life Sciences Ltd,NSE equity
+SUVIDHAA.NS,Suvidhaa Infoserve Ltd,NSE equity
+SUYOG.NS,Suyog Telematics Limited,NSE equity
+SUZLON.NS,Suzlon Energy Limited,NSE equity
+SVPGLOB.NS,Svp Global Textiles Ltd,NSE equity
+SWANCORP.NS,Swan Corp Limited,NSE equity
+SWARAJENG.NS,Swaraj Engines Ltd,NSE equity
+SWARNSAR.NS,Swarnsarita Jewels Ind L,NSE equity
+SWELECTES.NS,Swelect Energy Sys Ltd,NSE equity
+SWIGGY.NS,Swiggy Limited,NSE equity
+SYMBIOTEC.NS,Symbiotec Pharmalab Ltd,NSE equity
+SYMPHONY.NS,Symphony Limited,NSE equity
+SYNCOMF.NS,Syncom Formu (I) Ltd,NSE equity
+SGIL.NS,Synergy Green Ind. Ltd,NSE equity
+SYNGENE.NS,Syngene International Ltd,NSE equity
+SYRMA.NS,Syrma Sgs Technology Ltd,NSE equity
+TGVSL.NS,T G V Sraac Ltd.,NSE equity
+TTL.NS,T T Limited,NSE equity
+TAALTECH.NS,Taal Tech Ltd.,NSE equity
+TAINWALCHM.NS,Tainwala Chemical And Pla,NSE equity
+TAJGVK.NS,Taj Gvk Hotels & Resorts,NSE equity
+TAKE.NS,Take Limited,NSE equity
+TALBROAUTO.NS,Talbros Auto. Comp. Ltd,NSE equity
+TMB.NS,Tamilnad Merca Bank Ltd,NSE equity
+TNPL.NS,Tamilnadu Newsprt & Paper,NSE equity
+TNPETRO.NS,Tamilnadu Petroproducts L,NSE equity
+TNTELE.NS,Tamilnadu Telecommunicati,NSE equity
+TANAA.NS,Taneja Aerospace & Avia L,NSE equity
+TANLA.NS,Tanla Platforms Limited,NSE equity
+TARACHAND.NS,Tara Chand Infra Soln Ltd,NSE equity
+TARAPUR.NS,Tarapur Transformers Ltd,NSE equity
+TARC.NS,Tarc Limited,NSE equity
+TARMAT.NS,Tarmat Limited,NSE equity
+TARSONS.NS,Tarsons Products Limited,NSE equity
+TASTYBITE.NS,Tasty Bite Eatables Ltd,NSE equity
+TATACAP.NS,Tata Capital Limited,NSE equity
+TATACHEM.NS,Tata Chemicals Ltd,NSE equity
+TATACOMM.NS,Tata Communications Ltd,NSE equity
+TCS.NS,Tata Consultancy Serv Lt,NSE equity
+TATACONSUM.NS,Tata Consumer Product Ltd,NSE equity
+TATAELXSI.NS,Tata Elxsi Limited,NSE equity
+TATAINVEST.NS,Tata Investment Corp Ltd,NSE equity
+TMCV.NS,Tata Motors Limited,NSE equity
+TMPV.NS,Tata Motors Pass Veh Ltd,NSE equity
+TATAPOWER.NS,Tata Power Co Ltd,NSE equity
+TATASTEEL.NS,Tata Steel Limited,NSE equity
+TATATECH.NS,Tata Technologies Limited,NSE equity
+TTML.NS,Tata Teleserv(Maharastra),NSE equity
+NETF.NS,Tataaml - Netf,NSE equity
+NPBET.NS,Tataaml - Npbet,NSE equity
+TNIDETF.NS,Tataaml - Tnidetf,NSE equity
+TATAGOLD.NS,Tataaml-Tatagold,NSE equity
+TATSILV.NS,Tataaml-Tatsilv,NSE equity
+TATVA.NS,Tatva Chin Pharm Chem Ltd,NSE equity
+TBOTEK.NS,Tbo Tek Limited,NSE equity
+TCC.NS,Tcc Concept Limited,NSE equity
+TCIEXP.NS,Tci Express Limited,NSE equity
+TCIFINANCE.NS,Tci Finance Ltd,NSE equity
+TCPLPACK.NS,Tcpl Packaging Limited,NSE equity
+TDPOWERSYS.NS,Td Power Systems Ltd.,NSE equity
+TEAMGTY.NS,Team India Guaranty Ltd,NSE equity
+TEAMLEASE.NS,Teamlease Services Ltd.,NSE equity
+TECHM.NS,Tech Mahindra Limited,NSE equity
+TECHNOE.NS,Techno Elec & Eng Co. Ltd,NSE equity
+TIIL.NS,Technocraft Ind Ltd,NSE equity
+TECHNOCRAF.NS,Technocraft Ventures Ltd,NSE equity
+TECHNVISN.NS,Technvision Ventures Ltd.,NSE equity
+TECILCHEM.NS,Tecil Chemicals,NSE equity
+TEGA.NS,Tega Industries Limited,NSE equity
+TEJASNET.NS,Tejas Networks Limited,NSE equity
+TEMBO.NS,Tembo Global Ind Ltd,NSE equity
+TEMPSENS.NS,Tempsens Inst (India) Ltd,NSE equity
+TENNIND.NS,Tenneco Clean Air India L,NSE equity
+TERASOFT.NS,Tera Software Limited,NSE equity
+TEXINFRA.NS,Texmaco Infra & Holdg Ltd,NSE equity
+TEXRAIL.NS,Texmaco Rail & Eng. Ltd.,NSE equity
+TEXMOPIPES.NS,Texmo Pipe & Products Ltd,NSE equity
+TGBHOTELS.NS,Tgb Banquets&Hotels Ltd,NSE equity
+THACKER.NS,Thacker & Co. Ltd.,NSE equity
+THAKDEV.NS,Thakkers Developers Ltd.,NSE equity
+THANGAMAYL.NS,Thangamayil Jewellery Ltd,NSE equity
+ANUP.NS,The Anup Engineering Ltd,NSE equity
+BYKE.NS,The Byke Hospitality Ltd,NSE equity
+GESHIP.NS,The Ge Shpg.Ltd,NSE equity
+GROBTEA.NS,The Grob Tea Company Ltd,NSE equity
+INDIACEM.NS,The India Cements Limited,NSE equity
+INDHOTEL.NS,The Indian Hotels Co. Ltd,NSE equity
+THEINVEST.NS,The Invest Trust Of Ind L,NSE equity
+NIACL.NS,The New India Assu Co Ltd,NSE equity
+PHOENIXLTD.NS,The Phoenix Mills Ltd,NSE equity
+RAMCOCEM.NS,The Ramco Cements Limited,NSE equity
+RUBYMILLS.NS,The Ruby Mills Ltd,NSE equity
+SOUTHBANK.NS,The South Indian Bank Ltd,NSE equity
+STCINDIA.NS,The State Trading Corpn,NSE equity
+WIPL.NS,The Western India Ply Ltd,NSE equity
+THEJO.NS,Thejo Engineering Limited,NSE equity
+THEMISMED.NS,Themis Medicare Ltd.,NSE equity
+THERMAX.NS,Thermax Ltd,NSE equity
+TIRUMALCHM.NS,Thirumalai Chemicals Ltd,NSE equity
+THOMASCOOK.NS,Thomas Cook (India) Ltd,NSE equity
+THOMASCOTT.NS,Thomas Scott (India) Ltd,NSE equity
+THYROCARE.NS,Thyrocare Tech Ltd,NSE equity
+TIGERLOGS.NS,Tiger Logistics (India) L,NSE equity
+TI.NS,Tilaknagar Industries Ltd,NSE equity
+TIMETECHNO.NS,Time Technoplast Ltd.,NSE equity
+TIMEX.NS,Timex Group India Ltd.,NSE equity
+TIMKEN.NS,Timken India Ltd.,NSE equity
+TINNARUBR.NS,Tinna Rubber And Infr Ltd,NSE equity
+TIPSFILMS.NS,Tips Films Limited,NSE equity
+TIPSMUSIC.NS,Tips Music Limited,NSE equity
+TITAGARH.NS,Titagarh Rail Systems Ltd,NSE equity
+TITAN.NS,Titan Company Limited,NSE equity
+TOKYOPLAST.NS,Tokyo Plast Intl Ltd,NSE equity
+TOLINS.NS,Tolins Tyres Limited,NSE equity
+TORNTPHARM.NS,Torrent Pharmaceuticals L,NSE equity
+TORNTPOWER.NS,Torrent Power Ltd,NSE equity
+TOUCHWOOD.NS,Touchwood Entertain Ltd.,NSE equity
+TFCILTD.NS,Tourism Finance Corp. Of,NSE equity
+TOYAMSL.NS,Toyam Sports Ltd.,NSE equity
+TPLPLASTEH.NS,Tpl Plastech Limited,NSE equity
+TRACXN.NS,Tracxn Technologies Ltd,NSE equity
+TARIL.NS,Trans & Recti. Ltd,NSE equity
+TRANSCOR.NS,Transcorp International L,NSE equity
+TREL.NS,Transindia Real Estate L,NSE equity
+TCI.NS,Transport Corpn Of India,NSE equity
+TRANSRAILL.NS,Transrail Lighting Ltd,NSE equity
+TFL.NS,Transwarranty Fin. Ltd.,NSE equity
+TRAVELFOOD.NS,Travel Food Services Ltd,NSE equity
+TREEHOUSE.NS,Tree House Edu Ltd,NSE equity
+TREJHARA.NS,Trejhara Solutions Ltd,NSE equity
+TRENT.NS,Trent Ltd,NSE equity
+TRF.NS,Trf Limited,NSE equity
+TRIDENT.NS,Trident Limited,NSE equity
+TRIGYN.NS,Trigyn Technologies Ltd,NSE equity
+TRITONV.NS,Triton Valves Ltd.,NSE equity
+TRIVENI.NS,Triveni Engg. & Inds. Ltd,NSE equity
+TRITURBINE.NS,Triveni Turbine Limited,NSE equity
+TRUALT.NS,Trualt Bioenergy Limited,NSE equity
+TRU.NS,Trucap Finance Limited,NSE equity
+TSFINV.NS,Tsf Investments Limited,NSE equity
+TTKHLTCARE.NS,Ttk Healthcare Limited,NSE equity
+TTKPRESTIG.NS,Ttk Prestige Ltd,NSE equity
+TIINDIA.NS,Tube Invest Of India Ltd,NSE equity
+TURTLEMINT.NS,Turtlemint Fintech Sols L,NSE equity
+TUTIALKA.NS,Tuticorin Alkal Ch & Fe L,NSE equity
+TVTODAY.NS,Tv Today Network Ltd,NSE equity
+TVSELECT.NS,Tvs Electronics Ltd,NSE equity
+TVSHLTD.NS,Tvs Holdings Limited,NSE equity
+TVSMOTOR.NS,Tvs Motor Company  Ltd,NSE equity
+TVSSRICHAK.NS,Tvs Srichakra Limited,NSE equity
+TVSSCS.NS,Tvs Supply Chain Sol L,NSE equity
+UPHOT.NS,U P Hotels Ltd.,NSE equity
+UCOBANK.NS,Uco Bank,NSE equity
+UDAYJEW.NS,Uday Jewellery Inds. Ltd.,NSE equity
+USK.NS,Udayshivakumar Infra Ltd,NSE equity
+UFLEX.NS,Uflex Limited,NSE equity
+UFO.NS,Ufo Moviez India Ltd.,NSE equity
+UGROCAP.NS,Ugro Capital Limited,NSE equity
+UEL.NS,Ujaas Energy Limited,NSE equity
+UJJIVANSFB.NS,Ujjivan Small Financ Bank,NSE equity
+ULTRAMAR.NS,Ultramarine & Pigments L,NSE equity
+ULTRACEMCO.NS,Ultratech Cement Limited,NSE equity
+UMIYA-MRO.NS,Umiya Buildcon Limited,NSE equity
+UNICHEMLAB.NS,Unichem Laboratories Ltd,NSE equity
+UNIECOM.NS,Unicommerce Esolutions L,NSE equity
+UNIINFO.NS,Uniinfo Telecom Servi Ltd,NSE equity
+UNIMECH.NS,Unimech Aerospace N Mfg L,NSE equity
+UNIONBANK.NS,Union Bank Of India,NSE equity
+UNIONGOLD.NS,Unionamc - Uniongold,NSE equity
+UNIPARTS.NS,Uniparts India Limited,NSE equity
+UNIENTER.NS,Uniphos Enterprises Ltd,NSE equity
+UNITECH.NS,Unitech Ltd,NSE equity
+UBL.NS,United Breweries Ltd,NSE equity
+UNIDT.NS,United Drilling Tools Ltd,NSE equity
+UNITEDTEA.NS,United Nilgiri Tea Ltd,NSE equity
+UNITEDPOLY.NS,United Polyfab Guj. Ltd.,NSE equity
+UNITDSPR.NS,United Spirits Limited,NSE equity
+UNIVCABLES.NS,Universal Cables Ltd,NSE equity
+UNOMINDA.NS,Uno Minda Limited,NSE equity
+UDS.NS,Updater Services Limited,NSE equity
+UPL.NS,Upl Limited,NSE equity
+URBANCO.NS,Urban Company Limited,NSE equity
+URJA.NS,Urja Global Limited,NSE equity
+UMESLTD.NS,Usha Martin Edu & Sol Ltd,NSE equity
+USHAMART.NS,Usha Martin Ltd.,NSE equity
+UTIAMC.NS,Uti Asset Mngmt Co Ltd,NSE equity
+LIQUIDBETA.NS,Utiamc - Liquidbeta,NSE equity
+NIF500BETA.NS,Utiamc - Nif500Beta,NSE equity
+SECLEDBETA.NS,Utiamc - Secledbeta,NSE equity
+BANKBETA.NS,Utiamc-Bankbeta,NSE equity
+GILT10BETA.NS,Utiamc-Gilt10Beta,NSE equity
+GILT5BETA.NS,Utiamc-Gilt5Beta,NSE equity
+ITBETA.NS,Utiamc-Itbeta,NSE equity
+MIDCAPBETA.NS,Utiamc-Midcapbeta,NSE equity
+NEXT50BETA.NS,Utiamc-Next50Beta,NSE equity
+NIFTYBETA.NS,Utiamc-Niftybeta,NSE equity
+SENSEXBETA.NS,Utiamc-Sensexbeta,NSE equity
+SILVERBETA.NS,Utiamc-Silverbeta,NSE equity
+SNXT50BETA.NS,Utiamc-Snxt50Beta,NSE equity
+GOLDBETA.NS,Utiamc-Utigoldbeta,NSE equity
+UTKARSHBNK.NS,Utkarsh Small Fin Bank L,NSE equity
+UTTAMSUGAR.NS,Uttam Sugar Mills Ltd.,NSE equity
+VTMLTD.NS,V T M Ltd.,NSE equity
+VGUARD.NS,V-Guard Ind Ltd.,NSE equity
+V2RETAIL.NS,V2 Retail Limited,NSE equity
+WABAG.NS,Va Tech Wabag Ltd,NSE equity
+VADILENT.NS,Vadilal Enterprises Ltd.,NSE equity
+VADILALIND.NS,Vadilal Industries Ltd,NSE equity
+VAIBHAVGBL.NS,Vaibhav Global Limited,NSE equity
+VAISHALI.NS,Vaishali Pharma Limited,NSE equity
+VAKRANGEE.NS,Vakrangee Limited,NSE equity
+VALIANTORG.NS,Valiant Organics Limited,NSE equity
+DBREALTY.NS,Valor Estate Limited,NSE equity
+VHL.NS,Vardhman Holdings Limited,NSE equity
+VARDMNPOLY.NS,Vardhman Polytex Ltd.,NSE equity
+VSSL.NS,Vardhman Spc Steel Ltd,NSE equity
+VTL.NS,Vardhman Textiles Limited,NSE equity
+VARMORA.NS,Varmora Granito Limited,NSE equity
+VARROC.NS,Varroc Engineering Ltd.,NSE equity
+VBL.NS,Varun Beverages Limited,NSE equity
+VGL.NS,Varvee Global Limited,NSE equity
+VASCONEQ.NS,Vascon Engineers Ltd,NSE equity
+VASWANI.NS,Vaswani Ind Ltd,NSE equity
+MANYAVAR.NS,Vedant Fashions Limited,NSE equity
+VAML.NS,Vedanta Aluminium Metal L,NSE equity
+VISL.NS,Vedanta Iron And Steel L,NSE equity
+VEDL.NS,Vedanta Limited,NSE equity
+VOGL.NS,Vedanta Oil And Gas Ltd,NSE equity
+VEDPOWER.NS,Vedanta Power Limited,NSE equity
+VEDAVAAG.NS,Vedavaag Systems Ltd.,NSE equity
+VEEDOL.NS,Veedol Corporation Ltd,NSE equity
+VENKEYS.NS,Venky S (India) Limited,NSE equity
+VENTIVE.NS,Ventive Hospitality Ltd,NSE equity
+VENUSPIPES.NS,Venus Pipes & Tubes Ltd,NSE equity
+VENUSREM.NS,Venus Remedies Limited,NSE equity
+VERANDA.NS,Veranda Learning Sol Ltd,NSE equity
+VERTOZ.NS,Vertoz Limited,NSE equity
+VESUVIUS.NS,Vesuvius India Ltd,NSE equity
+VETO.NS,Veto Switchgear Cable Ltd,NSE equity
+VSTL.NS,Vibhor Steel Tubes Ltd,NSE equity
+VGCL.NS,Vibrant Global Capital L,NSE equity
+VIDHIING.NS,Vidhi Spclty F Ingrdnts L,NSE equity
+VIDYAWIRES.NS,Vidya Wires Limited,NSE equity
+VIJSOLX.NS,Vijay Solvex Ltd.,NSE equity
+VIJAYA.NS,Vijaya Diagnostic Cen Ltd,NSE equity
+VIKASECO.NS,Vikas Ecotech Limited,NSE equity
+VIKASLIFE.NS,Vikas Lifecare Limited,NSE equity
+VIKRAMSOLR.NS,Vikram Solar Limited,NSE equity
+VIKRAN.NS,Vikran Engineering Ltd,NSE equity
+VIMTALABS.NS,Vimta Labs Limited,NSE equity
+VINATIORGA.NS,Vinati Organics Ltd,NSE equity
+VINDHYATEL.NS,Vindhya Telelinks Ltd,NSE equity
+VINEETLAB.NS,Vineet Laboratories Ltd,NSE equity
+VINNY.NS,Vinny Overseas Limited,NSE equity
+VINCOFE.NS,Vintage Coffee N Bvrgs L,NSE equity
+VINYLINDIA.NS,Vinyl Chemicals (I) Ltd.,NSE equity
+VIPCLOTHNG.NS,Vip Clothing Limited,NSE equity
+VIPIND.NS,Vip Industries Ltd,NSE equity
+VIRAT.NS,Virat Industries Ltd.,NSE equity
+VIRINCHI.NS,Virinchi Limited,NSE equity
+VOEPL.NS,Virtuoso Optoelectronic L,NSE equity
+VISACHROME.NS,Visa Chrome Limited,NSE equity
+VIVIDHA.NS,Visagar Polytex Ltd,NSE equity
+VISHAL.NS,Vishal Fabrics Ltd.,NSE equity
+VMM.NS,Vishal Mega Mart Limited,NSE equity
+VISHNU.NS,Vishnu Chemicals Limited,NSE equity
+VPRPL.NS,Vishnu Prakash R Pungli L,NSE equity
+VISHWARAJ.NS,Vishwaraj Sugar Ind Ltd,NSE equity
+VITAL.NS,Vital Chemtech Limited,NSE equity
+VIVIANA.NS,Viviana Power Tech Ltd,NSE equity
+VIVOBIOT.NS,Vivo Bio Tech Ltd.,NSE equity
+VIYASH.NS,Viyash Scientific Limited,NSE equity
+VLEGOV.NS,Vl E Gov And It Sol Ltd,NSE equity
+VLSFINANCE.NS,Vls Finance Ltd,NSE equity
+VMART.NS,Vmart Retail Ltd,NSE equity
+VMSTMT.NS,Vms Tmt Limited,NSE equity
+IDEA.NS,Vodafone Idea Limited,NSE equity
+VOITHPAPR.NS,Voith Paper Fabrics Ind L,NSE equity
+VOLTAMP.NS,Voltamp Transformers Ltd,NSE equity
+VOLTAS.NS,Voltas Ltd,NSE equity
+VRAJ.NS,Vraj Iron And Steel Ltd,NSE equity
+VRLLOG.NS,Vrl Logistics Limited,NSE equity
+VSTIND.NS,Vst Industries Ltd,NSE equity
+VSTTILLERS.NS,Vst Tillers Tractors Ltd,NSE equity
+WHBRADY.NS,W H Brady & Co. Ltd.,NSE equity
+WPIL.NS,W P I L Ltd.,NSE equity
+WSI.NS,W.S.Industries (I) Ltd.,NSE equity
+WAAREEENER.NS,Waaree Energies Limited,NSE equity
+WAAREERTL.NS,Waaree Renewable Tech Ltd,NSE equity
+WAKEFIT.NS,Wakefit Innovations Ltd,NSE equity
+WALCHANNAG.NS,Walchandnagar Industries,NSE equity
+WANBURY.NS,Wanbury Limited,NSE equity
+WARDINMOBI.NS,Wardwizard Inno & Mob L,NSE equity
+WATERBASE.NS,Waterbase Ltd.,NSE equity
+CORDELIA.NS,Waterways Leisure Tour L,NSE equity
+WEWIN.NS,We Win Limited,NSE equity
+TWCGOLDETF.NS,Wealth - Twcgoldetf,NSE equity
+WEALTH.NS,Wealth Frst Port. Mg. Ltd,NSE equity
+WEBELSOLAR.NS,Websol Energy System Ltd,NSE equity
+WEIZMANIND.NS,Weizmann Ltd,NSE equity
+WELCORP.NS,Welspun Corp Limited,NSE equity
+WELENT.NS,Welspun Enterprises Ltd.,NSE equity
+WELSPUNLIV.NS,Welspun Living Limited,NSE equity
+WELSPLSOL.NS,Welspun Specialty Sol L,NSE equity
+WENDT.NS,Wendt (India) Limited,NSE equity
+WSTCSTPAPR.NS,West Coast Paper Mills Lt,NSE equity
+WCIL.NS,Western Carriers (Ind) L,NSE equity
+WESTLIFE.NS,Westlife Foodworld Ltd,NSE equity
+WEWORK.NS,Wework India Management L,NSE equity
+WHEELS.NS,Wheels India Ltd,NSE equity
+WHIRLPOOL.NS,Whirlpool Of India Ltd,NSE equity
+WILLAMAGOR.NS,Williamson Magor,NSE equity
+WINDLAS.NS,Windlas Biotech Limited,NSE equity
+WINDMACHIN.NS,Windsor Machines Limited,NSE equity
+WIPRO.NS,Wipro Ltd,NSE equity
+WOCKPHARMA.NS,Wockhardt Limited,NSE equity
+WEL.NS,Wonder Electricals Ltd,NSE equity
+WONDERLA.NS,Wonderla Holidays Ltd.,NSE equity
+WORTHPERI.NS,Worth Peripherals Limited,NSE equity
+XCHANGING.NS,Xchanging Solutions Ltd,NSE equity
+XELPMOC.NS,Xelpmoc Design & Tech Ltd,NSE equity
+XPROINDIA.NS,Xpro India Limited,NSE equity
+XTGLOBAL.NS,Xtglobal Infotech Limited,NSE equity
+XTRANET.NS,Xtranet Technologies Ltd,NSE equity
+YASHO.NS,Yasho Industries Limited,NSE equity
+YATHARTH.NS,Yatharth Hosp & Tra C S L,NSE equity
+YATRA.NS,Yatra Online Limited,NSE equity
+YESBANK.NS,Yes Bank Limited,NSE equity
+YOGI.NS,Yogi Ltd.,NSE equity
+YUKEN.NS,Yuken India Limited,NSE equity
+ZFSTEERING.NS,Z F Steering Gear (I) Ltd,NSE equity
+ZAGGLE.NS,Zaggle Prepa Ocean Ser L,NSE equity
+ZEEL.NS,Zee Entertainment Ent Ltd,NSE equity
+ZEELEARN.NS,Zee Learn Limited,NSE equity
+ZEEMEDIA.NS,Zee Media Corporation Ltd,NSE equity
+ZENTEC.NS,Zen Technologies Limited,NSE equity
+ZENITHEXPO.NS,Zenith Exports Ltd,NSE equity
+ZENITHSTL.NS,Zenith Steel Pip Ind Ltd,NSE equity
+ZENSARTECH.NS,Zensar Technologies  Ltd,NSE equity
+GOLDCASE.NS,Zerodhaamc - Goldcase,NSE equity
+LIQUIDCASE.NS,Zerodhaamc - Liquidcase,NSE equity
+LTGILTCASE.NS,Zerodhaamc - Ltgiltcase,NSE equity
+MID150CASE.NS,Zerodhaamc - Mid150Case,NSE equity
+NIFTYCASE.NS,Zerodhaamc - Niftycase,NSE equity
+SILVERCASE.NS,Zerodhaamc - Silvercase,NSE equity
+SML100CASE.NS,Zerodhaamc - Sml100Case,NSE equity
+TOP100CASE.NS,Zerodhaamc - Top100Case,NSE equity
+ZFCVINDIA.NS,Zf Com Ve Ctr Sys Ind Ltd,NSE equity
+ZIMLAB.NS,Zim Laboratories Limited,NSE equity
+ZODIACLOTH.NS,Zodiac Clothing Co. Ltd.,NSE equity
+ZODIAC.NS,Zodiac Energy Limited,NSE equity
+ZOTA.NS,Zota Health Care Limited,NSE equity
+ZUARI.NS,Zuari Agro Chemicals Ltd,NSE equity
+ZUARIIND.NS,Zuari Industries Limited,NSE equity
+ZYDUSLIFE.NS,Zydus Lifesciences Ltd,NSE equity
+ZYDUSWELL.NS,Zydus Wellness Limited,NSE equity
+MMM,3M,S&P 500
+AOS,A. O. Smith,S&P 500
+AES,AES Corporation,S&P 500
+APA,APA Corporation,S&P 500
+T,AT&T,S&P 500
+ABBV,AbbVie,S&P 500
+ABT,Abbott Laboratories,S&P 500
+ACN,Accenture,S&P 500
+ADBE,Adobe Inc.,S&P 500
+AMD,Advanced Micro Devices,S&P 500
+AFL,Aflac,S&P 500
+A,Agilent Technologies,S&P 500
+APD,Air Products,S&P 500
+ABNB,Airbnb,S&P 500
+AKAM,Akamai Technologies,S&P 500
+ALB,Albemarle Corporation,S&P 500
+ARE,Alexandria Real Estate Equities,S&P 500
+ALGN,Align Technology,S&P 500
+ALLE,Allegion,S&P 500
+LNT,Alliant Energy,S&P 500
+ALL,Allstate,S&P 500
+GOOGL,Alphabet Inc. (Class A),S&P 500
+GOOG,Alphabet Inc. (Class C),S&P 500
+MO,Altria,S&P 500
+AMZN,Amazon,S&P 500
+AMCR,Amcor,S&P 500
+AEE,Ameren,S&P 500
+AEP,American Electric Power,S&P 500
+AXP,American Express,S&P 500
+AIG,American International Group,S&P 500
+AMT,American Tower,S&P 500
+AWK,American Water Works,S&P 500
+AMP,Ameriprise Financial,S&P 500
+AME,Ametek,S&P 500
+AMGN,Amgen,S&P 500
+APH,Amphenol,S&P 500
+ADI,Analog Devices,S&P 500
+AON,Aon plc,S&P 500
+APO,Apollo Global Management,S&P 500
+APP,AppLovin,S&P 500
+AAPL,Apple Inc.,S&P 500
+AMAT,Applied Materials,S&P 500
+APTV,Aptiv,S&P 500
+ACGL,Arch Capital Group,S&P 500
+ADM,Archer Daniels Midland,S&P 500
+ARES,Ares Management,S&P 500
+ANET,Arista Networks,S&P 500
+AJG,Arthur J. Gallagher & Co.,S&P 500
+AIZ,Assurant,S&P 500
+ATO,Atmos Energy,S&P 500
+AZO,AutoZone,S&P 500
+ADSK,Autodesk,S&P 500
+ADP,Automatic Data Processing,S&P 500
+AVY,Avery Dennison,S&P 500
+AXON,Axon Enterprise,S&P 500
+BNY,BNY Mellon,S&P 500
+BXP,"BXP, Inc.",S&P 500
+BKR,Baker Hughes,S&P 500
+BALL,Ball Corporation,S&P 500
+BAC,Bank of America,S&P 500
+BAX,Baxter International,S&P 500
+BDX,Becton Dickinson,S&P 500
+BRK-B,Berkshire Hathaway,S&P 500
+BBY,Best Buy,S&P 500
+TECH,Bio-Techne,S&P 500
+BIIB,Biogen,S&P 500
+BLK,BlackRock,S&P 500
+BX,Blackstone Inc.,S&P 500
+XYZ,"Block, Inc.",S&P 500
+BE,Bloom Energy,S&P 500
+BA,Boeing,S&P 500
+BKNG,Booking Holdings,S&P 500
+BSX,Boston Scientific,S&P 500
+BMY,Bristol Myers Squibb,S&P 500
+AVGO,Broadcom,S&P 500
+BR,Broadridge Financial Solutions,S&P 500
+BRO,Brown & Brown,S&P 500
+BF-B,Brown–Forman,S&P 500
+BG,Bunge Global,S&P 500
+CHRW,C.H. Robinson,S&P 500
+CBRE,CBRE Group,S&P 500
+CDW,CDW Corporation,S&P 500
+CF,CF Industries,S&P 500
+CME,CME Group,S&P 500
+CMS,CMS Energy,S&P 500
+CRH,CRH plc,S&P 500
+CSX,CSX Corporation,S&P 500
+CVS,CVS Health,S&P 500
+CDNS,Cadence Design Systems,S&P 500
+CPT,Camden Property Trust,S&P 500
+COF,Capital One,S&P 500
+CAH,Cardinal Health,S&P 500
+CCL,Carnival Corporation,S&P 500
+CARR,Carrier Global,S&P 500
+CVNA,Carvana,S&P 500
+CASY,Casey's,S&P 500
+CAT,Caterpillar Inc.,S&P 500
+CBOE,Cboe Global Markets,S&P 500
+COR,Cencora,S&P 500
+CNC,Centene Corporation,S&P 500
+CNP,CenterPoint Energy,S&P 500
+CRL,Charles River Laboratories,S&P 500
+SCHW,Charles Schwab Corporation,S&P 500
+CHTR,Charter Communications,S&P 500
+CVX,Chevron Corporation,S&P 500
+CMG,Chipotle Mexican Grill,S&P 500
+CB,Chubb Limited,S&P 500
+CHD,Church & Dwight,S&P 500
+CIEN,Ciena,S&P 500
+CI,Cigna,S&P 500
+CINF,Cincinnati Financial,S&P 500
+CTAS,Cintas,S&P 500
+CSCO,Cisco,S&P 500
+C,Citigroup,S&P 500
+CFG,Citizens Financial Group,S&P 500
+CLX,Clorox,S&P 500
+CSGP,CoStar Group,S&P 500
+KO,Coca-Cola Company (The),S&P 500
+CTSH,Cognizant,S&P 500
+COHR,Coherent Corp.,S&P 500
+COIN,Coinbase,S&P 500
+CL,Colgate-Palmolive,S&P 500
+CMCSA,Comcast,S&P 500
+FIX,Comfort Systems USA,S&P 500
+COP,ConocoPhillips,S&P 500
+ED,Consolidated Edison,S&P 500
+STZ,Constellation Brands,S&P 500
+CEG,Constellation Energy,S&P 500
+COO,Cooper Companies (The),S&P 500
+CPRT,Copart,S&P 500
+GLW,Corning Inc.,S&P 500
+CPAY,Corpay,S&P 500
+CTVA,Corteva,S&P 500
+COST,Costco,S&P 500
+CRWD,CrowdStrike,S&P 500
+CCI,Crown Castle,S&P 500
+CMI,Cummins,S&P 500
+DHI,D. R. Horton,S&P 500
+DTE,DTE Energy,S&P 500
+DVA,DaVita,S&P 500
+DHR,Danaher Corporation,S&P 500
+DRI,Darden Restaurants,S&P 500
+DDOG,Datadog,S&P 500
+DECK,Deckers Brands,S&P 500
+DE,Deere & Company,S&P 500
+DELL,Dell Technologies,S&P 500
+DAL,Delta Air Lines,S&P 500
+DVN,Devon Energy,S&P 500
+DXCM,Dexcom,S&P 500
+FANG,Diamondback Energy,S&P 500
+DLR,Digital Realty,S&P 500
+DG,Dollar General,S&P 500
+DLTR,Dollar Tree,S&P 500
+D,Dominion Energy,S&P 500
+DPZ,Domino's,S&P 500
+DASH,DoorDash,S&P 500
+DOV,Dover Corporation,S&P 500
+DOW,Dow Inc.,S&P 500
+DD,DuPont,S&P 500
+DUK,Duke Energy,S&P 500
+EOG,EOG Resources,S&P 500
+EQT,EQT Corporation,S&P 500
+ETN,Eaton Corporation,S&P 500
+ECHO,EchoStar,S&P 500
+ECL,Ecolab,S&P 500
+EIX,Edison International,S&P 500
+EW,Edwards Lifesciences,S&P 500
+ELV,Elevance Health,S&P 500
+EME,Emcor,S&P 500
+EMR,Emerson Electric,S&P 500
+ETR,Entergy,S&P 500
+EFX,Equifax,S&P 500
+EQIX,Equinix,S&P 500
+ERIE,Erie Indemnity,S&P 500
+ESS,Essex Property Trust,S&P 500
+EL,Estée Lauder Companies (The),S&P 500
+EG,Everest Group,S&P 500
+EVRG,Evergy,S&P 500
+P,Everpure,S&P 500
+ES,Eversource Energy,S&P 500
+EXC,Exelon,S&P 500
+EXE,Expand Energy,S&P 500
+EXPE,Expedia Group,S&P 500
+EXPD,Expeditors International,S&P 500
+EXR,Extra Space Storage,S&P 500
+XOM,ExxonMobil,S&P 500
+FFIV,"F5, Inc.",S&P 500
+FDS,FactSet,S&P 500
+FICO,Fair Isaac,S&P 500
+FAST,Fastenal,S&P 500
+FDX,FedEx,S&P 500
+FDXF,FedEx Freight,S&P 500
+FRT,Federal Realty Investment Trust,S&P 500
+FERG,Ferguson Enterprises,S&P 500
+FIS,Fidelity National Information Services,S&P 500
+FITB,Fifth Third Bancorp,S&P 500
+FSLR,First Solar,S&P 500
+FE,FirstEnergy,S&P 500
+FISV,Fiserv,S&P 500
+FLEX,Flex Ltd.,S&P 500
+F,Ford Motor Company,S&P 500
+FTNT,Fortinet,S&P 500
+FTV,Fortive,S&P 500
+FOXA,Fox Corporation (Class A),S&P 500
+FOX,Fox Corporation (Class B),S&P 500
+BEN,Franklin Resources,S&P 500
+FCX,Freeport-McMoRan,S&P 500
+GE,GE Aerospace,S&P 500
+GEHC,GE HealthCare,S&P 500
+GEV,GE Vernova,S&P 500
+GRMN,Garmin,S&P 500
+IT,Gartner,S&P 500
+GEN,Gen Digital,S&P 500
+GNRC,Generac,S&P 500
+GD,General Dynamics,S&P 500
+GIS,General Mills,S&P 500
+GM,General Motors,S&P 500
+GPC,Genuine Parts Company,S&P 500
+GILD,Gilead Sciences,S&P 500
+GPN,Global Payments,S&P 500
+GL,Globe Life,S&P 500
+GDDY,GoDaddy,S&P 500
+GS,Goldman Sachs,S&P 500
+HCA,HCA Healthcare,S&P 500
+HPQ,HP Inc.,S&P 500
+HAL,Halliburton,S&P 500
+HIG,Hartford (The),S&P 500
+HAS,Hasbro,S&P 500
+DOC,Healthpeak Properties,S&P 500
+HSIC,Henry Schein,S&P 500
+HSY,Hershey Company (The),S&P 500
+HPE,Hewlett Packard Enterprise,S&P 500
+HLT,Hilton Worldwide,S&P 500
+HD,Home Depot (The),S&P 500
+HONA,Honeywell Aerospace,S&P 500
+HON,Honeywell Technologies,S&P 500
+HRL,Hormel Foods,S&P 500
+HST,Host Hotels & Resorts,S&P 500
+HWM,Howmet Aerospace,S&P 500
+HUBB,Hubbell Incorporated,S&P 500
+HUM,Humana,S&P 500
+HBAN,Huntington Bancshares,S&P 500
+HII,Huntington Ingalls Industries,S&P 500
+IBM,IBM,S&P 500
+IEX,IDEX Corporation,S&P 500
+IQV,IQVIA,S&P 500
+IDXX,Idexx Laboratories,S&P 500
+ITW,Illinois Tool Works,S&P 500
+ILMN,"Illumina, Inc.",S&P 500
+INCY,Incyte,S&P 500
+IR,Ingersoll Rand,S&P 500
+PODD,Insulet Corporation,S&P 500
+INTC,Intel,S&P 500
+IBKR,Interactive Brokers,S&P 500
+ICE,Intercontinental Exchange,S&P 500
+IFF,International Flavors & Fragrances,S&P 500
+IP,International Paper,S&P 500
+INTU,Intuit,S&P 500
+ISRG,Intuitive Surgical,S&P 500
+IVZ,Invesco,S&P 500
+INVH,Invitation Homes,S&P 500
+IRM,Iron Mountain,S&P 500
+JBHT,J.B. Hunt,S&P 500
+SJM,J.M. Smucker Company (The),S&P 500
+JPM,JPMorgan Chase,S&P 500
+JBL,Jabil,S&P 500
+JKHY,Jack Henry & Associates,S&P 500
+J,Jacobs Solutions,S&P 500
+JNJ,Johnson & Johnson,S&P 500
+JCI,Johnson Controls,S&P 500
+KKR,KKR & Co.,S&P 500
+KLAC,KLA Corporation,S&P 500
+KVUE,Kenvue,S&P 500
+KDP,Keurig Dr Pepper,S&P 500
+KEY,KeyCorp,S&P 500
+KEYS,Keysight Technologies,S&P 500
+KMB,Kimberly-Clark,S&P 500
+KIM,Kimco Realty,S&P 500
+KMI,Kinder Morgan,S&P 500
+KHC,Kraft Heinz,S&P 500
+KR,Kroger,S&P 500
+LHX,L3Harris,S&P 500
+LH,Labcorp,S&P 500
+LRCX,Lam Research,S&P 500
+LVS,Las Vegas Sands,S&P 500
+LDOS,Leidos,S&P 500
+LEN,Lennar,S&P 500
+LII,Lennox International,S&P 500
+LLY,Lilly (Eli),S&P 500
+LIN,Linde plc,S&P 500
+LYV,Live Nation Entertainment,S&P 500
+LMT,Lockheed Martin,S&P 500
+L,Loews Corporation,S&P 500
+LOW,Lowe's,S&P 500
+LULU,Lululemon Athletica,S&P 500
+LITE,Lumentum,S&P 500
+LYB,LyondellBasell,S&P 500
+MTB,M&T Bank,S&P 500
+MGM,MGM Resorts,S&P 500
+MSCI,MSCI,S&P 500
+MPC,Marathon Petroleum,S&P 500
+MAR,Marriott International,S&P 500
+MRSH,Marsh McLennan,S&P 500
+MLM,Martin Marietta Materials,S&P 500
+MRVL,Marvell Technology,S&P 500
+MAS,Masco,S&P 500
+MA,Mastercard,S&P 500
+MKC,McCormick & Company,S&P 500
+MCD,McDonald's,S&P 500
+MCK,McKesson Corporation,S&P 500
+MDT,Medtronic,S&P 500
+MRK,Merck & Co.,S&P 500
+MET,MetLife,S&P 500
+META,Meta Platforms,S&P 500
+MTD,Mettler Toledo,S&P 500
+MCHP,Microchip Technology,S&P 500
+MU,Micron Technology,S&P 500
+MSFT,Microsoft,S&P 500
+MAA,Mid-America Apartment Communities,S&P 500
+MRNA,Moderna,S&P 500
+MDLZ,Mondelez International,S&P 500
+MPWR,Monolithic Power Systems,S&P 500
+MNST,Monster Beverage,S&P 500
+MCO,Moody's Corporation,S&P 500
+MS,Morgan Stanley,S&P 500
+MOS,Mosaic Company (The),S&P 500
+MSI,Motorola Solutions,S&P 500
+NRG,NRG Energy,S&P 500
+NVR,"NVR, Inc.",S&P 500
+NXPI,NXP Semiconductors,S&P 500
+NDAQ,"Nasdaq, Inc.",S&P 500
+NTAP,NetApp,S&P 500
+NFLX,Netflix,S&P 500
+NEM,Newmont,S&P 500
+NWSA,News Corp (Class A),S&P 500
+NWS,News Corp (Class B),S&P 500
+NEE,NextEra Energy,S&P 500
+NI,NiSource,S&P 500
+NKE,"Nike, Inc.",S&P 500
+NDSN,Nordson Corporation,S&P 500
+NSC,Norfolk Southern,S&P 500
+NTRS,Northern Trust,S&P 500
+NOC,Northrop Grumman,S&P 500
+NCLH,Norwegian Cruise Line Holdings,S&P 500
+NUE,Nucor,S&P 500
+NVDA,Nvidia,S&P 500
+ORLY,O'Reilly Automotive,S&P 500
+ON,ON Semiconductor,S&P 500
+OXY,Occidental Petroleum,S&P 500
+ODFL,Old Dominion,S&P 500
+OMC,Omnicom Group,S&P 500
+OKE,Oneok,S&P 500
+ORCL,Oracle Corporation,S&P 500
+OTIS,Otis Worldwide,S&P 500
+PCG,PG&E Corporation,S&P 500
+PNC,PNC Financial Services,S&P 500
+PPG,PPG Industries,S&P 500
+PPL,PPL Corporation,S&P 500
+PTC,PTC Inc.,S&P 500
+PCAR,Paccar,S&P 500
+PKG,Packaging Corporation of America,S&P 500
+PLTR,Palantir Technologies,S&P 500
+PANW,Palo Alto Networks,S&P 500
+PSKY,Paramount Skydance Corporation,S&P 500
+PH,Parker Hannifin,S&P 500
+PYPL,PayPal,S&P 500
+PAYX,Paychex,S&P 500
+PNR,Pentair,S&P 500
+PEP,PepsiCo,S&P 500
+PFE,Pfizer,S&P 500
+PM,Philip Morris International,S&P 500
+PSX,Phillips 66,S&P 500
+PNW,Pinnacle West Capital,S&P 500
+PFG,Principal Financial Group,S&P 500
+PG,Procter & Gamble,S&P 500
+PGR,Progressive Corporation,S&P 500
+PLD,Prologis,S&P 500
+PRU,Prudential Financial,S&P 500
+PEG,Public Service Enterprise Group,S&P 500
+PSA,Public Storage,S&P 500
+PHM,PulteGroup,S&P 500
+Q,Qnity Electronics,S&P 500
+QCOM,Qualcomm,S&P 500
+PWR,Quanta Services,S&P 500
+DGX,Quest Diagnostics,S&P 500
+RTX,RTX Corporation,S&P 500
+RL,Ralph Lauren Corporation,S&P 500
+RJF,Raymond James Financial,S&P 500
+O,Realty Income,S&P 500
+RDDT,Reddit,S&P 500
+REG,Regency Centers,S&P 500
+REGN,Regeneron Pharmaceuticals,S&P 500
+RF,Regions Financial Corporation,S&P 500
+RSG,Republic Services,S&P 500
+RMD,ResMed|,S&P 500
+RVTY,Revvity,S&P 500
+HOOD,Robinhood Markets,S&P 500
+ROK,Rockwell Automation,S&P 500
+ROL,"Rollins, Inc.",S&P 500
+ROP,Roper Technologies,S&P 500
+ROST,Ross Stores,S&P 500
+RCL,Royal Caribbean Group,S&P 500
+SPGI,S&P Global,S&P 500
+SBAC,SBA Communications,S&P 500
+CRM,Salesforce,S&P 500
+SNDK,Sandisk,S&P 500
+SLB,Schlumberger,S&P 500
+STX,Seagate Technology,S&P 500
+SRE,Sempra,S&P 500
+NOW,ServiceNow,S&P 500
+SHW,Sherwin-Williams,S&P 500
+SPG,Simon Property Group,S&P 500
+SWKS,Skyworks Solutions,S&P 500
+SW,Smurfit Westrock,S&P 500
+SNA,Snap-on,S&P 500
+SOLV,Solventum,S&P 500
+SO,Southern Company,S&P 500
+LUV,Southwest Airlines,S&P 500
+SWK,Stanley Black & Decker,S&P 500
+SBUX,Starbucks,S&P 500
+STT,State Street Corporation,S&P 500
+STLD,Steel Dynamics,S&P 500
+STE,Steris,S&P 500
+SYK,Stryker Corporation,S&P 500
+SMCI,Supermicro,S&P 500
+SYF,Synchrony Financial,S&P 500
+SNPS,Synopsys,S&P 500
+SYY,Sysco,S&P 500
+TMUS,T-Mobile US,S&P 500
+TROW,T. Rowe Price,S&P 500
+TEL,TE Connectivity,S&P 500
+TJX,TJX Companies,S&P 500
+TKO,TKO Group Holdings,S&P 500
+TTWO,Take-Two Interactive,S&P 500
+TPR,"Tapestry, Inc.",S&P 500
+TRGP,Targa Resources,S&P 500
+TGT,Target Corporation,S&P 500
+TDY,Teledyne Technologies,S&P 500
+TER,Teradyne,S&P 500
+TSLA,"Tesla, Inc.",S&P 500
+TXN,Texas Instruments,S&P 500
+TPL,Texas Pacific Land Corporation,S&P 500
+TXT,Textron,S&P 500
+TMO,Thermo Fisher Scientific,S&P 500
+TSCO,Tractor Supply,S&P 500
+TT,Trane Technologies,S&P 500
+TDG,TransDigm Group,S&P 500
+TRV,Travelers Companies (The),S&P 500
+TRMB,Trimble Inc.,S&P 500
+TFC,Truist Financial,S&P 500
+TYL,Tyler Technologies,S&P 500
+TSN,Tyson Foods,S&P 500
+USB,U.S. Bancorp,S&P 500
+UDR,"UDR, Inc.",S&P 500
+UBER,Uber,S&P 500
+ULTA,Ulta Beauty,S&P 500
+UNP,Union Pacific Corporation,S&P 500
+UAL,United Airlines Holdings,S&P 500
+UPS,United Parcel Service,S&P 500
+URI,United Rentals,S&P 500
+UNH,UnitedHealth Group,S&P 500
+UHS,Universal Health Services,S&P 500
+VLO,Valero Energy,S&P 500
+VEEV,Veeva Systems,S&P 500
+VTR,Ventas,S&P 500
+VLTO,Veralto,S&P 500
+VRSN,Verisign,S&P 500
+VRSK,Verisk Analytics,S&P 500
+VZ,Verizon,S&P 500
+VRTX,Vertex Pharmaceuticals,S&P 500
+VRT,Vertiv,S&P 500
+VTRS,Viatris,S&P 500
+VICI,Vici Properties,S&P 500
+V,Visa Inc.,S&P 500
+VST,Vistra Corp.,S&P 500
+VMRK,Vivmark Residential,S&P 500
+VMC,Vulcan Materials Company,S&P 500
+WRB,W. R. Berkley Corporation,S&P 500
+GWW,W. W. Grainger,S&P 500
+WEC,WEC Energy Group,S&P 500
+WAB,Wabtec,S&P 500
+WMT,Walmart,S&P 500
+DIS,Walt Disney Company (The),S&P 500
+WBD,Warner Bros. Discovery,S&P 500
+WM,Waste Management,S&P 500
+WAT,Waters Corporation,S&P 500
+WFC,Wells Fargo,S&P 500
+WELL,Welltower,S&P 500
+WST,West Pharmaceutical Services,S&P 500
+WDC,Western Digital,S&P 500
+WY,Weyerhaeuser,S&P 500
+WMB,Williams Companies,S&P 500
+WSM,"Williams-Sonoma, Inc.",S&P 500
+WTW,Willis Towers Watson,S&P 500
+WDAY,"Workday, Inc.",S&P 500
+WYNN,Wynn Resorts,S&P 500
+XEL,Xcel Energy,S&P 500
+XYL,Xylem Inc.,S&P 500
+YUM,Yum! Brands,S&P 500
+ZBRA,Zebra Technologies,S&P 500
+ZBH,Zimmer Biomet,S&P 500
+ZTS,Zoetis,S&P 500
+EBAY,eBay Inc.,S&P 500
+^VIX,VIX (US),Volatility

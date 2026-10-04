@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from io import StringIO
 from datetime import datetime, timedelta, timezone, date as date_type
@@ -452,6 +453,55 @@ def _drop_unpriced(tickers, chunk=120):
     return alive
 
 
+SYMBOL_SEED_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "data", "symbols.csv")
+
+
+def export_symbol_seed(path=SYMBOL_SEED_PATH):
+    """Write the current symbol table to the seed file committed with the repo."""
+    conn = _get_connection()
+    try:
+        frame = pd.read_sql(
+            "SELECT ticker, name, kind FROM symbols ORDER BY kind, name", conn
+        )
+    finally:
+        conn.close()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    frame.to_csv(path, index=False)
+    return len(frame)
+
+
+def seed_symbols_from_file(path=SYMBOL_SEED_PATH):
+    """Load the bundled instrument table. This is what the app actually starts
+    from: building it from the network needs Wikipedia and NSE to both be
+    reachable, which is not true from every host, and silently yields a partial
+    table when it is not. Returns the number of rows loaded."""
+    if not os.path.exists(path):
+        return 0
+    try:
+        frame = pd.read_csv(path)
+    except Exception:
+        return 0
+    rows = [(str(t), str(n), str(k)) for t, n, k
+            in zip(frame["ticker"], frame["name"], frame["kind"])]
+    conn = _get_connection()
+    try:
+        conn.executemany(
+            "INSERT OR IGNORE INTO symbols (ticker, name, kind) VALUES (?, ?, ?)", rows
+        )
+        # Stamp the seed's age too, otherwise the very next page load sees no
+        # refresh timestamp and kicks off a full network rebuild.
+        conn.execute(
+            "INSERT INTO symbols_meta (key, value) VALUES ('refreshed_at', ?) "
+            "ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            (datetime.now(timezone.utc).isoformat(),),
+        )
+        conn.commit()
+        return conn.execute("SELECT COUNT(*) FROM symbols").fetchone()[0]
+    finally:
+        conn.close()
+
+
 def symbol_count():
     conn = _get_connection()
     try:
@@ -461,7 +511,17 @@ def symbol_count():
 
 
 def refresh_symbols(force=False):
-    """Rebuild the searchable instrument table. Returns (changed, message)."""
+    """Make sure the instrument table is populated. Returns (changed, message).
+
+    The bundled seed is loaded first so the app is usable immediately and does
+    not depend on Wikipedia or NSE being reachable from wherever it is hosted.
+    The network rebuild then only runs when the table is stale.
+    """
+    if symbol_count() == 0:
+        loaded = seed_symbols_from_file()
+        if loaded and not force:
+            return True, f"{loaded} instruments (from bundled seed)."
+
     conn = _get_connection()
     try:
         if not force:
