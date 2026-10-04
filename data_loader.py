@@ -358,148 +358,38 @@ CURATED_INSTRUMENTS = [
     ("Volatility",  "VIX (US)",         "^VIX"),
 ]
 
-SYMBOLS_MAX_AGE_DAYS = 7
-
-
-def _nse_equities():
-    """(ticker, name) for every mainboard NSE equity, from NSE's own daily
-    bhavcopy. Returns [] if no recent trading day can be fetched."""
-    from io import StringIO
-
-    from jugaad_data.nse import bhavcopy_raw
-
-    day = date_type.today()
-    for _ in range(8):          # walk back over weekends and holidays
-        try:
-            raw = bhavcopy_raw(day)
-        except Exception:
-            day -= timedelta(days=1)
-            continue
-        frame = pd.read_csv(StringIO(raw))
-        frame = frame[frame["SctySrs"] == "EQ"]
-        pairs = {}
-        for symbol, name in zip(frame["TckrSymb"], frame["FinInstrmNm"]):
-            symbol = str(symbol).strip()
-            if symbol:
-                pairs[f"{symbol}.NS"] = str(name).strip().title()
-        return sorted(pairs.items())
-    return []
-
-
-_WIKI_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; TraderDesk/1.0)"}
-
-# (kind, wikipedia page, ticker column, name column, suffix, dot_to_dash)
-# Yahoo suffixes differ per exchange. DAX and Euro Stoxx publish an already
-# suffixed symbol, so their dots must be kept; FTSE publishes a bare LSE code;
-# S&P symbols are plain, and there a dot is a share class Yahoo spells with a
-# dash (BRK.B -> BRK-B).
-GLOBAL_INDEX_SOURCES = [
-    ("S&P 500",       "List_of_S%26P_500_companies", "Symbol", "Security", "",   True),
-    ("FTSE 100",      "FTSE_100_Index",              "Ticker", "Company",  ".L", True),
-    ("DAX",           "DAX",                         "Ticker", "Company",  "",   False),
-    ("Euro Stoxx 50", "EURO_STOXX_50",               "Ticker", "Name",     "",   False),
-]
-
-
-def _global_equities():
-    """(ticker, name, kind) for the major global index members. Tickers are not
-    validated here — refresh_symbols drops any that do not price."""
-    import requests
-
-    out = []
-    for kind, page, tcol, ncol, suffix, dot_to_dash in GLOBAL_INDEX_SOURCES:
-        try:
-            html = requests.get(
-                f"https://en.wikipedia.org/wiki/{page}",
-                headers=_WIKI_HEADERS, timeout=30,
-            ).text
-            frame = next(
-                f for f in pd.read_html(StringIO(html))
-                if tcol in map(str, f.columns) and ncol in map(str, f.columns)
-                and len(f) >= 30
-            )
-        except Exception:
-            continue
-        for sym, name in zip(frame[tcol], frame[ncol]):
-            sym, name = str(sym).strip(), str(name).strip()
-            if not sym or sym.lower() == "nan":
-                continue
-            if dot_to_dash:
-                sym = sym.replace(".", "-")
-            out.append((sym + suffix, name, kind))
-    return out
-
-
-def _drop_unpriced(tickers, chunk=120):
-    """Return the subset of tickers that actually return price data."""
-    alive = set()
-    for i in range(0, len(tickers), chunk):
-        batch = tickers[i:i + chunk]
-        try:
-            data = yf.download(batch, period="5d", progress=False,
-                               auto_adjust=True, threads=True)
-        except Exception:
-            continue
-        if data is None or data.empty:
-            continue
-        close = data["Close"] if "Close" in data else data
-        if isinstance(close, pd.Series):
-            if close.notna().any():
-                alive.add(batch[0])
-            continue
-        for col in close.columns:
-            if close[col].notna().any():
-                alive.add(col)
-    return alive
-
-
 SYMBOL_SEED_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "data", "symbols.csv")
 
 
-def export_symbol_seed(path=SYMBOL_SEED_PATH):
-    """Write the current symbol table to the seed file committed with the repo."""
-    conn = _get_connection()
-    try:
-        frame = pd.read_sql(
-            "SELECT ticker, name, kind FROM symbols ORDER BY kind, name", conn
-        )
-    finally:
-        conn.close()
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    frame.to_csv(path, index=False)
-    return len(frame)
+def refresh_symbols(force=False):
+    """Populate the instrument table from the committed seed file.
 
-
-def seed_symbols_from_file(path=SYMBOL_SEED_PATH):
-    """Load the bundled instrument table. This is what the app actually starts
-    from: building it from the network needs Wikipedia and NSE to both be
-    reachable, which is not true from every host, and silently yields a partial
-    table when it is not. Returns the number of rows loaded."""
-    if not os.path.exists(path):
-        return 0
+    data/symbols.csv is the single source of truth. To update the table
+    (after an index reshuffle or to add new instruments), edit the CSV and
+    commit it — no network calls, no weekly rebuilds, no partial failures.
+    Returns (changed, message).
+    """
+    if not os.path.exists(SYMBOL_SEED_PATH):
+        return False, "Seed file missing — instrument search unavailable."
     try:
-        frame = pd.read_csv(path)
-    except Exception:
-        return 0
+        frame = pd.read_csv(SYMBOL_SEED_PATH)
+    except Exception as e:
+        return False, f"Could not read seed file: {e}"
+
     rows = [(str(t), str(n), str(k)) for t, n, k
             in zip(frame["ticker"], frame["name"], frame["kind"])]
     conn = _get_connection()
     try:
+        conn.execute("DELETE FROM symbols")
         conn.executemany(
-            "INSERT OR IGNORE INTO symbols (ticker, name, kind) VALUES (?, ?, ?)", rows
-        )
-        # Stamp the seed's age too, otherwise the very next page load sees no
-        # refresh timestamp and kicks off a full network rebuild.
-        conn.execute(
-            "INSERT INTO symbols_meta (key, value) VALUES ('refreshed_at', ?) "
-            "ON CONFLICT (key) DO UPDATE SET value = excluded.value",
-            (datetime.now(timezone.utc).isoformat(),),
+            "INSERT INTO symbols (ticker, name, kind) VALUES (?, ?, ?)", rows
         )
         conn.commit()
-        return conn.execute("SELECT COUNT(*) FROM symbols").fetchone()[0]
+        total = conn.execute("SELECT COUNT(*) FROM symbols").fetchone()[0]
     finally:
         conn.close()
+    return True, f"{total} instruments."
 
 
 def symbol_count():
@@ -510,65 +400,22 @@ def symbol_count():
         conn.close()
 
 
-def refresh_symbols(force=False):
-    """Make sure the instrument table is populated. Returns (changed, message).
+def export_symbol_seed(path=SYMBOL_SEED_PATH):
+    """Write the current symbol table back to the seed file.
 
-    The bundled seed is loaded first so the app is usable immediately and does
-    not depend on Wikipedia or NSE being reachable from wherever it is hosted.
-    The network rebuild then only runs when the table is stale.
+    Run this locally after manually adding or removing instruments, then
+    commit data/symbols.csv so the next deploy picks up the changes.
     """
-    # Always top-up from the seed: INSERT OR IGNORE means nothing duplicates
-    # and missing rows (e.g. globals absent from a partial prior build) get
-    # filled in immediately at ~0.01s cost.
-    seed_symbols_from_file()
-
     conn = _get_connection()
     try:
-        if not force:
-            row = conn.execute(
-                "SELECT value FROM symbols_meta WHERE key = 'refreshed_at'"
-            ).fetchone()
-            count = conn.execute("SELECT COUNT(*) FROM symbols").fetchone()[0]
-            if row and count:
-                age = datetime.now(timezone.utc) - datetime.fromisoformat(row[0])
-                if age < timedelta(days=SYMBOLS_MAX_AGE_DAYS):
-                    return False, "Symbol table is current."
+        frame = pd.read_sql(
+            "SELECT ticker, name, kind FROM symbols ORDER BY kind, name", conn
+        )
     finally:
         conn.close()
-
-    equities = _nse_equities()
-
-    # Global members come from a community-maintained source, so a symbol can
-    # be wrong or stale. Keep only the ones that actually price — a dead entry
-    # in the picker is worse than a missing one.
-    global_rows = _global_equities()
-    if global_rows:
-        alive = _drop_unpriced(sorted({t for t, _, _ in global_rows}))
-        global_rows = [r for r in global_rows if r[0] in alive]
-
-    conn = _get_connection()
-    try:
-        rows = [(t, n, c) for c, n, t in CURATED_INSTRUMENTS]
-        rows += global_rows
-        rows += [(t, n, "NSE equity") for t, n in equities]
-        # Curated entries are inserted first and win on conflict, so their
-        # hand-written names survive the bulk NSE load.
-        conn.executemany(
-            "INSERT OR IGNORE INTO symbols (ticker, name, kind) VALUES (?, ?, ?)", rows
-        )
-        conn.execute(
-            "INSERT INTO symbols_meta (key, value) VALUES ('refreshed_at', ?) "
-            "ON CONFLICT (key) DO UPDATE SET value = excluded.value",
-            (datetime.now(timezone.utc).isoformat(),),
-        )
-        conn.commit()
-        total = conn.execute("SELECT COUNT(*) FROM symbols").fetchone()[0]
-    finally:
-        conn.close()
-
-    if not equities:
-        return True, f"{total} instruments (NSE list unavailable — curated only)."
-    return True, f"{total} instruments."
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    frame.to_csv(path, index=False)
+    return len(frame)
 
 
 def get_all_symbols():
