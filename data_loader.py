@@ -1,4 +1,5 @@
 import sqlite3
+from io import StringIO
 from datetime import datetime, timedelta, timezone, date as date_type
 
 import pandas as pd
@@ -384,6 +385,73 @@ def _nse_equities():
     return []
 
 
+_WIKI_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; TraderDesk/1.0)"}
+
+# (kind, wikipedia page, ticker column, name column, suffix, dot_to_dash)
+# Yahoo suffixes differ per exchange. DAX and Euro Stoxx publish an already
+# suffixed symbol, so their dots must be kept; FTSE publishes a bare LSE code;
+# S&P symbols are plain, and there a dot is a share class Yahoo spells with a
+# dash (BRK.B -> BRK-B).
+GLOBAL_INDEX_SOURCES = [
+    ("S&P 500",       "List_of_S%26P_500_companies", "Symbol", "Security", "",   True),
+    ("FTSE 100",      "FTSE_100_Index",              "Ticker", "Company",  ".L", True),
+    ("DAX",           "DAX",                         "Ticker", "Company",  "",   False),
+    ("Euro Stoxx 50", "EURO_STOXX_50",               "Ticker", "Name",     "",   False),
+]
+
+
+def _global_equities():
+    """(ticker, name, kind) for the major global index members. Tickers are not
+    validated here — refresh_symbols drops any that do not price."""
+    import requests
+
+    out = []
+    for kind, page, tcol, ncol, suffix, dot_to_dash in GLOBAL_INDEX_SOURCES:
+        try:
+            html = requests.get(
+                f"https://en.wikipedia.org/wiki/{page}",
+                headers=_WIKI_HEADERS, timeout=30,
+            ).text
+            frame = next(
+                f for f in pd.read_html(StringIO(html))
+                if tcol in map(str, f.columns) and ncol in map(str, f.columns)
+                and len(f) >= 30
+            )
+        except Exception:
+            continue
+        for sym, name in zip(frame[tcol], frame[ncol]):
+            sym, name = str(sym).strip(), str(name).strip()
+            if not sym or sym.lower() == "nan":
+                continue
+            if dot_to_dash:
+                sym = sym.replace(".", "-")
+            out.append((sym + suffix, name, kind))
+    return out
+
+
+def _drop_unpriced(tickers, chunk=120):
+    """Return the subset of tickers that actually return price data."""
+    alive = set()
+    for i in range(0, len(tickers), chunk):
+        batch = tickers[i:i + chunk]
+        try:
+            data = yf.download(batch, period="5d", progress=False,
+                               auto_adjust=True, threads=True)
+        except Exception:
+            continue
+        if data is None or data.empty:
+            continue
+        close = data["Close"] if "Close" in data else data
+        if isinstance(close, pd.Series):
+            if close.notna().any():
+                alive.add(batch[0])
+            continue
+        for col in close.columns:
+            if close[col].notna().any():
+                alive.add(col)
+    return alive
+
+
 def symbol_count():
     conn = _get_connection()
     try:
@@ -410,9 +478,18 @@ def refresh_symbols(force=False):
 
     equities = _nse_equities()
 
+    # Global members come from a community-maintained source, so a symbol can
+    # be wrong or stale. Keep only the ones that actually price — a dead entry
+    # in the picker is worse than a missing one.
+    global_rows = _global_equities()
+    if global_rows:
+        alive = _drop_unpriced(sorted({t for t, _, _ in global_rows}))
+        global_rows = [r for r in global_rows if r[0] in alive]
+
     conn = _get_connection()
     try:
         rows = [(t, n, c) for c, n, t in CURATED_INSTRUMENTS]
+        rows += global_rows
         rows += [(t, n, "NSE equity") for t, n in equities]
         # Curated entries are inserted first and win on conflict, so their
         # hand-written names survive the bulk NSE load.
@@ -435,15 +512,22 @@ def refresh_symbols(force=False):
 
 
 def get_all_symbols():
-    """Every searchable instrument, curated ones first so that a dropdown
-    using `filter_mode="contains"` surfaces indices and FX above bulk equities."""
+    """Every searchable instrument, ordered so a dropdown using
+    `filter_mode="contains"` surfaces indices and FX first, then large-cap
+    index members, then the rest of the NSE board."""
     conn = _get_connection()
     try:
         rows = conn.execute(
             """
             SELECT ticker, name, kind
             FROM symbols
-            ORDER BY CASE WHEN kind <> 'NSE equity' THEN 0 ELSE 1 END, name
+            ORDER BY
+                CASE
+                    WHEN kind IN ('Indices','India','FX','Commodities','Volatility') THEN 0
+                    WHEN kind <> 'NSE equity' THEN 1
+                    ELSE 2
+                END,
+                name
             """
         ).fetchall()
         return [{"ticker": r[0], "name": r[1], "kind": r[2]} for r in rows]
