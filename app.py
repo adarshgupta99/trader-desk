@@ -1,3 +1,6 @@
+from datetime import date, timedelta
+
+import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 
@@ -238,6 +241,38 @@ T3      = "#9C988D"   # text tertiary
 
 PERIODS = {"1W": "5d", "1M": "1mo", "3M": "3mo", "6M": "6mo", "1Y": "1y", "3Y": "3y"}
 PERIOD_LABELS = {v: k for k, v in PERIODS.items()}
+
+# Chart tab presets, and how far back each one reaches.
+CHART_PRESETS = {"1M": 30, "3M": 90, "6M": 182, "1Y": 365, "3Y": 1095}
+
+# How many calendar days of history each loader period is good for. Used to pick
+# the cheapest period that still reaches back to a chosen start date.
+PERIOD_COVERS = (("1mo", 31), ("3mo", 92), ("6mo", 184), ("1y", 368), ("3y", 1100))
+
+# 3Y is the furthest back the loader will fetch — its NSE path maps anything it
+# doesn't recognise to 35 days, so asking for more would quietly return less.
+MAX_HISTORY_DAYS = 1095
+
+
+def range_history(ticker, start, end):
+    """Price history between two dates, inclusive.
+
+    get_price_history only takes preset periods and SQLite caches on them, so
+    fetch the smallest preset that still reaches `start` and slice it down.
+    That reuses the existing cache instead of adding a cache key per date pair.
+    """
+    days = (date.today() - start).days
+    period = "3y"
+    for name, covers in PERIOD_COVERS:
+        if days <= covers:
+            period = name
+            break
+
+    df = get_price_history(ticker, period=period).dropna(subset=["Close"])
+    if df.empty:
+        return df
+    on = pd.to_datetime(df.index).date
+    return df[(on >= start) & (on <= end)]
 
 PRESET_NAMES = ["Nifty 50", "Nifty Midcap", "Nifty Auto", "Nifty IT", "Bank Nifty"]
 
@@ -763,7 +798,7 @@ elif nav == "Chart":
 
     lbl = (f"<div style='font-size:12px;color:{T2};text-transform:uppercase;"
            f"letter-spacing:0.08em;margin:0 0 4px 0;'>{{}}</div>")
-    c1, c2, c3 = st.columns([3, 3, 2])
+    c1, c2 = st.columns(2)
     with c1:
         st.markdown(lbl.format("Instrument 1"), unsafe_allow_html=True)
         t1 = pick_instrument("chart_t1", placeholder="Search instruments",
@@ -774,29 +809,67 @@ elif nav == "Chart":
         t2 = pick_instrument("chart_t2", placeholder="Search instruments",
                              default=st.session_state["_ct2"]) or ""
         st.session_state["_ct2"] = t2
-    with c3:
+
+    # ── History range ─────────────────────────────────────────────────────────
+    # One range with two ways to set it: a preset writes the dates, and editing a
+    # date drops the preset. Only one of them ever governs the chart (spec).
+    today    = date.today()
+    earliest = today - timedelta(days=MAX_HISTORY_DAYS)
+
+    if "chart_start" not in st.session_state:
+        st.session_state.chart_start = today - timedelta(days=CHART_PRESETS["3M"])
+        st.session_state.chart_end   = today
+
+    def _apply_preset():
+        choice = st.session_state.chart_period
+        if choice:
+            st.session_state.chart_start = today - timedelta(days=CHART_PRESETS[choice])
+            st.session_state.chart_end   = today
+
+    def _apply_dates():
+        st.session_state.chart_period = None   # the dates govern now
+
+    r1, r2, r3 = st.columns([4, 2, 2])
+    with r1:
         # This control, not the global one, governs the chart below (spec)
         st.markdown(lbl.format("History — this chart"), unsafe_allow_html=True)
         chart_period_label = st.segmented_control(
-            "cp", ["1M", "3M", "6M", "1Y", "3Y"], default="3M",
-            label_visibility="collapsed", key="chart_period"
+            "cp", list(CHART_PRESETS), default="3M", label_visibility="collapsed",
+            key="chart_period", on_change=_apply_preset,
         )
-    chart_period = PERIODS.get(chart_period_label or "3M", "3mo")
+    with r2:
+        st.markdown(lbl.format("Start"), unsafe_allow_html=True)
+        start = st.date_input("s", key="chart_start", on_change=_apply_dates,
+                              min_value=earliest, max_value=today,
+                              format="DD/MM/YYYY", label_visibility="collapsed")
+    with r3:
+        st.markdown(lbl.format("End"), unsafe_allow_html=True)
+        end = st.date_input("e", key="chart_end", on_change=_apply_dates,
+                            min_value=earliest, max_value=today,
+                            format="DD/MM/YYYY", label_visibility="collapsed")
+
+    if start > end:
+        st.warning("Start date is after the end date — showing nothing. "
+                   "Pick a start on or before the end.")
+        t1 = ""   # nothing sensible to plot
+
+    span_label = (chart_period_label if chart_period_label else
+                  f"{start:%d %b %Y} – {end:%d %b %Y}")
 
     if t1:
-        df1 = get_price_history(t1.strip(), period=chart_period)
-        df1 = df1.dropna(subset=["Close"])
+        df1 = range_history(t1.strip(), start, end)
 
         df2 = None
         if t2:
-            df2 = get_price_history(t2.strip(), period=chart_period)
-            df2 = df2.dropna(subset=["Close"])
+            df2 = range_history(t2.strip(), start, end)
             if df2.empty:
-                st.warning(f"No data for '{t2.strip()}'")
+                st.warning(f"No data for '{t2.strip()}' between {start:%d %b %Y} "
+                           f"and {end:%d %b %Y}")
                 df2 = None
 
         if df1.empty:
-            st.warning(f"No data for '{t1.strip()}'")
+            st.warning(f"No data for '{t1.strip()}' between {start:%d %b %Y} "
+                       f"and {end:%d %b %Y}")
         else:
             # Comparison identity: series 1 black solid, series 2 gray dashed
             C1, C2 = T1, T2
@@ -805,7 +878,7 @@ elif nav == "Chart":
             pct1_color = UP if pct1 >= 0 else DOWN
 
             has_t2 = df2 is not None and not df2.empty
-            cp_label = chart_period_label or "3M"
+            cp_label = span_label
 
             # ── Summary bar ───────────────────────────────────────────────────
             summary = (
@@ -837,7 +910,8 @@ elif nav == "Chart":
             st.markdown(summary, unsafe_allow_html=True)
 
             # ── Chart ─────────────────────────────────────────────────────────
-            tickformat_x = "%b %Y" if chart_period in ("1y", "3y") else "%d %b"
+            # Years appear once the range spans more than one (spec)
+            tickformat_x = "%b %Y" if (end - start).days > 180 else "%d %b"
 
             fig = go.Figure()
             fig.add_trace(go.Scatter(

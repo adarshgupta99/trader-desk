@@ -90,7 +90,7 @@ section deselects it and the app silently falls back to the first section.
 | Section | Contents |
 |---|---|
 | Watchlist | Nine views via two chip rows: 5 read-only index views + 4 editable custom lists (≤30 each); 1D/1W toggle; × to remove |
-| Chart | Plot 1–2 instruments on dual y-axis; own history selector; persists instruments across tab switches |
+| Chart | Plot 1–2 instruments on dual y-axis; preset history **or** explicit start/end dates; persists instruments across section switches |
 | Indices | S&P 500, Nasdaq, Nifty 50, KOSPI, FTSE 100, DAX, Euro Stoxx 50, Nikkei 225 |
 | India | Bank Nifty, Nifty IT, Nifty Auto, Nifty Energy, Nifty Mid Select, Nifty Defence |
 | FX | USD/INR, EUR/USD, GBP/USD, EUR/INR |
@@ -111,6 +111,23 @@ Rates tab is parked until `FRED_API_KEY` is added.
   index views, which draws no remove control
 - `_pick_index()` / `_pick_custom()` — `on_change` callbacks for the two chip rows; one
   selection between them, so picking in one clears the other
+- `range_history(ticker, start, end)` — price history between two dates
+
+**The Chart tab's date range.** One range with two ways to set it: the 1M–3Y presets write
+the Start and End dates, and editing either date clears the preset highlight, so only one
+control ever claims the chart (the spec forbids two controls implying authority over the
+same chart). The summary line beside the price shows the preset label when one is active
+and the literal `10 Jun 2026 – 05 Oct 2026` otherwise.
+
+`range_history()` exists because `get_price_history()` only accepts preset periods and
+SQLite caches on them — a cache key per date pair would be useless. It picks the smallest
+preset that still reaches back to `start` (`PERIOD_COVERS`) and slices the frame to the
+range, so arbitrary dates reuse the same cached fetches the preset buttons already warmed.
+
+Start dates are capped at 3 years back (`MAX_HISTORY_DAYS`). That is the furthest the
+loader will go: `_fetch_from_nse()` maps any period it doesn't recognise to 35 days, so a
+longer request would quietly return *less* data for the Indian indices rather than erroring.
+Lifting the cap means extending `_PERIOD_TO_DAYS` in `data_loader.py` first.
 - `instrument_options()` — builds `(labels, label → ticker)`; label is the name alone, with
   the ticker appended only when two instruments share a name (Volkswagen, Jain Irrigation)
 - `pick_instrument(key, placeholder, ...)` — the searchable dropdown used by Watchlist and Chart
