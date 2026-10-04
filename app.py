@@ -11,7 +11,7 @@ from data_loader import (get_price_history, clear_price_cache, WATCHLIST_PRESETS
 
 st.set_page_config(page_title="Trader Desk", layout="wide", page_icon="📊", initial_sidebar_state="collapsed")
 
-refresh_symbols()   # no-op unless the instrument table is missing or stale
+refresh_symbols()   # reload the instrument table from data/symbols.csv
 
 st.markdown("""
 <style>
