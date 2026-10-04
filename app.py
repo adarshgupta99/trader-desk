@@ -252,24 +252,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-col_title, col_period = st.columns([2, 2])
-with col_title:
-    st.markdown(
-        f"<div style='font-size:38px;font-weight:700;color:{T1};letter-spacing:-0.02em;"
-        f"line-height:1.1;padding-top:2px;'>Trader Desk</div>",
-        unsafe_allow_html=True,
-    )
-with col_period:
-    st.markdown(
-        f"<div style='font-size:12px;color:{T2};text-transform:uppercase;"
-        f"letter-spacing:0.08em;margin:6px 0 2px 0;'>History — panel tabs</div>",
-        unsafe_allow_html=True,
-    )
-    period_label = st.segmented_control(
-        "Period", list(PERIODS.keys()), default="1M", label_visibility="collapsed"
-    )
-
-period = PERIODS[period_label or "1M"]
+st.markdown(
+    f"<div style='font-size:38px;font-weight:700;color:{T1};letter-spacing:-0.02em;"
+    f"line-height:1.1;padding-top:2px;'>Trader Desk</div>",
+    unsafe_allow_html=True,
+)
 st.markdown(
     f"<div style='border-top:2px solid {T1};margin:14px 0 0 0;'></div>",
     unsafe_allow_html=True,
@@ -857,18 +844,29 @@ with tab_chart:
             unsafe_allow_html=True,
         )
 
+_period_lbl = f"<div style='font-size:12px;color:{T2};text-transform:uppercase;letter-spacing:0.08em;margin:0 0 2px 0;'>History</div>"
+
 with tab_indices:
-    render_grid(INDICES, period, cols=3, decimal=2)
+    st.markdown(_period_lbl, unsafe_allow_html=True)
+    period_label = st.segmented_control("pi", list(PERIODS.keys()), default="1M", label_visibility="collapsed", key="period_indices")
+    render_grid(INDICES, PERIODS[period_label or "1M"], cols=3, decimal=2)
 
 with tab_india:
-    render_grid(INDIA, period, cols=3, decimal=2)
+    st.markdown(_period_lbl, unsafe_allow_html=True)
+    period_label = st.segmented_control("pi", list(PERIODS.keys()), default="1M", label_visibility="collapsed", key="period_india")
+    render_grid(INDIA, PERIODS[period_label or "1M"], cols=3, decimal=2)
 
 with tab_fx:
-    render_grid(FX, period, cols=2, decimal=4)
+    st.markdown(_period_lbl, unsafe_allow_html=True)
+    period_label = st.segmented_control("pi", list(PERIODS.keys()), default="1M", label_visibility="collapsed", key="period_fx")
+    render_grid(FX, PERIODS[period_label or "1M"], cols=2, decimal=4)
 
 with tab_commodities:
-    render_grid(COMMODITIES, period, cols=3, decimal=2)
+    st.markdown(_period_lbl, unsafe_allow_html=True)
+    period_label = st.segmented_control("pi", list(PERIODS.keys()), default="1M", label_visibility="collapsed", key="period_commodities")
+    render_grid(COMMODITIES, PERIODS[period_label or "1M"], cols=3, decimal=2)
 
 with tab_volatility:
-    # Single instrument: dominant value, larger chart (spec)
-    render_grid(VOLATILITY, period, cols=1, decimal=2, height=420, value_size=40)
+    st.markdown(_period_lbl, unsafe_allow_html=True)
+    period_label = st.segmented_control("pi", list(PERIODS.keys()), default="1M", label_visibility="collapsed", key="period_volatility")
+    render_grid(VOLATILITY, PERIODS[period_label or "1M"], cols=1, decimal=2, height=420, value_size=40)
