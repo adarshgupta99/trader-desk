@@ -147,10 +147,34 @@ st.markdown("""
        Built from native containers so the remove control can be a real button
        instead of a link that reloads the page. */
     .st-key-wl_tiles { gap: 10px !important; margin: 6px 0; }
-    .st-key-wl_tiles [data-testid="stVerticalBlockBorderWrapper"] {
+    /* The tile itself. st.container(border=True) puts the border on the
+       stVerticalBlock, so that is what has to carry the old .wl-cell look —
+       including min-width, which is what kept tiles on a uniform 132px grid
+       instead of letting each one shrink to its name. */
+    .st-key-wl_tiles > div > [data-testid="stVerticalBlock"] {
+        background: #D7D2C1 !important;
+        border: 1px solid #BDB7A5 !important;
+        border-radius: 0 !important;
         padding: 9px 13px !important;
-        min-width: 132px;
+        min-width: 132px !important;
+        gap: 5px !important;          /* the old header margin-bottom */
     }
+    /* Streamlit stacks these as flex children with a zero basis, so they shrink
+       below their own text and spill past the bottom border. Size them to content. */
+    .st-key-wl_tiles > div > [data-testid="stVerticalBlock"] > * {
+        flex: 0 0 auto !important;
+    }
+    /* Streamlit hangs margin-bottom:-16px off markdown to cancel the bottom
+       margin of the <p> it normally wraps content in. Some of these tiles emit
+       bare <div>s with no such margin, so the negative value had nothing to
+       cancel and pulled the border up through the price. Zero both instead, and
+       restore the 1.6 line-height the old .wl-cell inherited from the page. */
+    .st-key-wl_tiles [data-testid="stMarkdownContainer"] {
+        margin-bottom: 0 !important;
+        line-height: 1.6 !important;
+        font-size: 13px !important;   /* the name's line box; values set their own */
+    }
+    .st-key-wl_tiles [data-testid="stMarkdownContainer"] p { margin: 0 !important; }
     /* No stray vertical gaps inside a tile */
     .st-key-wl_tiles [data-testid="stVerticalBlock"] { gap: 0 !important; }
     .st-key-wl_tiles [data-testid="stHorizontalBlock"] { gap: 10px !important; }
