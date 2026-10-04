@@ -1,5 +1,3 @@
-from urllib.parse import quote
-
 import streamlit as st
 import plotly.graph_objects as go
 
@@ -43,14 +41,36 @@ st.markdown("""
         border-color: #c74424; background: rgba(199,68,36,0.08);
     }
 
-    /* ── Tabs ── */
-    .stTabs [data-baseweb="tab"] {
-        font-size: 13px; font-weight: 500; letter-spacing: 0.02em;
-        color: #6B675F; font-family: 'Inter', Arial, sans-serif;
+    /* ── Main navigation ──
+       A segmented control restyled as plain text nav. It replaces st.tabs
+       because st.tabs renders every tab's body on every run — all 53 charts,
+       however few are visible. Only the selected section is built now. */
+    .st-key-main_nav { margin: -4px 0 12px 0; }
+    .st-key-main_nav [data-testid="stButtonGroup"] { gap: 22px !important; flex-wrap: wrap; }
+    .st-key-main_nav button[data-variant="segmented_control"] + button { margin-left: 22px !important; }
+    .st-key-main_nav button[data-variant="segmented_control"] {
+        background: transparent !important;
+        border: none !important;
+        border-bottom: 2px solid transparent !important;
+        border-radius: 0 !important;
+        padding: 2px 0 5px 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+        box-shadow: none !important;
+        color: #6B675F !important;
+        font-family: 'Inter', Arial, sans-serif !important;
     }
-    .stTabs [aria-selected="true"] { color: #1F1D19 !important; }
-    .stTabs [data-baseweb="tab-border"] { background: #BDB7A5 !important; }
-    .stTabs [data-baseweb="tab-highlight"] { background: #C25C36 !important; }
+    .st-key-main_nav button[data-variant="segmented_control"] p {
+        font-size: 13px !important; font-weight: 500 !important;
+        letter-spacing: 0.02em !important; color: inherit !important;
+        margin: 0 !important;
+    }
+    .st-key-main_nav button[data-variant="segmented_control"]:hover { color: #1F1D19 !important; }
+    .st-key-main_nav button[aria-checked="true"] {
+        color: #1F1D19 !important;
+        border-bottom-color: #C25C36 !important;
+    }
+    .st-key-main_nav button[aria-checked="true"] p { font-weight: 600 !important; }
 
     /* ── Chart cards: restyle Streamlit's bordered container ── */
     [data-testid="stVerticalBlockBorderWrapper"] {
@@ -120,52 +140,66 @@ st.markdown("""
     /* ── Divider ── */
     hr { border-color: #BDB7A5 !important; }
 
-    /* ── Watchlist: compact tiles that wrap and hug their content ── */
-    .wl-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin: 6px 0;
-    }
-    .wl-cell {
-        background: #D7D2C1;
-        border: 1px solid #BDB7A5;
-        padding: 9px 13px;
+    /* ── Watchlist: compact tiles that wrap and hug their content ──
+       Built from native containers so the remove control can be a real button
+       instead of a link that reloads the page. */
+    .st-key-wl_tiles { gap: 10px !important; margin: 6px 0; }
+    .st-key-wl_tiles [data-testid="stVerticalBlockBorderWrapper"] {
+        padding: 9px 13px !important;
         min-width: 132px;
-        flex: 0 0 auto;
     }
-    a.wl-remove, a.wl-remove:link, a.wl-remove:visited {
-        font-size: 16px !important; color: #9C988D !important;
-        text-decoration: none !important;
-        line-height: 1; padding: 2px 7px; margin: -2px -7px 0 0;
+    /* No stray vertical gaps inside a tile */
+    .st-key-wl_tiles [data-testid="stVerticalBlock"] { gap: 0 !important; }
+    .st-key-wl_tiles [data-testid="stHorizontalBlock"] { gap: 10px !important; }
+    .st-key-wl_tiles [data-testid="stElementContainer"] { margin: 0 !important; }
+    /* Remove control: sized and coloured like the × it replaces */
+    .st-key-wl_tiles [data-testid="stBaseButton-tertiary"] {
+        font-size: 17px !important; line-height: 1 !important;
+        color: #9C988D !important; padding: 0 2px !important;
+        min-height: 0 !important; height: auto !important;
+        background: transparent !important; border: none !important;
     }
-    a.wl-remove:hover { color: #C25C36 !important; }
+    .st-key-wl_tiles [data-testid="stBaseButton-tertiary"]:hover { color: #C25C36 !important; }
+    .st-key-wl_tiles [data-testid="stBaseButton-tertiary"] p {
+        font-size: 17px !important; line-height: 1 !important; margin: 0 !important;
+        color: inherit !important;
+    }
 
     /* Streamlit colours bare anchors blue; keep our own links neutral */
     .clear-cache-btn a, .clear-cache-btn a:link, .clear-cache-btn a:visited {
         text-decoration: none !important;
     }
 
-    /* ── View selector chips ── */
-    .chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0; }
+    /* ── View selector chips ──
+       st.pills restyled as the square chips the design calls for. Native
+       widgets, so switching view is a rerun rather than a page navigation. */
     .chip-label {
         font-size: 12px; color: #6B675F; text-transform: uppercase;
-        letter-spacing: 0.08em; min-width: 72px;
+        letter-spacing: 0.08em; margin-bottom: 4px;
     }
-    a.chip, a.chip:link, a.chip:visited {
-        display: inline-block; text-decoration: none !important;
-        font-family: 'Inter', Arial, sans-serif;
-        font-size: 13px; font-weight: 500;
-        padding: 0.34em 0.8em; border-radius: 0;
-        border: 1px solid #BDB7A5; color: #6B675F !important;
-        background: transparent;
+    .st-key-wl_idx button, .st-key-wl_cst button {
+        background: transparent !important;
+        border: 1px solid #BDB7A5 !important;
+        border-radius: 0 !important;
+        color: #6B675F !important;
+        padding: 0.34em 0.8em !important;
+        min-height: 0 !important; height: auto !important;
+        box-shadow: none !important;
+        font-family: 'Inter', Arial, sans-serif !important;
     }
-    a.chip:hover { border-color: #6B675F; color: #1F1D19 !important; }
-    a.chip-on, a.chip-on:link, a.chip-on:visited {
-        border-color: #1F1D19; background: #1F1D19;
-        color: #DFDACB !important; font-weight: 600;
+    .st-key-wl_idx button p, .st-key-wl_cst button p {
+        font-size: 13px !important; font-weight: 500 !important;
+        color: inherit !important; margin: 0 !important;
     }
-    a.chip-on:hover { color: #DFDACB !important; }
+    .st-key-wl_idx button:hover, .st-key-wl_cst button:hover {
+        border-color: #6B675F !important; color: #1F1D19 !important;
+    }
+    .st-key-wl_idx button[aria-checked="true"], .st-key-wl_cst button[aria-checked="true"] {
+        background: #1F1D19 !important; border-color: #1F1D19 !important;
+        color: #DFDACB !important;
+    }
+    .st-key-wl_idx button[aria-checked="true"] p,
+    .st-key-wl_cst button[aria-checked="true"] p { font-weight: 600 !important; }
 
     /* ── Inline confirm buttons: sized to their text ── */
     .confirm-row { display: flex; gap: 8px; margin: 6px 0 2px 0; }
@@ -503,111 +537,121 @@ def render_grid(assets, period, cols=3, decimal=2, height=220, value_size=28):
         with columns[i % cols]:
             asset_card(label, ticker, period, decimal, height, value_size)
 
-def _watchlist_grid(watchlist, show_1w, view=None):
-    """Render instrument tiles. `view` is the editable list this belongs to;
-    pass None for read-only index views so no remove control is drawn."""
-    window = "1W" if show_1w else "1D"
-    cells = ""
-    for item in watchlist:
-        ticker = item["ticker"]
-        label  = item["label"]
-        remove = (
-            f"<a href='?view={quote(view)}&remove={quote(ticker)}' target='_self' "
-            f"class='wl-remove' title='Remove {label}'>&times;</a>"
-            if view else ""
-        )
-        header = (
-            f"<div style='display:flex;justify-content:space-between;align-items:center;"
-            f"gap:10px;margin-bottom:5px;'>"
-            f"<span style='font-size:13px;color:{T2};font-weight:600;"
-            f"white-space:nowrap;'>{label}</span>{remove}</div>"
-        )
+def _watchlist_grid(watchlist, show_1w, list_id=None):
+    """Render instrument tiles. `list_id` is the editable list these belong to;
+    pass None for read-only index views so no remove control is drawn.
 
-        df = get_price_history(ticker, period="5d")
-        df = df.dropna(subset=["Close"])
+    Tiles are native containers rather than one HTML block so that the remove
+    control can be a real button. As a link it was a page navigation, which
+    reloaded the whole app — blanking the page and resetting scroll.
+    """
+    with st.container(horizontal=True, wrap=True, gap="small", key="wl_tiles"):
+        for item in watchlist:
+            ticker = item["ticker"]
+            label  = item["label"]
 
-        if df.empty:
-            # Keep failed instruments visible and removable (spec, high severity)
-            cells += (
-                f"<div class='wl-cell'>{header}"
-                f"<div style='font-size:13px;color:{DOWN};line-height:1.5;'>"
-                f"Couldn't load</div></div>"
-            )
-            continue
+            with st.container(border=True, width="content", key=f"wl_{ticker}"):
+                head = st.container(horizontal=True, gap="small",
+                                    vertical_alignment="center")
+                with head:
+                    st.markdown(
+                        f"<span style='font-size:13px;color:{T2};font-weight:600;"
+                        f"white-space:nowrap;'>{label}</span>",
+                        unsafe_allow_html=True,
+                    )
+                    if list_id is not None and st.button(
+                        "×", key=f"rm_{list_id}_{ticker}", type="tertiary",
+                        help=f"Remove {label}",
+                    ):
+                        remove_from_list(list_id, ticker)
+                        st.rerun()
 
-        last    = df["Close"].iloc[-1]
-        decimal = 4 if ticker.endswith("=X") else 2
-        pct = ((last / df["Close"].iloc[0]) - 1) * 100 if show_1w else (
-              ((last / df["Close"].iloc[-2]) - 1) * 100 if len(df) >= 2 else 0.0)
-        color = UP if pct >= 0 else DOWN
+                df = get_price_history(ticker, period="5d")
+                df = df.dropna(subset=["Close"])
 
-        cells += (
-            f"<div class='wl-cell'>{header}"
-            f"<div style='font-size:22px;font-weight:700;color:{color};"
-            f"line-height:1.1;margin-bottom:3px;{TABULAR}'>{signed_pct(pct)}</div>"
-            f"<div style='font-size:14px;font-weight:600;color:{T1};{TABULAR}'>"
-            f"{format_price(ticker, last, decimal)}</div>"
-            f"</div>"
-        )
+                if df.empty:
+                    # Keep failed instruments visible and removable (spec, high severity)
+                    st.markdown(
+                        f"<div style='font-size:13px;color:{DOWN};line-height:1.5;'>"
+                        f"Couldn't load</div>",
+                        unsafe_allow_html=True,
+                    )
+                    continue
 
-    st.markdown(f"<div class='wl-grid'>{cells}</div>", unsafe_allow_html=True)
+                last    = df["Close"].iloc[-1]
+                decimal = 4 if ticker.endswith("=X") else 2
+                pct = ((last / df["Close"].iloc[0]) - 1) * 100 if show_1w else (
+                      ((last / df["Close"].iloc[-2]) - 1) * 100 if len(df) >= 2 else 0.0)
+                color = UP if pct >= 0 else DOWN
+
+                st.markdown(
+                    f"<div style='font-size:22px;font-weight:700;color:{color};"
+                    f"line-height:1.1;margin-bottom:3px;{TABULAR}'>{signed_pct(pct)}</div>"
+                    f"<div style='font-size:14px;font-weight:600;color:{T1};{TABULAR}'>"
+                    f"{format_price(ticker, last, decimal)}</div>",
+                    unsafe_allow_html=True,
+                )
 
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 
-tab_watchlist, tab_chart, tab_indices, tab_india, tab_fx, tab_commodities, tab_volatility = st.tabs(
-    ["Watchlist", "Chart", "Indices", "India", "FX", "Commodities", "Volatility"]
+# Only the selected section is rendered. st.tabs would run every tab's body on
+# every interaction — 53 charts rebuilt to show at most 8 — which cost ~650ms a
+# click regardless of what was clicked.
+NAV = ["Watchlist", "Chart", "Indices", "India", "FX", "Commodities", "Volatility"]
+
+
+# `required` keeps a section selected: without it, clicking the active item
+# deselects it and the app falls back to the first section.
+nav = st.segmented_control(
+    "nav", NAV, default=NAV[0], required=True,
+    label_visibility="collapsed", key="main_nav",
 )
 
-with tab_watchlist:
+_period_lbl = (f"<div style='font-size:12px;color:{T2};text-transform:uppercase;"
+               f"letter-spacing:0.08em;margin:0 0 2px 0;'>History</div>")
+
+if nav == "Watchlist":
     lists = get_custom_lists()
 
-    # The active view lives in the URL, not session state: the remove control
-    # is a link, and following one is a page navigation that session state
-    # does not reliably survive.
-    view = st.query_params.get("view") or f"p:{PRESET_NAMES[0]}"
+    # The active view is session state. It used to live in the URL because the
+    # chips and the remove control were links; now they are native widgets,
+    # nothing navigates, and there is no page load to survive.
+    if "wl_view" not in st.session_state:
+        st.session_state.wl_view = f"p:{PRESET_NAMES[0]}"
+
+    # Two chip rows, one selection between them: picking in one clears the other.
+    def _pick_index():
+        if st.session_state.wl_idx:
+            st.session_state.wl_view = f"p:{st.session_state.wl_idx}"
+            st.session_state.wl_cst = None
+
+    def _pick_custom():
+        if st.session_state.wl_cst:
+            st.session_state.wl_view = f"c:{st.session_state.wl_cst}"
+            st.session_state.wl_idx = None
+
+    view = st.session_state.wl_view
     is_custom = view.startswith("c:")
     list_id = int(view[2:]) if is_custom and view[2:].isdigit() else None
     if is_custom and list_id not in {l["id"] for l in lists}:
-        view, is_custom, list_id = f"p:{PRESET_NAMES[0]}", False, None
+        view = st.session_state.wl_view = f"p:{PRESET_NAMES[0]}"
+        is_custom, list_id = False, None
 
-    to_remove = st.query_params.get("remove")
-    if to_remove and is_custom:
-        remove_from_list(list_id, to_remove)
-        st.query_params.clear()
-        st.query_params["view"] = view
-        st.rerun()
-
-    # Adding happens through a link too, so a failure message has to travel
-    # back in the URL — session state does not survive the navigation.
-    to_add = st.query_params.get("add")
-    if to_add and is_custom:
-        ok, msg = add_to_list(list_id, to_add)
-        st.query_params.clear()
-        st.query_params["view"] = view
-        if not ok:
-            st.query_params["err"] = msg
-        st.rerun()
-
-    err = st.query_params.get("err")
+    err = st.session_state.pop("wl_err", None)
 
     # ── View selector ─────────────────────────────────────────────────────────
-    def _chips(label, items):
-        chips = "".join(
-            f"<a href='?view={quote(key)}' target='_self' "
-            f"class='chip{' chip-on' if key == view else ''}'>{name}</a>"
-            for key, name in items
-        )
-        return (
-            f"<div class='chip-row'>"
-            f"<span class='chip-label'>{label}</span>{chips}</div>"
-        )
-
-    st.markdown(
-        _chips("Indices", [(f"p:{n}", n) for n in PRESET_NAMES])
-        + _chips("My lists", [(f"c:{l['id']}", l["name"]) for l in lists]),
-        unsafe_allow_html=True,
-    )
+    names = {l["id"]: l["name"] for l in lists}
+    st.markdown("<div class='chip-label'>Indices</div>", unsafe_allow_html=True)
+    st.pills("idx", PRESET_NAMES, key="wl_idx", on_change=_pick_index,
+             label_visibility="collapsed",
+             default=view[2:] if not is_custom else None)
+    st.markdown("<div class='chip-label' style='margin-top:8px;'>My lists</div>",
+                unsafe_allow_html=True)
+    st.pills("cst", [l["id"] for l in lists], key="wl_cst",
+             format_func=lambda i: names[i], on_change=_pick_custom,
+             label_visibility="collapsed",
+             default=list_id if is_custom else None)
 
     # ── Resolve the items for this view ───────────────────────────────────────
     if is_custom:
@@ -679,7 +723,7 @@ with tab_watchlist:
                 if ok:
                     st.rerun()
                 else:
-                    st.query_params["err"] = msg
+                    st.session_state["wl_err"] = msg
                     st.rerun()
 
         if rename_clicked:
@@ -696,7 +740,8 @@ with tab_watchlist:
         unsafe_allow_html=True,
     )
     wl_period = st.segmented_control(
-        "wl_period", ["1D", "1W"], default="1D", label_visibility="collapsed", key="wl_period"
+        "wl_period", ["1D", "1W"], default="1D", required=True,
+        label_visibility="collapsed", key="wl_period"
     )
     show_1w = (wl_period == "1W")
 
@@ -707,10 +752,10 @@ with tab_watchlist:
             unsafe_allow_html=True,
         )
     else:
-        _watchlist_grid(items, show_1w, view if is_custom else None)
+        _watchlist_grid(items, show_1w, list_id if is_custom else None)
 
 
-with tab_chart:
+elif nav == "Chart":
     # Remember the plotted instruments across tab switches
     for k in ("_ct1", "_ct2"):
         if k not in st.session_state:
@@ -844,29 +889,27 @@ with tab_chart:
             unsafe_allow_html=True,
         )
 
-_period_lbl = f"<div style='font-size:12px;color:{T2};text-transform:uppercase;letter-spacing:0.08em;margin:0 0 2px 0;'>History</div>"
-
-with tab_indices:
+elif nav == "Indices":
     st.markdown(_period_lbl, unsafe_allow_html=True)
     period_label = st.segmented_control("pi", list(PERIODS.keys()), default="1M", label_visibility="collapsed", key="period_indices")
     render_grid(INDICES, PERIODS[period_label or "1M"], cols=3, decimal=2)
 
-with tab_india:
+elif nav == "India":
     st.markdown(_period_lbl, unsafe_allow_html=True)
     period_label = st.segmented_control("pi", list(PERIODS.keys()), default="1M", label_visibility="collapsed", key="period_india")
     render_grid(INDIA, PERIODS[period_label or "1M"], cols=3, decimal=2)
 
-with tab_fx:
+elif nav == "FX":
     st.markdown(_period_lbl, unsafe_allow_html=True)
     period_label = st.segmented_control("pi", list(PERIODS.keys()), default="1M", label_visibility="collapsed", key="period_fx")
     render_grid(FX, PERIODS[period_label or "1M"], cols=2, decimal=4)
 
-with tab_commodities:
+elif nav == "Commodities":
     st.markdown(_period_lbl, unsafe_allow_html=True)
     period_label = st.segmented_control("pi", list(PERIODS.keys()), default="1M", label_visibility="collapsed", key="period_commodities")
     render_grid(COMMODITIES, PERIODS[period_label or "1M"], cols=3, decimal=2)
 
-with tab_volatility:
+elif nav == "Volatility":
     st.markdown(_period_lbl, unsafe_allow_html=True)
     period_label = st.segmented_control("pi", list(PERIODS.keys()), default="1M", label_visibility="collapsed", key="period_volatility")
     render_grid(VOLATILITY, PERIODS[period_label or "1M"], cols=1, decimal=2, height=420, value_size=40)

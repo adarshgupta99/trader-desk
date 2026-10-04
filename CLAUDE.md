@@ -156,7 +156,7 @@ Because nothing is ever destroyed by switching views, there is no confirmation s
 - The table covers NSE and the curated set, so when a search returns nothing, offer the typed text as a raw ticker. That keeps US equities and anything else reachable; `add_to_list` validates it has data before accepting it.
 - Rank curated instruments above bulk NSE rows in search results, otherwise ETFs whose tickers begin with "NIFTY" or "GOLD" bury the actual index and the gold contract.
 - Resolve a friendly name when an instrument is added, falling back to the raw ticker. Read it from the chart endpoint's metadata (`Ticker.history_metadata`), not `Ticker.info` — `.info` uses Yahoo's quoteSummary endpoint, which returns 404 for tickers whose price data loads fine.
-- Keep the active view in the URL, not `st.session_state`. The remove control is a link, and following a link is a page navigation that session state does not reliably survive.
+- **Superseded (5 October 2026).** The active view now lives in `st.session_state`, not the URL. The URL rule existed because the view chips and the remove control were HTML links, and a link click is a page navigation that session state does not reliably survive. They are native widgets now — `st.pills` and `st.button` — so nothing navigates and session state is the right home. Measured: 0 page navigations across chip, add and remove; a chip click went from 761ms (link) to a 406ms median rerun.
 - To clear a text input after a successful submit, change the widget's key (a nonce). Deleting the key alone does not empty the widget.
 - Keep entry controls secondary to the heading. Label the change window separately from chart history.
 - Keep failed instruments visible and removable; preserve tile geometry while loading.
@@ -199,7 +199,7 @@ These are supplied design-sweep/QA findings from 3 October 2026, not a fresh cod
 | Severity | Issue | Suggested fix |
 | --- | --- | --- |
 | High | A hidden failed ticker still counts toward the 30-ticker cap; Add disables without explanation. | Render a "Couldn't load X" tile with a remove button. Explain the cap whenever Add is disabled, including failed entries. |
-| High | Remove is an 11px link; it opens a new tab and leaves the original stale. | Fixed: added `target='_self'` to force same-tab navigation. Kept as HTML link — `st.button` cannot be placed inside `st.markdown` without breaking the flex card layout. |
+| High | Remove is an 11px link; it opens a new tab and leaves the original stale. | Fixed, then superseded (5 October 2026). Remove is now a real `st.button`, so it reruns instead of navigating. The old "`st.button` cannot be placed inside `st.markdown`" constraint no longer binds: `st.container(horizontal=True, wrap=True)` gives the flex-wrap layout natively. |
 | Medium | Presets silently replace the entire watchlist. | Obsolete — index presets are now read-only views that replace nothing, so there is nothing to confirm. |
 | Medium | 3Y takes 20-30 seconds; clicks take 5-15 seconds and dim the whole page. | Batch compatible yfinance downloads and use an in-panel `st.spinner`. Keep SQLite as the cache layer — do not add `@st.cache_data`, it conflicts with existing SQLite caching and loses data on reboot. |
 | Medium | "Trader Desk" is clipped under the toolbar on desktop and mobile. | Use appropriate `.block-container` top padding (about `3rem` as a starting point) or `st.title`; check both viewports. |

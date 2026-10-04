@@ -70,14 +70,26 @@ User types a ticker in the browser
 ## Module Details
 
 ### `app.py`
-The Streamlit entry point. Seven tabs. Each tab owns its own history selector —
+The Streamlit entry point. Seven sections. Each owns its own history selector —
 there is no longer a shared one in the header.
 
-**Tabs:**
+**Navigation is a `st.segmented_control`, not `st.tabs`.** `st.tabs` runs every tab's
+body on every rerun, so all 53 charts were rebuilt on every click no matter which tab
+was showing — proven by Indices (8 charts) costing 667ms and Volatility (1 chart)
+costing 651ms. An `if/elif` chain on the selected section builds only what is visible:
+Indices 667→422ms, Volatility 651→324ms, Commodities 734→352ms. The trade-off is that
+switching sections now costs a server round-trip (~382ms) where `st.tabs` switched
+instantly in the browser. Roughly 300ms of every figure above is Streamlit's websocket
+round-trip floor, so that is the practical lower bound for any click.
 
-| Tab | Contents |
+`required=True` on the control matters: without it, clicking the already-active
+section deselects it and the app silently falls back to the first section.
+
+**Sections:**
+
+| Section | Contents |
 |---|---|
-| Watchlist | Nine views via a chip row: 5 read-only index views + 4 editable custom lists (≤30 each); 1D/1W toggle; × to remove |
+| Watchlist | Nine views via two chip rows: 5 read-only index views + 4 editable custom lists (≤30 each); 1D/1W toggle; × to remove |
 | Chart | Plot 1–2 instruments on dual y-axis; own history selector; persists instruments across tab switches |
 | Indices | S&P 500, Nasdaq, Nifty 50, KOSPI, FTSE 100, DAX, Euro Stoxx 50, Nikkei 225 |
 | India | Bank Nifty, Nifty IT, Nifty Auto, Nifty Energy, Nifty Mid Select, Nifty Defence |
@@ -94,7 +106,11 @@ Rates tab is parked until `FRED_API_KEY` is added.
 - `asset_card(label, ticker, period, decimal)` — card with CSS-restyled border, label, price, chart
 - `_constituents_popover(label, members)` — `st.popover` with approx. index weights
 - `render_grid(assets, period, cols, decimal)` — 3-column grid of `asset_card()` calls
-- `_watchlist_grid(watchlist, show_1w, view)` — single HTML flex block; remove via `?remove=` query param
+- `_watchlist_grid(watchlist, show_1w, list_id)` — native `st.container(horizontal=True,
+  wrap=True)` of bordered tiles; remove is an `st.button`. `list_id=None` for read-only
+  index views, which draws no remove control
+- `_pick_index()` / `_pick_custom()` — `on_change` callbacks for the two chip rows; one
+  selection between them, so picking in one clears the other
 - `instrument_options()` — builds `(labels, label → ticker)`; label is the name alone, with
   the ticker appended only when two instruments share a name (Volkswagen, Jain Irrigation)
 - `pick_instrument(key, placeholder, ...)` — the searchable dropdown used by Watchlist and Chart
@@ -107,6 +123,15 @@ searchable ticker behind a shorter label. That is why the instrument **names** h
 carry the searchable words (see `scripts/refresh_symbol_names.py`). Anything outside the
 table stays reachable because `accept_new_options` offers the typed text as a raw ticker,
 which `add_to_list` then validates against real price data.
+
+**Nothing in the Watchlist navigates.** The view chips, the remove control and the error
+banner were all built on `<a href>` links and `st.query_params`, which meant every click
+was a full page load — the page blanked, scroll position reset and the websocket
+reconnected. They are native widgets now (`st.pills`, `st.button`) with the active view in
+`st.session_state.wl_view` and errors in `st.session_state.wl_err`. Verified in a browser:
+0 main-frame navigations across chip, add and remove, and a JS global set at load survives
+every interaction. A chip click went from 761ms to a 406ms median. The only remaining
+query param in the app is the clear-cache link.
 
 All data goes through `get_price_history()` from `data_loader.py`.
 
@@ -237,8 +262,9 @@ with `yfinance` anyway).
 | `62ccb3f` | 4 Oct 2026 | Adarsh Gupta | Replace dynamic symbol fetch with a fixed lookup table |
 | `bd50a3c` | 4 Oct 2026 | Adarsh Gupta | Show name only in instrument dropdown, ticker only when needed |
 | `d32ebdd` | 4 Oct 2026 | Adarsh Gupta | Move period control into each tab, remove it from the header |
+| `5256b31` | 5 Oct 2026 | Adarsh Gupta | Use NSE's full company names so instruments are findable by name |
 
-**Deployed:** `62ccb3f` is the newest commit on the remote. Everything after it is local only.
+**Deployed:** `5256b31` is the newest commit on the remote. Everything after it is local only.
 
 ---
 
