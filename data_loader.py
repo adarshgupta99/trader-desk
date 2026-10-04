@@ -434,6 +434,23 @@ def refresh_symbols(force=False):
     return True, f"{total} instruments."
 
 
+def get_all_symbols():
+    """Every searchable instrument, curated ones first so that a dropdown
+    using `filter_mode="contains"` surfaces indices and FX above bulk equities."""
+    conn = _get_connection()
+    try:
+        rows = conn.execute(
+            """
+            SELECT ticker, name, kind
+            FROM symbols
+            ORDER BY CASE WHEN kind <> 'NSE equity' THEN 0 ELSE 1 END, name
+            """
+        ).fetchall()
+        return [{"ticker": r[0], "name": r[1], "kind": r[2]} for r in rows]
+    finally:
+        conn.close()
+
+
 def search_instruments(query, limit=10):
     """Match a query against instrument names and tickers, best match first."""
     query = (query or "").strip()

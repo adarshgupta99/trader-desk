@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 from data_loader import (get_price_history, clear_price_cache, WATCHLIST_PRESETS,
                          LIST_MAX, get_custom_lists, rename_custom_list,
                          get_list_items, add_to_list, remove_from_list,
-                         count_list_with_data, search_instruments,
+                         count_list_with_data, get_all_symbols,
                          refresh_symbols, CURATED_INSTRUMENTS)
 
 st.set_page_config(page_title="Trader Desk", layout="wide", page_icon="📊", initial_sidebar_state="collapsed")
@@ -166,24 +166,6 @@ st.markdown("""
         color: #DFDACB !important; font-weight: 600;
     }
     a.chip-on:hover { color: #DFDACB !important; }
-
-    /* ── Search results ── */
-    .srch {
-        border: 1px solid #BDB7A5; background: #D7D2C1;
-        max-width: 640px; margin: 4px 0 2px 0;
-    }
-    .srch-row {
-        display: flex; justify-content: space-between; align-items: baseline;
-        gap: 18px; padding: 7px 12px;
-        border-bottom: 1px solid #BDB7A5;
-        text-decoration: none !important;
-        font-family: 'Inter', Arial, sans-serif;
-    }
-    .srch-row:last-child { border-bottom: none; }
-    a.srch-row:hover { background: #CFC9B6; }
-    .srch-name { font-size: 13px; color: #1F1D19 !important; font-weight: 500; }
-    .srch-meta { font-size: 12px; color: #6B675F !important; white-space: nowrap; }
-    .srch-held { opacity: 0.55; }
 
     /* ── Inline confirm buttons: sized to their text ── */
     .confirm-row { display: flex; gap: 8px; margin: 6px 0 2px 0; }
@@ -370,6 +352,42 @@ CONSTITUENTS = {
 }
 
 # ── Asset definitions ─────────────────────────────────────────────────────────
+
+def instrument_options():
+    """(labels, label -> ticker) for the instrument dropdowns."""
+    labels, by_label = [], {}
+    for s in get_all_symbols():
+        label = f"{s['name']} — {s['ticker']}"
+        labels.append(label)
+        by_label[label] = s["ticker"]
+    return labels, by_label
+
+
+def pick_instrument(key, placeholder, disabled=False, default=None):
+    """Searchable dropdown over the instrument table. Returns a ticker, or None.
+
+    `accept_new_options` keeps anything outside the table reachable — the table
+    is NSE plus curated entries, so a US ticker is typed rather than picked.
+    `filter_mode="contains"` keeps our ordering instead of re-scoring matches.
+    """
+    labels, by_label = instrument_options()
+    index = None
+    if default:
+        match = next((l for l, t in by_label.items() if t == default), None)
+        if match:
+            index = labels.index(match)
+        else:                       # a raw ticker that is not in the table
+            labels = [default] + labels
+            index = 0
+    choice = st.selectbox(
+        key, labels, index=index, placeholder=placeholder,
+        label_visibility="collapsed", key=key, disabled=disabled,
+        accept_new_options=True, filter_mode="contains",
+    )
+    if not choice:
+        return None
+    return by_label.get(choice, choice.strip().upper())
+
 
 def _group(category):
     return [(name, ticker) for cat, name, ticker in CURATED_INSTRUMENTS
@@ -625,11 +643,14 @@ with tab_watchlist:
 
         is_full = count >= LIST_MAX
 
+        # A new key after each add gives a fresh, empty dropdown
+        pick_nonce = st.session_state.get(f"add_nonce_{list_id}", 0)
+
         c_search, c_name, c_save = st.columns([6, 3, 1])
         with c_search:
-            query = st.text_input(
-                "search", placeholder="Search instruments — name or ticker",
-                label_visibility="collapsed", key=f"search_{list_id}",
+            picked = pick_instrument(
+                f"add_{list_id}_{pick_nonce}",
+                placeholder="Search instruments — name or ticker",
                 disabled=is_full,
             )
         with c_name:
@@ -654,38 +675,21 @@ with tab_watchlist:
                 f"<div style='color:{DOWN};font-size:12px;margin:-2px 0 4px 0;'>{note}</div>",
                 unsafe_allow_html=True,
             )
-        elif query and len(query.strip()) >= 2:
-            held = {i["ticker"] for i in items}
-            results = search_instruments(query, limit=8)
-            rows = ""
-            for hit in results:
-                if hit["ticker"] in held:
-                    rows += (
-                        f"<span class='srch-row srch-held'>"
-                        f"<span class='srch-name'>{hit['name']}</span>"
-                        f"<span class='srch-meta'>{hit['ticker']} · already added</span>"
-                        f"</span>"
-                    )
-                else:
-                    rows += (
-                        f"<a class='srch-row' target='_self' "
-                        f"href='?view={quote(view)}&add={quote(hit['ticker'])}'>"
-                        f"<span class='srch-name'>{hit['name']}</span>"
-                        f"<span class='srch-meta'>{hit['ticker']} · {hit['kind']}</span>"
-                        f"</a>"
-                    )
-            # The table covers NSE plus curated instruments. Anything outside it
-            # (a US equity, say) can still go in as a raw ticker.
-            if not results:
-                raw = query.strip().upper()
-                rows += (
-                    f"<a class='srch-row' target='_self' "
-                    f"href='?view={quote(view)}&add={quote(raw)}'>"
-                    f"<span class='srch-name'>Try “{raw}” as a ticker</span>"
-                    f"<span class='srch-meta'>no local match</span>"
-                    f"</a>"
+        elif picked:
+            if picked in {i["ticker"] for i in items}:
+                st.markdown(
+                    f"<div style='color:{T2};font-size:12px;margin:2px 0 4px 0;'>"
+                    f"{picked} is already in this list.</div>",
+                    unsafe_allow_html=True,
                 )
-            st.markdown(f"<div class='srch'>{rows}</div>", unsafe_allow_html=True)
+            else:
+                ok, msg = add_to_list(list_id, picked)
+                st.session_state[f"add_nonce_{list_id}"] = pick_nonce + 1
+                if ok:
+                    st.rerun()
+                else:
+                    st.query_params["err"] = msg
+                    st.rerun()
 
         if rename_clicked:
             ok, msg = rename_custom_list(list_id, new_name)
@@ -716,27 +720,24 @@ with tab_watchlist:
 
 
 with tab_chart:
-    # Persist ticker values across tab switches via explicit session state
+    # Remember the plotted instruments across tab switches
     for k in ("_ct1", "_ct2"):
         if k not in st.session_state:
             st.session_state[k] = ""
-
-    def _save_t1(): st.session_state["_ct1"] = st.session_state["chart_t1"]
-    def _save_t2(): st.session_state["_ct2"] = st.session_state["chart_t2"]
 
     lbl = (f"<div style='font-size:12px;color:{T2};text-transform:uppercase;"
            f"letter-spacing:0.08em;margin:0 0 4px 0;'>{{}}</div>")
     c1, c2, c3 = st.columns([3, 3, 2])
     with c1:
         st.markdown(lbl.format("Instrument 1"), unsafe_allow_html=True)
-        t1 = st.text_input("Ticker 1", placeholder="e.g. RELIANCE.NS", key="chart_t1",
-                           value=st.session_state["_ct1"],
-                           label_visibility="collapsed", on_change=_save_t1)
+        t1 = pick_instrument("chart_t1", placeholder="Search instruments",
+                             default=st.session_state["_ct1"]) or ""
+        st.session_state["_ct1"] = t1
     with c2:
         st.markdown(lbl.format("Instrument 2 (optional)"), unsafe_allow_html=True)
-        t2 = st.text_input("Ticker 2 (optional)", placeholder="e.g. HDFCBANK.NS",
-                           key="chart_t2", value=st.session_state["_ct2"],
-                           label_visibility="collapsed", on_change=_save_t2)
+        t2 = pick_instrument("chart_t2", placeholder="Search instruments",
+                             default=st.session_state["_ct2"]) or ""
+        st.session_state["_ct2"] = t2
     with c3:
         # This control, not the global one, governs the chart below (spec)
         st.markdown(lbl.format("History — this chart"), unsafe_allow_html=True)
