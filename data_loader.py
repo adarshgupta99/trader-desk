@@ -517,10 +517,10 @@ def refresh_symbols(force=False):
     not depend on Wikipedia or NSE being reachable from wherever it is hosted.
     The network rebuild then only runs when the table is stale.
     """
-    if symbol_count() == 0:
-        loaded = seed_symbols_from_file()
-        if loaded and not force:
-            return True, f"{loaded} instruments (from bundled seed)."
+    # Always top-up from the seed: INSERT OR IGNORE means nothing duplicates
+    # and missing rows (e.g. globals absent from a partial prior build) get
+    # filled in immediately at ~0.01s cost.
+    seed_symbols_from_file()
 
     conn = _get_connection()
     try:
