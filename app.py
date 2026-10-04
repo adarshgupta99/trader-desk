@@ -355,9 +355,13 @@ CONSTITUENTS = {
 
 def instrument_options():
     """(labels, label -> ticker) for the instrument dropdowns."""
+    # Count names first so duplicates get a ticker suffix to disambiguate.
+    all_syms = get_all_symbols()
+    from collections import Counter
+    name_counts = Counter(s["name"] for s in all_syms)
     labels, by_label = [], {}
-    for s in get_all_symbols():
-        label = f"{s['name']} — {s['ticker']}"
+    for s in all_syms:
+        label = s["name"] if name_counts[s["name"]] == 1 else f"{s['name']} ({s['ticker']})"
         labels.append(label)
         by_label[label] = s["ticker"]
     return labels, by_label
