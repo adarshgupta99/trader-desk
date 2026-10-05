@@ -1,14 +1,22 @@
 """
 Price history, and the SQLite cache in front of it.
 
-Two providers behind one function: yfinance for everything, and jugaad-data
-for the NSE indices yfinance does not carry. For anything with a jugaad-data
-equivalent - the three Indian indices on both providers (Nifty 50, Bank
-Nifty, Nifty IT), plus every NSE-listed equity - yfinance stays primary but
-every fetch also merges in jugaad-data, so a date yfinance left null or
-omitted entirely still shows up if jugaad has it. Each provider's Indian
-feed is independently flaky about when a session's close lands, and not
-reliably in the same direction, so neither is "the" source on its own.
+Every caller still gets back one daily OHLCV row per date - that external
+shape hasn't changed. What feeds those rows has: for any date within
+yfinance's 1h retention window (a rolling ~2 years back from today, capped
+at 730 days - see _HOURLY_MAX_DAYS), the daily candle is built by resampling
+hourly bars (open = first bar, high/low = session extremes, close = last
+bar) instead of trusting yfinance's own daily feed. The daily feed is only
+used for dates older than that window. This matters because the *last*
+hourly bar of a session is reliably the real close the moment it prints,
+where yfinance's daily feed for Indian tickers can come back null or
+missing entirely for hours after a session ends.
+
+On top of that, jugaad-data still fills in gaps for anything with a
+jugaad-data equivalent - the three Indian indices on both providers (Nifty
+50, Bank Nifty, Nifty IT), plus every NSE-listed equity - exactly as before:
+unchanged, and still only touching dates the combined yfinance result left
+null or omitted.
 get_price_history() is the only thing other modules should need.
 """
 
@@ -89,15 +97,8 @@ def _normalize_dates(df):
     return df
 
 
-# ── yfinance path ─────────────────────────────────────────────────────────────
-
-def _fetch_from_yfinance(ticker, period, interval):
-    df = yf.Ticker(ticker).history(period=period, interval=interval)
-    return df[["Open", "High", "Low", "Close", "Volume"]]
-
-
-# ── jugaad-data path (NSE indices) ────────────────────────────────────────────
-
+# How far back each period label reaches, in calendar days. Shared: it sizes
+# the hourly request below as well as both jugaad-data fetches.
 _PERIOD_TO_DAYS = {
     "5d": 7,
     "1mo": 35,
@@ -106,6 +107,87 @@ _PERIOD_TO_DAYS = {
     "1y": 370,
     "3y": 1100,
 }
+
+
+# ── yfinance path ─────────────────────────────────────────────────────────────
+
+def _fetch_from_yfinance(ticker, period, interval):
+    df = yf.Ticker(ticker).history(period=period, interval=interval)
+    return df[["Open", "High", "Low", "Close", "Volume"]]
+
+
+# Yahoo hard-refuses a 1h request whose range starts more than 730 days back
+# ("The requested range must be within the last 730 days"), for every ticker,
+# Indian or not. Stay under it rather than on it. Note this is a *rolling*
+# window anchored to today, not a fixed archive: it slides forward daily, so
+# the daily feed below is permanently needed for anything older.
+_HOURLY_MAX_DAYS = 720
+
+
+def _fetch_hourly_from_yfinance(ticker, days):
+    df = yf.Ticker(ticker).history(
+        period=f"{min(days, _HOURLY_MAX_DAYS)}d", interval="1h"
+    )
+    if df.empty:
+        return pd.DataFrame()
+    return df[["Open", "High", "Low", "Close", "Volume"]]
+
+
+def _resample_hourly_to_daily(df):
+    """Collapse 1h bars into one candle per trading session.
+
+    Grouping is on the tz-aware index's own local date, which is the
+    exchange's calendar day - so an NSE session buckets as one Indian day and
+    a US session as one New York day, without either being split or merged by
+    a UTC conversion. The last bar's close is the session close (NSE's 15:15
+    bucket, New York's 15:30, whatever the exchange's final hour is) - taken
+    positionally rather than by hardcoded clock time so it holds across
+    exchanges, and so a session still in progress yields its latest price
+    instead of nothing.
+    """
+    if df.empty:
+        return df
+    daily = df.groupby(df.index.date).agg(
+        Open=("Open", "first"),
+        High=("High", "max"),
+        Low=("Low", "min"),
+        Close=("Close", "last"),
+        Volume=("Volume", "sum"),
+    )
+    daily.index = pd.to_datetime(daily.index, utc=True)
+    return daily.dropna(subset=["Close"])
+
+
+def _fetch_daily_via_hourly(ticker, period, interval):
+    """Daily candles for `period`, resampled from hourly bars wherever hourly
+    reaches, and from yfinance's daily feed for dates older than that.
+
+    Hourly wins on every date both cover - that is the whole point of the
+    shift. A hourly fetch that fails or comes back empty (an unsupported
+    ticker, a network blip) must not take the daily result down with it, so
+    the daily feed is fetched whenever hourly cannot cover the full span, and
+    as a standalone fallback when hourly yields nothing at all.
+    """
+    days = _PERIOD_TO_DAYS.get(period, 35)
+    try:
+        hourly = _normalize_dates(
+            _resample_hourly_to_daily(_fetch_hourly_from_yfinance(ticker, days))
+        )
+    except Exception:
+        hourly = pd.DataFrame()
+
+    if hourly.empty:
+        return _normalize_dates(_fetch_from_yfinance(ticker, period, interval))
+    if days <= _HOURLY_MAX_DAYS:
+        return hourly
+
+    daily = _normalize_dates(_fetch_from_yfinance(ticker, period, interval))
+    if daily.empty:
+        return hourly
+    return hourly.combine_first(daily)[["Open", "High", "Low", "Close", "Volume"]]
+
+
+# ── jugaad-data path (NSE indices) ────────────────────────────────────────────
 
 def _fetch_from_nse(nse_symbol, period, interval):
     from jugaad_data.nse import index_raw
@@ -248,12 +330,19 @@ def _write_to_cache(conn, ticker, period, interval, df):
 def get_price_history(ticker, period="1mo", interval="1d", max_age_hours=6):
     """Return OHLCV data for ticker.
 
+    One row per trading day, whatever the source underneath.
+
     Prefix ticker with 'NSE:' to fetch from NSE via jugaad-data, e.g.
-    'NSE:NIFTY AUTO'. All other tickers go through yfinance - and anything
-    with a jugaad-data equivalent (Nifty 50, Bank Nifty, Nifty IT, and every
-    NSE-listed ".NS" equity) also gets any date yfinance left null or
-    omitted filled in from jugaad-data (see _jugaad_fallback).
-    Results are cached in SQLite for max_age_hours.
+    'NSE:NIFTY AUTO'. All other tickers go through yfinance, where recent
+    dates are resampled from hourly bars and older ones come from the daily
+    feed (see _fetch_daily_via_hourly) - and anything with a jugaad-data
+    equivalent (Nifty 50, Bank Nifty, Nifty IT, and every NSE-listed ".NS"
+    equity) additionally gets any date still left null or omitted filled in
+    from jugaad-data (see _jugaad_fallback).
+
+    `interval` is the cache's row identity, not a request to yfinance: the
+    yfinance path always asks for hourly and aggregates. Results are cached
+    in SQLite for max_age_hours.
     """
     conn = get_connection()
     try:
@@ -264,7 +353,7 @@ def get_price_history(ticker, period="1mo", interval="1d", max_age_hours=6):
             nse_symbol = ticker[len(NSE_PREFIX):]
             df = _fetch_from_nse(nse_symbol, period, interval)
         else:
-            df = _normalize_dates(_fetch_from_yfinance(ticker, period, interval))
+            df = _fetch_daily_via_hourly(ticker, period, interval)
             df = _fill_gaps_from_nse(ticker, df, period, interval)
 
         if df.empty:

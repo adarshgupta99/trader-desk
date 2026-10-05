@@ -282,9 +282,39 @@ get_price_history(ticker, period="1mo", interval="1d", max_age_hours=6)
 clear_price_cache()                    → empties price_cache and cache_meta
 ```
 
+**Daily candles are built from hourly bars, not from yfinance's daily feed.** Callers still
+get one row per trading day — that contract hasn't changed — but for any date inside
+yfinance's 1h retention window, `_fetch_daily_via_hourly()` resamples hourly bars into that
+day's candle: open = first bar, high/low = session extremes, close = **last bar**, volume =
+summed. The last hourly bar is the real close the moment it prints, where yfinance's daily
+feed for Indian tickers can sit null or omit the date entirely for hours after a session
+ends — the bug behind a Watchlist tile showing "as of 01 Oct" on the 6th. Verified against
+jugaad-data's official closes for 5 Oct: `^NSEI` 22,555.75, `^NSEBANK` 54,714.10,
+`RELIANCE.NS` 1,186.40 — exact to the last decimal on all three.
+
+Sessions are bucketed on the hourly index's own **exchange-local** date, so an NSE day and a
+New York day each collapse as one candle without a UTC conversion splitting or merging them.
+The close is taken positionally (last bar), not by hardcoded clock time, so it holds across
+exchanges — NSE's 15:15 bucket, New York's 15:30 — and a session still in progress yields
+its latest price rather than nothing.
+
+**The daily feed is permanently still needed for older dates.** Yahoo hard-refuses any 1h
+request reaching more than 730 days back (`_HOURLY_MAX_DAYS = 720`, staying under rather than
+on the limit), for every ticker, Indian or not. That window is **rolling, anchored to today** —
+it slides forward daily, so it never accumulates into a fixed multi-year archive. For periods
+longer than it (`3Y` is 1095 days in `CHART_PRESETS`), the daily feed covers the older stretch
+and hourly wins on every date both cover. Measured on `^NSEI` `3y`: 739 rows spanning the full
+1096 days, no null closes. A hourly fetch that fails or returns nothing falls back to the daily
+feed alone rather than taking the result down with it.
+
+`interval` is the cache's row identity, not a request parameter to yfinance — the yfinance path
+always asks for hourly and aggregates. All call sites pass the default `"1d"`.
+
 A `NSE:` prefix on the ticker routes to jugaad-data; everything else goes to yfinance —
 except anything with a jugaad-data equivalent, where yfinance stays primary but every fetch
-also merges in jugaad-data's close for any date yfinance left null or omitted. That's Nifty 50
+also merges in jugaad-data's close for any date the combined hourly-plus-daily result above
+still left null or omitted. This step is unchanged by the hourly shift and still runs last.
+That's Nifty 50
 (`^NSEI`), Bank Nifty (`^NSEBANK`) and Nifty IT (`^CNXIT`) — the three Indian indices that
 exist on **both** providers, via `index_raw` — plus every NSE-listed equity (any `.NS`
 yfinance ticker), via jugaad-data's `stock_df`. Neither provider's Indian feed is reliably
@@ -533,10 +563,14 @@ with `yfinance` anyway).
 | `556a28b` | 6 Oct 2026 | Adarsh Gupta | Fix the price cache silently losing good closes, and merge in jugaad-data for Nifty/Bank Nifty/Nifty IT |
 | `0e5a3fb` | 6 Oct 2026 | Adarsh Gupta | Document the price cache upsert fix and jugaad-data merge in ARCHITECTURE.md |
 | `bf2e49f` | 6 Oct 2026 | Adarsh Gupta | Extend the jugaad-data gap-fill to every NSE equity, not just the 3 indices |
+| `fea18b1` | 6 Oct 2026 | Adarsh Gupta | Document the per-equity jugaad-data gap-fill in ARCHITECTURE.md |
 
 **Deployed:** `a97c532` is the newest commit on `origin/main` — merged from
-`refactor/split-into-modules` and pushed. `556a28b`, `0e5a3fb` and `bf2e49f` are local,
-not yet pushed.
+`refactor/split-into-modules` and pushed. `556a28b`, `0e5a3fb`, `bf2e49f` and `fea18b1`
+are local on `main`, not yet pushed.
+
+**In progress:** `feature/hourly-latest-close` branches off `fea18b1` and carries the shift
+to hourly-resampled daily candles (see `prices.py` above). Not merged, not pushed.
 
 ---
 
