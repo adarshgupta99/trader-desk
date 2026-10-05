@@ -90,7 +90,7 @@ section deselects it and the app silently falls back to the first section.
 | Section | Contents |
 |---|---|
 | Watchlist | Nine views via two chip rows: 5 read-only index views + 4 editable custom lists (≤30 each); 1D/1W toggle; × to remove |
-| Chart | Plot 1–2 instruments on dual y-axis; preset history **or** explicit start/end dates; persists instruments across section switches |
+| Chart | Plot 1–2 instruments on dual y-axis; preset history **or** explicit start/end dates; Measure tool for click-to-click % change; persists instruments across section switches |
 | Indices | S&P 500, Nasdaq, Nifty 50, KOSPI, FTSE 100, DAX, Euro Stoxx 50, Nikkei 225 |
 | India | Bank Nifty, Nifty IT, Nifty Auto, Nifty Energy, Nifty Mid Select, Nifty Defence |
 | FX | USD/INR, EUR/USD, GBP/USD, EUR/INR |
@@ -112,6 +112,11 @@ Rates tab is parked until `FRED_API_KEY` is added.
 - `_pick_index()` / `_pick_custom()` — `on_change` callbacks for the two chip rows; one
   selection between them, so picking in one clears the other
 - `range_history(ticker, start, end)` — price history between two dates
+- `display_name(ticker)` — friendly name for display, via the local `symbols` table;
+  falls back to the raw ticker
+
+**The Chart tab's controls are two rows.** Row 1: Instrument 1, Instrument 2, Start, End —
+four columns. Row 2: the History presets and the Measure toggle, side by side.
 
 **The Chart tab's date range.** One range with two ways to set it: the 1M–3Y presets write
 the Start and End dates, and editing either date clears the preset highlight, so only one
@@ -140,6 +145,29 @@ searchable ticker behind a shorter label. That is why the instrument **names** h
 carry the searchable words (see `scripts/refresh_symbol_names.py`). Anything outside the
 table stays reachable because `accept_new_options` offers the typed text as a raw ticker,
 which `add_to_list` then validates against real price data.
+
+**The Measure tool** (Chart tab). Click two points on the chart to see the change between
+them. Plotly's `on_select` selection lands in `st.session_state[MEASURE_KEY]` as a single
+replace-not-accumulate value, so the two picked points are tracked by hand in
+`st.session_state.measure_a` / `measure_b`, each new click compared against the last one
+processed (via its x/point_index "signature") so an unrelated rerun doesn't get mistaken
+for a fresh click.
+
+Streamlit silently **drops the whole click** if a single click event reports points for
+more than one trace — which `hovermode="x"` causes whenever a second series is also
+hoverable. The fix: only one trace stays hit-testable (`hoverinfo="skip"` on the rest), and
+any other series' data rides along in that one trace's `customdata`/`hovertemplate` instead
+of getting its own tooltip. With a second instrument plotted, its close price is aligned to
+the first instrument's dates (`series2_at_t1 = df2["Close"].reindex(df1.index,
+method="nearest")`) so a single click-target trace can carry both instruments' values.
+
+Once point A is picked, hovering shows both instruments' % change from that point
+continuously, computed client-side via pre-baked `customdata` — no server round-trip per
+mouse move. The final readout (after point B) shows % and absolute change for both
+instruments, bar count, and elapsed time. Display text uses `display_name(ticker)` (looks
+up the local `symbols` table) everywhere a ticker would otherwise show — `^NSEBANK` reads
+as "Bank Nifty". The underlying ticker variables are kept separately for currency/decimal
+formatting, which depends on ticker suffixes (`.NS`, `=X`, etc.).
 
 **Nothing in the Watchlist navigates.** The view chips, the remove control and the error
 banner were all built on `<a href>` links and `st.query_params`, which meant every click
@@ -279,9 +307,14 @@ with `yfinance` anyway).
 | `62ccb3f` | 4 Oct 2026 | Adarsh Gupta | Replace dynamic symbol fetch with a fixed lookup table |
 | `bd50a3c` | 4 Oct 2026 | Adarsh Gupta | Show name only in instrument dropdown, ticker only when needed |
 | `d32ebdd` | 4 Oct 2026 | Adarsh Gupta | Move period control into each tab, remove it from the header |
-| `5256b31` | 5 Oct 2026 | Adarsh Gupta | Use NSE's full company names so instruments are findable by name |
+| `5256b31` | 4 Oct 2026 | Adarsh Gupta | Use NSE's full company names so instruments are findable by name |
+| `90d6c86` | 5 Oct 2026 | Adarsh Gupta | Stop reloading the page on every watchlist click |
+| `6a697eb` | 5 Oct 2026 | Adarsh Gupta | Add start and end date pickers to the Chart tab |
+| `1556e1e` | 5 Oct 2026 | Adarsh Gupta | Restore the watchlist tile geometry lost in the native rewrite |
+| `cbbda77` | 5 Oct 2026 | Adarsh Gupta | Add a Measure tool to the Chart tab |
+| `a03dcda` | 5 Oct 2026 | Adarsh Gupta | Show friendly instrument names and tidy the Chart tab layout |
 
-**Deployed:** `5256b31` is the newest commit on the remote. Everything after it is local only.
+**Deployed:** `a03dcda` is the newest commit on the remote — everything above is pushed.
 
 ---
 
