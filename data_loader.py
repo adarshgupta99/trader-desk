@@ -555,11 +555,15 @@ def _fetch_from_nse(nse_symbol, period, interval):
 # ── shared write ──────────────────────────────────────────────────────────────
 
 def _write_to_cache(conn, ticker, period, interval, df):
-    # Normalize index to UTC so all stored timestamps are in a single format
-    if df.index.tz is None:
-        df.index = df.index.tz_localize("UTC")
+    # Keep each row's exchange-local trading date (e.g. a KOSPI bar stays
+    # dated in Asia/Seoul, not shifted to the previous day by a UTC
+    # conversion) while still storing a single consistent format: re-tag the
+    # local calendar date as UTC midnight, same convention the NSE path
+    # already uses when it parses "HistoricalDate" with utc=True.
+    if df.index.tz is not None:
+        df.index = pd.to_datetime(df.index.date, utc=True)
     else:
-        df.index = df.index.tz_convert("UTC")
+        df.index = df.index.tz_localize("UTC")
 
     conn.execute(
         "DELETE FROM price_cache WHERE ticker = ? AND period = ? AND interval = ?",

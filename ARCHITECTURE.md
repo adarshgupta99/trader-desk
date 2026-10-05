@@ -89,7 +89,7 @@ section deselects it and the app silently falls back to the first section.
 
 | Section | Contents |
 |---|---|
-| Watchlist | Nine views via two chip rows: 5 read-only index views + 4 editable custom lists (≤30 each); 1D/1W toggle; × to remove |
+| Watchlist | Nine views via two chip rows: 5 read-only index views + 4 editable custom lists (≤30 each); 1D/1W toggle; × to remove. Index views also show the index's own price, signed change and last-close date beside the toggle |
 | Chart | Plot 1–2 instruments on dual y-axis; preset history **or** explicit start/end dates; Measure tool for click-to-click % change; persists instruments across section switches |
 | Indices | S&P 500, Nasdaq, Nifty 50, KOSPI, FTSE 100, DAX, Euro Stoxx 50, Nikkei 225 |
 | India | Bank Nifty, Nifty IT, Nifty Auto, Nifty Energy, Nifty Mid Select, Nifty Defence |
