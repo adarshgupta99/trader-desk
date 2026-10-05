@@ -5,3 +5,13 @@ backgroundColor = "#DFDACB"
 secondaryBackgroundColor = "#D7D2C1"
 textColor = "#1F1D19"
 font = "sans serif"
+
+# Charcoal Warm — the dark variant. Colours only; font and geometry match light.
+[theme.dark]
+base = "dark"
+primaryColor = "#D8B58A"
+backgroundColor = "#24211E"
+secondaryBackgroundColor = "#302B27"
+textColor = "#ECE5DA"
+borderColor = "#554A40"
+font = "sans serif"

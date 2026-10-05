@@ -14,13 +14,72 @@ st.set_page_config(page_title="Trader Desk", layout="wide", page_icon="📊", in
 
 refresh_symbols()   # reload the instrument table from data/symbols.csv
 
+# ── Design tokens ─────────────────────────────────────────────────────────────
+# Two palettes, identical roles: Swiss Editorial (light) and Charcoal Warm
+# (dark). Colours only — geometry, type and spacing are shared.
+# `accent` and `selected` are split from `down` on purpose: in dark they are
+# accent_selected, never loss_color, so a blind hex swap would be wrong.
+_LIGHT = dict(
+    canvas="#DFDACB", card_bg="#D7D2C1", card_border="#BDB7A5",
+    t1="#1F1D19", t2="#6B675F", t3="#9C988D",
+    up="#35875B", down="#C25C36",
+    accent="#C25C36", selected="#1F1D19",
+    rule="#BDB7A5", tooltip_bg="#FFFFFF",
+    down_rgb="194,92,54",
+)
+_DARK = dict(
+    canvas="#24211E", card_bg="#302B27", card_border="#554A40",
+    t1="#ECE5DA", t2="#AAA197", t3="#AAA197",
+    up="#9AC69C", down="#E8A078",
+    accent="#D8B58A", selected="#D8B58A",
+    rule="#96816A", tooltip_bg="#302B27",
+    down_rgb="232,160,120",
+)
+THEME = "dark" if getattr(st.context.theme, "type", "light") == "dark" else "light"
+_P = _DARK if THEME == "dark" else _LIGHT
+
+UP      = _P["up"]          # positive change
+DOWN    = _P["down"]        # negative change
+BG      = _P["canvas"]      # page canvas
+SURFACE = _P["card_bg"]     # card surface
+BORDER  = _P["card_border"] # rule / border
+GRID    = _P["card_border"] # chart grid
+T1      = _P["t1"]          # text primary
+T2      = _P["t2"]          # text secondary
+T3      = _P["t3"]          # text tertiary
+ACCENT  = _P["accent"]      # active navigation
+SELECTED = _P["selected"]   # filled selected control, pinned chart mark
+RULE    = _P["rule"]        # editorial rules, chart axis lines
+TOOLTIP_BG = _P["tooltip_bg"]
+
+st.markdown(f"""
+<style>
+    :root {{
+        --canvas: {_P['canvas']};
+        --card-bg: {_P['card_bg']};
+        --card-border: {_P['card_border']};
+        --primary-text: {_P['t1']};
+        --secondary-text: {_P['t2']};
+        --tertiary-text: {_P['t3']};
+        --loss: {_P['down']};
+        --accent: {_P['accent']};
+        --selected: {_P['selected']};
+        --rule: {_P['rule']};
+        --loss-soft: rgba({_P['down_rgb']}, 0.07);
+        --loss-softer: rgba({_P['down_rgb']}, 0.04);
+        --loss-hover: rgba({_P['down_rgb']}, 0.16);
+        --loss-hover-soft: rgba({_P['down_rgb']}, 0.08);
+    }}
+</style>
+""", unsafe_allow_html=True)
+
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
     /* ── Layout ── */
     html, body, [data-testid="stAppViewContainer"], .main {
-        background-color: #DFDACB !important;
+        background-color: var(--canvas) !important;
         font-family: 'Inter', Arial, sans-serif !important;
     }
     .block-container { padding-top: 2rem; padding-bottom: 1rem; }
@@ -34,14 +93,14 @@ st.markdown("""
     }
     .clear-cache-btn a {
         display: inline-block; text-align: center; text-decoration: none;
-        border: 1px solid #d4a89a; border-radius: 0; padding: 0.5em 0.7em;
-        background: rgba(199,68,36,0.04); color: #c74424;
+        border: 1px solid var(--loss); border-radius: 0; padding: 0.5em 0.7em;
+        background: var(--loss-softer); color: var(--loss);
         font-size: 8px; font-weight: 700; letter-spacing: 0.12em; line-height: 1.6;
         text-transform: uppercase; transition: all 0.2s;
         font-family: 'Inter', Arial, sans-serif;
     }
     .clear-cache-btn a:hover {
-        border-color: #c74424; background: rgba(199,68,36,0.08);
+        border-color: var(--loss); background: var(--loss-hover-soft);
     }
 
     /* ── Main navigation ──
@@ -60,7 +119,7 @@ st.markdown("""
         min-height: 0 !important;
         height: auto !important;
         box-shadow: none !important;
-        color: #6B675F !important;
+        color: var(--secondary-text) !important;
         font-family: 'Inter', Arial, sans-serif !important;
     }
     .st-key-main_nav button[data-variant="segmented_control"] p {
@@ -68,17 +127,17 @@ st.markdown("""
         letter-spacing: 0.02em !important; color: inherit !important;
         margin: 0 !important;
     }
-    .st-key-main_nav button[data-variant="segmented_control"]:hover { color: #1F1D19 !important; }
+    .st-key-main_nav button[data-variant="segmented_control"]:hover { color: var(--primary-text) !important; }
     .st-key-main_nav button[aria-checked="true"] {
-        color: #1F1D19 !important;
-        border-bottom-color: #C25C36 !important;
+        color: var(--primary-text) !important;
+        border-bottom-color: var(--accent) !important;
     }
     .st-key-main_nav button[aria-checked="true"] p { font-weight: 600 !important; }
 
     /* ── Chart cards: restyle Streamlit's bordered container ── */
     [data-testid="stVerticalBlockBorderWrapper"] {
-        background: #D7D2C1 !important;
-        border: 1px solid #BDB7A5 !important;
+        background: var(--card-bg) !important;
+        border: 1px solid var(--card-border) !important;
         border-radius: 0px !important;
         padding: 6px 8px 2px 8px !important;
     }
@@ -88,27 +147,27 @@ st.markdown("""
         background: transparent !important;
         border: none !important;
         padding: 0 !important;
-        color: #1F1D19 !important;
+        color: var(--primary-text) !important;
         font-size: 14px !important;
         font-weight: 500 !important;
         letter-spacing: 0 !important;
         height: auto !important;
         min-height: 0 !important;
         line-height: 1.4 !important;
-        border-bottom: 1px dotted #9C988D !important;
+        border-bottom: 1px dotted var(--tertiary-text) !important;
         box-shadow: none !important;
         cursor: pointer !important;
         font-family: 'Inter', Arial, sans-serif !important;
     }
     [data-testid="stPopover"] button:hover {
-        color: #1F1D19 !important;
-        border-bottom-color: #6B675F !important;
+        color: var(--primary-text) !important;
+        border-bottom-color: var(--secondary-text) !important;
     }
 
     /* ── Popover panel ── */
     [data-testid="stPopoverBody"] {
-        background: #DFDACB !important;
-        border: 1px solid #BDB7A5 !important;
+        background: var(--canvas) !important;
+        border: 1px solid var(--card-border) !important;
         border-radius: 4px !important;
         min-width: 0 !important;
         width: fit-content !important;
@@ -119,29 +178,29 @@ st.markdown("""
 
     /* ── Remove button ── */
     [data-testid="stBaseButton-tertiary"] {
-        color: #6B675F !important;
+        color: var(--secondary-text) !important;
         font-size: 11px !important;
         padding: 0 4px !important;
         height: auto !important;
     }
-    [data-testid="stBaseButton-tertiary"]:hover { color: #C25C36 !important; }
+    [data-testid="stBaseButton-tertiary"]:hover { color: var(--loss) !important; }
 
     /* ── Inputs and buttons ── */
     [data-testid="stTextInput"] input {
-        background: #D7D2C1 !important;
-        border-color: #BDB7A5 !important;
-        color: #1F1D19 !important;
+        background: var(--card-bg) !important;
+        border-color: var(--card-border) !important;
+        color: var(--primary-text) !important;
         font-family: 'Inter', Arial, sans-serif !important;
     }
     [data-testid="stBaseButton-secondary"] {
-        background: #D7D2C1 !important;
-        border-color: #BDB7A5 !important;
-        color: #1F1D19 !important;
+        background: var(--card-bg) !important;
+        border-color: var(--card-border) !important;
+        color: var(--primary-text) !important;
         font-family: 'Inter', Arial, sans-serif !important;
     }
 
     /* ── Divider ── */
-    hr { border-color: #BDB7A5 !important; }
+    hr { border-color: var(--card-border) !important; }
 
     /* ── Watchlist: compact tiles that wrap and hug their content ──
        Built from native containers so the remove control can be a real button
@@ -152,8 +211,8 @@ st.markdown("""
        including min-width, which is what kept tiles on a uniform 132px grid
        instead of letting each one shrink to its name. */
     .st-key-wl_tiles > div > [data-testid="stVerticalBlock"] {
-        background: #D7D2C1 !important;
-        border: 1px solid #BDB7A5 !important;
+        background: var(--card-bg) !important;
+        border: 1px solid var(--card-border) !important;
         border-radius: 0 !important;
         padding: 9px 13px !important;
         min-width: 132px !important;
@@ -182,11 +241,11 @@ st.markdown("""
     /* Remove control: sized and coloured like the × it replaces */
     .st-key-wl_tiles [data-testid="stBaseButton-tertiary"] {
         font-size: 17px !important; line-height: 1 !important;
-        color: #9C988D !important; padding: 0 2px !important;
+        color: var(--tertiary-text) !important; padding: 0 2px !important;
         min-height: 0 !important; height: auto !important;
         background: transparent !important; border: none !important;
     }
-    .st-key-wl_tiles [data-testid="stBaseButton-tertiary"]:hover { color: #C25C36 !important; }
+    .st-key-wl_tiles [data-testid="stBaseButton-tertiary"]:hover { color: var(--loss) !important; }
     .st-key-wl_tiles [data-testid="stBaseButton-tertiary"] p {
         font-size: 17px !important; line-height: 1 !important; margin: 0 !important;
         color: inherit !important;
@@ -201,14 +260,14 @@ st.markdown("""
        st.pills restyled as the square chips the design calls for. Native
        widgets, so switching view is a rerun rather than a page navigation. */
     .chip-label {
-        font-size: 12px; color: #6B675F; text-transform: uppercase;
+        font-size: 12px; color: var(--secondary-text); text-transform: uppercase;
         letter-spacing: 0.08em; margin-bottom: 4px;
     }
     .st-key-wl_idx button, .st-key-wl_cst button {
         background: transparent !important;
-        border: 1px solid #BDB7A5 !important;
+        border: 1px solid var(--card-border) !important;
         border-radius: 0 !important;
-        color: #6B675F !important;
+        color: var(--secondary-text) !important;
         padding: 0.34em 0.8em !important;
         min-height: 0 !important; height: auto !important;
         box-shadow: none !important;
@@ -219,11 +278,11 @@ st.markdown("""
         color: inherit !important; margin: 0 !important;
     }
     .st-key-wl_idx button:hover, .st-key-wl_cst button:hover {
-        border-color: #6B675F !important; color: #1F1D19 !important;
+        border-color: var(--secondary-text) !important; color: var(--primary-text) !important;
     }
     .st-key-wl_idx button[aria-checked="true"], .st-key-wl_cst button[aria-checked="true"] {
-        background: #1F1D19 !important; border-color: #1F1D19 !important;
-        color: #DFDACB !important;
+        background: var(--selected) !important; border-color: var(--selected) !important;
+        color: var(--canvas) !important;
     }
     .st-key-wl_idx button[aria-checked="true"] p,
     .st-key-wl_cst button[aria-checked="true"] p { font-weight: 600 !important; }
@@ -239,29 +298,24 @@ st.markdown("""
         border-radius: 0;
     }
     a.btn-danger, a.btn-danger:link, a.btn-danger:visited {
-        border: 1px solid #C25C36; color: #C25C36 !important;
-        background: rgba(194,92,54,0.07);
+        border: 1px solid var(--loss); color: var(--loss) !important;
+        background: var(--loss-soft);
     }
-    a.btn-danger:hover { background: rgba(194,92,54,0.16); }
+    a.btn-danger:hover { background: var(--loss-hover); }
     a.btn-quiet, a.btn-quiet:link, a.btn-quiet:visited {
-        border: 1px solid #BDB7A5; color: #6B675F !important;
+        border: 1px solid var(--card-border); color: var(--secondary-text) !important;
         background: transparent;
     }
-    a.btn-quiet:hover { border-color: #6B675F; color: #1F1D19 !important; }
+    a.btn-quiet:hover { border-color: var(--secondary-text); color: var(--primary-text) !important; }
+
+    /* the theme watcher's iframe and button: no height, no slot in the layout */
+    iframe[height="0"] { display: none !important; }
+    [data-testid="stElementContainer"]:has(iframe[height="0"]) { display: none !important; }
+    .st-key-theme_sync { position: absolute; width: 0; height: 0; overflow: hidden;
+                         opacity: 0; pointer-events: none; }
 
 </style>
 """, unsafe_allow_html=True)
-
-# ── Design tokens ─────────────────────────────────────────────────────────────
-UP      = "#35875B"   # positive — green
-DOWN    = "#C25C36"   # negative — terracotta
-BG      = "#DFDACB"   # canvas — matte, low-glare
-SURFACE = "#D7D2C1"   # card surface
-BORDER  = "#BDB7A5"   # rule / border
-GRID    = "#BDB7A5"   # chart grid
-T1      = "#1F1D19"   # text primary
-T2      = "#6B675F"   # text secondary
-T3      = "#9C988D"   # text tertiary
 
 PERIODS = {"1W": "5d", "1M": "1mo", "3M": "3mo", "6M": "6mo", "1Y": "1y", "3Y": "3y"}
 PERIOD_LABELS = {v: k for k, v in PERIODS.items()}
@@ -563,7 +617,7 @@ def price_chart(label, ticker, period, height=220):
         yaxis=dict(showgrid=True, gridcolor=GRID, gridwidth=1, showline=False, zeroline=False,
                    tickfont=dict(size=12, color=T2), side="right", range=[ymin, ymax]),
         showlegend=False,
-        hoverlabel=dict(bgcolor="#FFFFFF", bordercolor=BORDER,
+        hoverlabel=dict(bgcolor=TOOLTIP_BG, bordercolor=BORDER,
                         font=dict(size=12, color=T1, family="Inter, Arial, sans-serif")),
     )
     return fig, last, pct, latest_date
@@ -1242,10 +1296,10 @@ elif nav == "Chart":
                 # Mark the picked start point so it stays visible once the
                 # cursor (and the live preview) move away from it. Added after
                 # the click target so it doesn't shift measure_curve's index.
-                fig.add_vline(x=ma["date"], line=dict(color=T1, width=1, dash="dot"))
+                fig.add_vline(x=ma["date"], line=dict(color=SELECTED, width=1, dash="dot"))
                 fig.add_trace(go.Scatter(
                     x=[ma["date"]], y=[ma["close"]],
-                    mode="markers", marker=dict(size=9, color=T1,
+                    mode="markers", marker=dict(size=9, color=SELECTED,
                                                  line=dict(color=BG, width=1.5)),
                     hoverinfo="skip", showlegend=False, name="",
                 ))
@@ -1262,7 +1316,7 @@ elif nav == "Chart":
                            gridcolor=GRID, zeroline=False, side="left",
                            tickformat=",.0f"),
                 yaxis2=yaxis2_cfg,
-                hoverlabel=dict(bgcolor="#FFFFFF", bordercolor=BORDER,
+                hoverlabel=dict(bgcolor=TOOLTIP_BG, bordercolor=BORDER,
                                 font=dict(size=12, color=T1,
                                           family="Inter, Arial, sans-serif")),
                 showlegend=False,

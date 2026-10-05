@@ -256,3 +256,73 @@ These are supplied design-sweep/QA findings from 3 October 2026, not a fresh cod
 - **Watchlist ownership:** the supplied QA notes say the public app shares watchlist state across visitors. Decide whether this is intentional or whether watchlists should be per-session or per-user. Do not silently change persistence or treat this as a styling fix.
 - **Proposed, not verified:** exact hex tokens, font stack, type-scale values, non-FX decimal defaults, and locale grouping above are implementation proposals. Keep them centralized and consistent; confirm or revise them rather than adding ad hoc alternatives.
 - **Verification required:** commodity contracts/units and source mappings; actual `1D`/`1W` behavior. Do not claim these checks are complete from this document alone.
+
+
+## Dark mode: Charcoal Warm
+
+Use Charcoal Warm as the dark variant of Swiss Editorial. Change colors only. Keep layout, typography, spacing, grid, hierarchy, component geometry and behavior identical to the existing design language. These are the chosen palette values, not alternatives.
+
+### Color tokens
+
+| Token | Hex | Apply to |
+| --- | --- | --- |
+| `canvas` | `#24211E` | App background; labels on filled selected controls |
+| `card_bg` | `#302B27` | Existing cards, panels, widget surfaces and tooltip backgrounds |
+| `card_border` | `#554A40` | Existing card, panel and control borders; subtle chart gridlines |
+| `primary_text` | `#ECE5DA` | Headings, body text, key values and neutral chart series |
+| `secondary_text` | `#AAA197` | Supporting labels, metadata, axis labels and comparison series |
+| `gain_color` | `#9AC69C` | Positive changes, gains and positive chart marks |
+| `loss_color` | `#E8A078` | Negative changes, losses and negative chart marks |
+| `accent_selected` | `#D8B58A` | Selected/active states, focus indicators and existing highlights |
+| `rule_color` | `#96816A` | Existing editorial rules, separators and chart axis/zero lines |
+
+Keep gains green and losses warm orange — the same direction convention as light mode, which Adarsh's 3 October decision already settled (green gains, terracotta losses). The "black-gain" wording refers to the original pre-override spec; there is no clash with light mode, and **where this dark section and an earlier decision ever do disagree, the earlier decision wins and light mode is left alone.**
+
+Use `accent_selected`, never `loss_color`, for selection or active navigation. On filled selected controls, use `accent_selected` for the background and `canvas` for the label. This applies to dark only: light mode keeps its terracotta nav underline and near-black selected chip.
+
+### Application rules
+
+- Define the palette once. Map every existing hardcoded color to a semantic token, including inline styles, widget states, tables, tooltips and chart configuration. Do not perform blind hex replacement where the same old color has different meanings.
+- Do not introduce colors outside this palette. Derive any existing translucent treatment from a token with explicit alpha; do not add standalone tint hex values. Do not fade text below the contrast floor.
+- Preserve existing hover, focus, disabled and selected behavior. Change only their color assignments. Do not use gain/loss colors for unrelated controls.
+
+Use these chart color defaults; retain existing chart geometry, series order, line styles and data meaning:
+
+| Chart role | Token derivation |
+| --- | --- |
+| Plot/paper background | Match the containing surface: `card_bg` or `canvas` |
+| Main neutral line | `primary_text` |
+| Comparison line | `secondary_text`; retain the existing dashed style |
+| Positive/negative marks | `gain_color` / `loss_color` |
+| Existing selected mark | `accent_selected` |
+| Existing area fill | Corresponding line token at 12% opacity; do not add fills |
+| Axis labels, ticks, legend text | `secondary_text` |
+| Axis and zero lines | `rule_color` |
+| Gridlines | `card_border`, opaque |
+| Tooltip | `card_bg` background, `card_border` border, `primary_text` text |
+
+Do not apply gain/loss semantics to a neutral series. Do not let chart-library defaults inject new colors. If more series need distinction, retain their existing dash/marker distinctions rather than adding hues.
+
+### Streamlit implementation
+
+Set the dark theme's native colors in `.streamlit/config.toml`: `primaryColor = "#D8B58A"`, `backgroundColor = "#24211E"`, `secondaryBackgroundColor = "#302B27"`, and `textColor = "#ECE5DA"`. Use the installed Streamlit version's supported dark-theme configuration. Preserve the light theme and all existing font, sizing, radius and border-width settings.
+
+Use native theme options where supported. Use scoped CSS overrides for remaining semantic colors and component states; keep selectors narrow and verify them after Streamlit updates. Configure chart colors explicitly rather than relying on theme inheritance. Check sidebar surfaces and selected-label colors, since native widget defaults may differ from this mapping.
+
+**Implemented (5 October 2026).** Streamlit 1.64 takes both themes at once: `[theme]` holds light, `[theme.dark]` holds Charcoal Warm, and the viewer switches in the toolbar (⋮ → Settings → Appearance) or follows the system setting. Light is untouched.
+
+How the palette is wired, so later work extends it rather than re-hardcoding:
+
+- `app.py` defines `_LIGHT` and `_DARK` dicts with identical role keys and picks one via `st.context.theme.type`. The existing token names (`UP`, `DOWN`, `BG`, `SURFACE`, `BORDER`, `GRID`, `T1`-`T3`) read from that dict, so Plotly and inline HTML follow the theme with no call-site changes.
+- The same values are emitted as CSS custom properties on `:root` (`--canvas`, `--card-bg`, `--loss`, `--accent`, …), and the main stylesheet references `var(--token)` only. **Add no raw hex to `app.py`** — add a role to both dicts instead.
+- `ACCENT`, `SELECTED` and `RULE` are separate tokens, not aliases of `DOWN`. In light, `accent` is terracotta and `selected` is near-black; in dark, both are `#D8B58A`. This is the "same old color, different meanings" trap the rules above warn about: the nav underline and selected chip must not inherit the loss color in dark.
+- Dark has no distinct tertiary: `t3` maps to `secondary_text`, keeping de-emphasised controls in-palette (5.50:1, above the floor).
+- Translucent button fills derive from the loss token with explicit alpha (`--loss-soft`, `--loss-hover`), replacing the off-palette `#c74424`/`#d4a89a` tints that had drifted into the light stylesheet.
+
+Contrast re-verified by calculation against both dark surfaces: text roles 5.50:1 to 12.80:1, `canvas` on `accent_selected` 8.31:1 — matching this section's stated figures.
+
+### Contrast and scope
+
+Require at least **4.5:1** contrast for text against its actual background. Verified by sRGB relative-luminance calculation: the text-role colors above are **5.50:1 or higher** on both `canvas` and `card_bg`; the `canvas` label on `accent_selected` is **8.31:1**. Borders and rules are not text colors. Recheck any alpha treatment or different foreground/background pairing.
+
+Restyle only. Add no elements, panels, controls or chart content. Change no layout, typography, spacing, dimensions, hierarchy, functionality or data logic.

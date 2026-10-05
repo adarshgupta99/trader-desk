@@ -23,6 +23,8 @@ trader-desk/
 │   └── symbols.csv     # Committed instrument table (3,360 rows) — search's source of truth
 ├── scripts/
 │   └── refresh_symbol_names.py  # Maintenance: pull full NSE company names into symbols.csv
+├── .streamlit/
+│   └── config.toml     # Streamlit chrome colours: [theme] light + [theme.dark] Charcoal Warm
 ├── market_cache.db     # Auto-generated SQLite database (gitignored)
 ├── requirements.txt    # Python dependencies
 ├── news_loader.py      # Week 3 RSS/GDELT work; currently unused — nothing imports it
@@ -99,7 +101,21 @@ section deselects it and the app silently falls back to the first section.
 
 Rates tab is parked until `FRED_API_KEY` is added.
 
-**Design tokens** (top of file): `UP`, `DOWN`, `BG`, `SURFACE`, `BORDER`, `GRID`, `T1`, `T2`, `T3`
+**Design tokens** (top of file): `UP`, `DOWN`, `BG`, `SURFACE`, `BORDER`, `GRID`, `T1`, `T2`,
+`T3`, `ACCENT`, `SELECTED`, `RULE`, `TOOLTIP_BG`.
+
+**Two themes, one set of tokens.** `_LIGHT` (Swiss Editorial) and `_DARK` (Charcoal Warm)
+are dicts with identical keys; `st.context.theme.type` picks one into `_P` at module level,
+which re-runs on every rerun. The Python tokens above come from `_P`, and a small f-string
+`<style>` block emits the same values as `:root` CSS variables (`--canvas`, `--card-bg`,
+`--loss`, `--accent`, …). The big stylesheet below it is a plain non-f string that
+references only `var(--token)` — **no raw hex belongs in `app.py` any more**, or it will
+not follow the theme. `.streamlit/config.toml` carries the matching `[theme]` and
+`[theme.dark]` sections for Streamlit's own chrome.
+
+`ACCENT` and `SELECTED` are deliberately separate from `DOWN`. In light all three happen to
+be the same terracotta, so a blind hex swap would have turned the active-nav underline and
+the selected chip into "loss" colours in dark. See the dark-mode section of CLAUDE.md.
 
 **Key functions:**
 - `price_chart(label, ticker, period)` — plotly area chart, y-axis scaled to spread, green/red by direction
@@ -313,6 +329,7 @@ with `yfinance` anyway).
 | `1556e1e` | 5 Oct 2026 | Adarsh Gupta | Restore the watchlist tile geometry lost in the native rewrite |
 | `cbbda77` | 5 Oct 2026 | Adarsh Gupta | Add a Measure tool to the Chart tab |
 | `a03dcda` | 5 Oct 2026 | Adarsh Gupta | Show friendly instrument names and tidy the Chart tab layout |
+| `866f5ef` | 5 Oct 2026 | Adarsh Gupta | Document the Measure tool and Chart tab layout in ARCHITECTURE.md |
 
 **Deployed:** `a03dcda` is the newest commit on the remote — everything above is pushed.
 
