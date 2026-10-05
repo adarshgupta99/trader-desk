@@ -333,6 +333,27 @@ def format_price(ticker, value, decimals=2):
         return "₹" + format_inr(value, decimals)
     return f"{value:,.{decimals}f}"
 
+
+def price_decimals(ticker):
+    """FX quotes keep four decimals and trailing zeros (spec); everything else two."""
+    return 4 if ticker.endswith("=X") else 2
+
+
+def signed_price_change(ticker, value, decimals=2):
+    """Signed absolute change with the instrument's currency/unit; never -0.00."""
+    if round(value, decimals) == 0:
+        return "+" + format_price(ticker, 0, decimals)
+    sign = "-" if value < 0 else "+"
+    return sign + format_price(ticker, abs(value), decimals)
+
+
+def elapsed_label(days):
+    """Calendar days elapsed; weeks+days once it crosses two weeks (spec)."""
+    if days <= 14:
+        return f"{days}d"
+    weeks, rem = divmod(days, 7)
+    return f"{weeks}w {rem}d" if rem else f"{weeks}w"
+
 if st.query_params.get("clear_cache") == "1":
     clear_price_cache()
     st.query_params.clear()
@@ -880,6 +901,28 @@ elif nav == "Chart":
     span_label = (chart_period_label if chart_period_label else
                   f"{start:%d %b %Y} – {end:%d %b %Y}")
 
+    # ── Measure ───────────────────────────────────────────────────────────────
+    # Click two points on the primary series to see the change between them.
+    # A click replaces Plotly's selection outright (it does not accumulate), so
+    # the two picked points live in session_state, not in the widget's own
+    # return value — each new click is compared against the last one processed
+    # (via its x/point_index "signature") so an unrelated rerun doesn't get
+    # mistaken for a fresh click.
+    measure_on = st.toggle("Measure", key="measure_on")
+
+    scope = (t1.strip(), t2.strip(), start, end)
+    if st.session_state.get("measure_scope") != scope:
+        # Instrument or range changed — stale points wouldn't exist in the new
+        # frame, and switching the active series mid-measurement is undefined.
+        st.session_state.measure_scope = scope
+        st.session_state.measure_a = None
+        st.session_state.measure_b = None
+        st.session_state.measure_last_sig = None
+    if not measure_on:
+        st.session_state.measure_a = None
+        st.session_state.measure_b = None
+        st.session_state.measure_last_sig = None
+
     if t1:
         df1 = range_history(t1.strip(), start, end)
 
@@ -895,13 +938,61 @@ elif nav == "Chart":
             st.warning(f"No data for '{t1.strip()}' between {start:%d %b %Y} "
                        f"and {end:%d %b %Y}")
         else:
+            has_t2 = df2 is not None and not df2.empty
+
+            # ── Measure: process the click from the previous render ──────────
+            # Streamlit syncs the plotly widget's selection into session_state
+            # before this script runs, so the click that triggered this rerun
+            # is already sitting in session_state[MEASURE_KEY] — read it here,
+            # before the chart (and its vrect) is built. The click-target trace
+            # is always added last (see the figure-building section below) so
+            # it renders on top and actually receives the click; its curve
+            # number shifts by one when a second series is plotted.
+            MEASURE_KEY = "chart_measure_plot"
+            measure_curve = 2 if has_t2 else 1
+            if measure_on:
+                pending = st.session_state.get(MEASURE_KEY)
+                pts = [p for p in (pending or {}).get("selection", {}).get("points", [])
+                       if p.get("curve_number") == measure_curve]
+                if pts:
+                    p = pts[-1]
+                    sig = (p.get("point_index"), p.get("x"))
+                    if sig != st.session_state.measure_last_sig:
+                        st.session_state.measure_last_sig = sig
+                        idx = p.get("point_index")
+                        if idx is not None and 0 <= idx < len(df1):
+                            picked = {"date": df1.index[idx],
+                                      "close": float(df1["Close"].iloc[idx])}
+                        else:
+                            # Snap-to-nearest fallback if point_index is missing
+                            pos = df1.index.get_indexer(
+                                [pd.Timestamp(p["x"])], method="nearest")[0]
+                            picked = {"date": df1.index[pos],
+                                      "close": float(df1["Close"].iloc[pos])}
+
+                        a, b = st.session_state.measure_a, st.session_state.measure_b
+                        if a is None:
+                            st.session_state.measure_a = picked
+                        elif b is None and picked["date"] != a["date"]:
+                            st.session_state.measure_b = picked
+                        elif b is not None:
+                            # A third click starts a fresh pair
+                            st.session_state.measure_a = picked
+                            st.session_state.measure_b = None
+
+            ma, mb = st.session_state.measure_a, st.session_state.measure_b
+            measure_ready = ma is not None and mb is not None
+            measure_armed = ma is not None and mb is None
+            if measure_ready and mb["date"] < ma["date"]:
+                ma, mb = mb, ma   # always chronological, regardless of click order
+
             # Comparison identity: series 1 black solid, series 2 gray dashed
             C1, C2 = T1, T2
             name1, name2 = t1.strip(), (t2.strip() if t2 else "")
+            m_dec = price_decimals(name1)
             pct1 = (df1["Close"].iloc[-1] / df1["Close"].iloc[0] - 1) * 100
             pct1_color = UP if pct1 >= 0 else DOWN
 
-            has_t2 = df2 is not None and not df2.empty
             cp_label = span_label
 
             # ── Summary bar ───────────────────────────────────────────────────
@@ -933,34 +1024,163 @@ elif nav == "Chart":
             summary += "</div>"
             st.markdown(summary, unsafe_allow_html=True)
 
+            # ── Measure readout ───────────────────────────────────────────────
+            if measure_ready:
+                m_chg = mb["close"] - ma["close"]
+                m_pct = ((mb["close"] / ma["close"]) - 1) * 100 if ma["close"] else 0.0
+                m_color = UP if m_pct >= 0 else DOWN
+                m_dir = "up" if m_pct >= 0 else "down"
+                pos_a, pos_b = df1.index.get_loc(ma["date"]), df1.index.get_loc(mb["date"])
+                m_bars = pos_b - pos_a + 1
+                m_days = (mb["date"] - ma["date"]).days
+                st.markdown(
+                    f"<div style='display:flex;gap:26px;align-items:center;flex-wrap:wrap;"
+                    f"border:1px solid {BORDER};padding:10px 14px;margin-bottom:12px;'>"
+                    f"<span style='font-size:11px;color:{T2};text-transform:uppercase;"
+                    f"letter-spacing:0.08em;'>Measured, {m_dir}</span>"
+                    f"<span style='font-size:19px;font-weight:700;color:{m_color};{TABULAR}'>"
+                    f"{signed_pct(m_pct)}</span>"
+                    f"<span style='font-size:14px;font-weight:600;color:{m_color};{TABULAR}'>"
+                    f"{signed_price_change(t1.strip(), m_chg, m_dec)}</span>"
+                    f"<span style='font-size:13px;color:{T2};{TABULAR}'>{m_bars} bars</span>"
+                    f"<span style='font-size:13px;color:{T2};{TABULAR}'>{elapsed_label(m_days)}</span>"
+                    f"<span style='font-size:12px;color:{T2};{TABULAR}'>"
+                    f"{ma['date']:%d %b %Y} → {mb['date']:%d %b %Y}</span>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+            elif measure_armed:
+                st.markdown(
+                    f"<div style='font-size:12px;color:{T2};margin-bottom:12px;'>"
+                    f"Measure — hover {name1} to preview the change, click to set "
+                    f"the end point.</div>",
+                    unsafe_allow_html=True,
+                )
+            elif measure_on:
+                st.markdown(
+                    f"<div style='font-size:12px;color:{T2};margin-bottom:12px;'>"
+                    f"Measure — click a start point, then an end point, on "
+                    f"{name1}.</div>",
+                    unsafe_allow_html=True,
+                )
+
             # ── Chart ─────────────────────────────────────────────────────────
             # Years appear once the range spans more than one (spec)
             tickformat_x = "%b %Y" if (end - start).days > 180 else "%d %b"
 
             fig = go.Figure()
+
+            # When Measure is on, the line itself skips hover/click hit-testing.
+            # Plotly's "closest" hovermode resolves ties between coincident
+            # points by trace order regardless of z-order, so with both the
+            # line and the click-target markers sitting on the same data, the
+            # line would always win the hit test and clicks could never reach
+            # the markers. Hover info moves to the markers trace instead.
             fig.add_trace(go.Scatter(
                 x=df1.index, y=df1["Close"],
                 name=name1, mode="lines",
                 line=dict(color=C1, width=1.8),
                 yaxis="y1",
-                hovertemplate="<b>%{x|%d %b %Y}</b><br>%{y:,.4f}<extra>" + name1 + "</extra>",
+                hoverinfo="skip" if measure_on else None,
+                hovertemplate=(None if measure_on else
+                               "<b>%{x|%d %b %Y}</b><br>%{y:,.4f}<extra>" + name1 + "</extra>"),
             ))
 
+            if measure_ready:
+                fig.add_vrect(
+                    x0=ma["date"], x1=mb["date"],
+                    fillcolor=(T1 if m_pct >= 0 else DOWN),
+                    opacity=0.10, line_width=0,
+                )
+
             yaxis2_cfg = None
+            series2_at_t1 = None
             if has_t2:
+                # Streamlit's selection capture drops the whole click when more
+                # than one trace reports a point for it, which happens whenever
+                # a second trace is also hoverable under hovermode "x" — so
+                # during Measure, series 2 skips hit-testing just like series 1,
+                # and its price rides along in the click-target's own
+                # hovertemplate instead (aligned to series 1's dates, nearest
+                # match) rather than getting its own tooltip.
                 fig.add_trace(go.Scatter(
                     x=df2.index, y=df2["Close"],
                     name=name2, mode="lines",
                     line=dict(color=C2, width=1.8, dash="dash"),
                     yaxis="y2",
-                    hovertemplate="<b>%{x|%d %b %Y}</b><br>%{y:,.4f}<extra>" + name2 + "</extra>",
+                    hoverinfo="skip" if measure_on else None,
+                    hovertemplate=(None if measure_on else
+                                   "<b>%{x|%d %b %Y}</b><br>%{y:,.4f}<extra>" + name2 + "</extra>"),
                 ))
+                if measure_on:
+                    series2_at_t1 = df2["Close"].reindex(df1.index, method="nearest")
                 yaxis2_cfg = dict(
                     title=dict(text=name2, font=dict(size=12, color=T2)),
                     tickfont=dict(size=12, color=T2), showgrid=False,
                     zeroline=False, overlaying="y", side="right",
                     tickformat=",.0f",   # match left axis; never mix raw with k
                 )
+
+            if measure_on:
+                # Click target. The line (above) skips hit-testing, so this is
+                # the only trace Plotly can match a click or hover against.
+                # Its position must match measure_curve, computed above from
+                # the same has_t2 before any click on it could be processed.
+                assert len(fig.data) == measure_curve
+                m2_dec = price_decimals(name2) if has_t2 else None
+                if measure_armed:
+                    # Point A is picked, point B isn't yet — mirror TradingView's
+                    # live readout by showing the change from A to whatever the
+                    # cursor is over, continuously, with no server round-trip
+                    # (the hover text is computed client-side from customdata
+                    # baked in at render time; moving the mouse never reruns
+                    # the app).
+                    base = ma["close"]
+                    if has_t2:
+                        customdata = [
+                            (signed_pct((c / base - 1) * 100),
+                             signed_price_change(name1, c - base, m_dec),
+                             format_price(name2, c2, m2_dec))
+                            for c, c2 in zip(df1["Close"], series2_at_t1)
+                        ]
+                        hovertemplate = ("<b>%{x|%d %b %Y}</b><br>%{customdata[0]}<br>"
+                                          "%{customdata[1]} from start<br>"
+                                          + name2 + ": %{customdata[2]}<extra></extra>")
+                    else:
+                        customdata = [
+                            (signed_pct((c / base - 1) * 100),
+                             signed_price_change(name1, c - base, m_dec))
+                            for c in df1["Close"]
+                        ]
+                        hovertemplate = ("<b>%{x|%d %b %Y}</b><br>%{customdata[0]}<br>"
+                                          "%{customdata[1]} from start<extra></extra>")
+                elif has_t2:
+                    customdata = [format_price(name2, c2, m2_dec) for c2 in series2_at_t1]
+                    hovertemplate = ("<b>%{x|%d %b %Y}</b><br>%{y:,.4f}<br>"
+                                      + name2 + ": %{customdata}<extra>" + name1 + "</extra>")
+                else:
+                    customdata = None
+                    hovertemplate = ("<b>%{x|%d %b %Y}</b><br>%{y:,.4f}<extra>"
+                                      + name1 + "</extra>")
+                fig.add_trace(go.Scatter(
+                    x=df1.index, y=df1["Close"],
+                    mode="markers", marker=dict(size=7, color=C1, opacity=0.02),
+                    customdata=customdata,
+                    hovertemplate=hovertemplate,
+                    showlegend=False, name="",
+                ))
+
+            if ma is not None:
+                # Mark the picked start point so it stays visible once the
+                # cursor (and the live preview) move away from it. Added after
+                # the click target so it doesn't shift measure_curve's index.
+                fig.add_vline(x=ma["date"], line=dict(color=T1, width=1, dash="dot"))
+                fig.add_trace(go.Scatter(
+                    x=[ma["date"]], y=[ma["close"]],
+                    mode="markers", marker=dict(size=9, color=T1,
+                                                 line=dict(color=BG, width=1.5)),
+                    hoverinfo="skip", showlegend=False, name="",
+                ))
 
             fig.update_layout(
                 height=460,
@@ -978,8 +1198,20 @@ elif nav == "Chart":
                                 font=dict(size=12, color=T1,
                                           family="Inter, Arial, sans-serif")),
                 showlegend=False,
+                clickmode="event+select" if measure_on else "event",
+                # "x": match the nearest point by date alone, so hover/click
+                # don't also require landing within pixels of the line's y —
+                # needed for the live preview, and for picking a point without
+                # a second series' line stealing the hit test.
+                hovermode="x" if measure_on else "closest",
             )
-            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+            if measure_on:
+                st.plotly_chart(fig, width="stretch", key=MEASURE_KEY,
+                                on_select="rerun", selection_mode=("points",),
+                                config={"displayModeBar": False})
+            else:
+                st.plotly_chart(fig, width="stretch",
+                                config={"displayModeBar": False})
     else:
         st.markdown(
             f"<div style='color:{T2};text-align:center;padding:80px 0;'>"
