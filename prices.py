@@ -54,6 +54,39 @@ _SESSION_CLOSE = time_type(15, 45)
 _INTRADAY_CACHE_HOURS = 10 / 60
 
 
+# Instruments that actually trade on the Indian session. The INR pairs are in
+# here because the rupee's onshore market runs alongside NSE - they move on
+# this clock. Everything else the app carries (US/European/Asian indices, VIX,
+# the metals and crude contracts, non-INR pairs) does not, so refreshing it on
+# an Indian clock would be requests spent on a closed or unrelated market.
+_INDIAN_INDEX_TICKERS = frozenset({"^NSEI", "^NSEBANK", "^CNXIT"})
+_INR_PAIRS = frozenset({"USDINR=X", "EURINR=X"})
+
+
+def _has_intraday_source(ticker):
+    """Whether ticker both trades on the Indian session and has a source that
+    can actually show a price mid-session.
+
+    The NSE:-prefixed indices (Nifty Auto, Energy, Mid Select, Defence) are
+    Indian but deliberately excluded: yfinance does not carry them at all, so
+    jugaad-data's EOD feed is their only source and it does not publish until
+    after the bell. Refreshing them every 10 minutes would be the same
+    all-cost-no-data scraping the mid-session jugaad skip exists to avoid.
+
+    Kept separate from _JUGAAD_FALLBACK_INDEX, which happens to hold the same
+    three index tickers but means something else entirely ("has a second
+    provider to merge from") - they would drift apart the moment either list
+    changes for its own reasons.
+    """
+    if ticker.startswith(NSE_PREFIX):
+        return False
+    return (
+        ticker.endswith(".NS")
+        or ticker in _INDIAN_INDEX_TICKERS
+        or ticker in _INR_PAIRS
+    )
+
+
 def _in_nse_session(now=None):
     """Whether NSE is mid-session right now, by the clock and the weekday.
 
@@ -369,7 +402,10 @@ def get_price_history(ticker, period="1mo", interval="1d", max_age_hours=6):
     yfinance path always asks for hourly and aggregates. Results are cached
     in SQLite for max_age_hours.
     """
-    live = _in_nse_session()
+    # Non-Indian instruments stay on the 6-hour window even mid-session: their
+    # own markets are shut (or simply unrelated to this clock), so a 10-minute
+    # refresh would re-fetch an unchanged number.
+    live = _in_nse_session() and _has_intraday_source(ticker)
     if live:
         # min(), not assignment: the session can only make the cache fresher,
         # never staler than what the caller asked for.

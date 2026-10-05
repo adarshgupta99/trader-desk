@@ -319,6 +319,23 @@ a holiday the window is still "open" and the hourly fetch just finds no new bars
 wasted yfinance call and changing nothing — preferred over depending on a holiday list that
 goes stale silently.
 
+**Only instruments with a live intraday source get that window** — `_has_intraday_source()`.
+That is the three yfinance Indian indices (`^NSEI`, `^NSEBANK`, `^CNXIT`), every `.NS` equity,
+and the two INR pairs (the rupee's onshore market runs on the same clock). Two exclusions,
+both deliberate:
+- **Non-Indian instruments** (US/European/Asian indices, VIX, metals, crude, non-INR pairs)
+  stay on 6 hours — their markets are shut or simply unrelated to this clock, so a 10-minute
+  refresh re-fetches an unchanged number.
+- **The `NSE:`-prefixed indices** (Nifty Auto, Energy, Mid Select, Defence) are Indian but
+  excluded anyway: yfinance does not carry them at all, so jugaad-data's EOD feed is their
+  *only* source and it does not publish until after the bell. A 10-minute window on them
+  would be the same all-cost-no-data scraping the mid-session jugaad skip exists to avoid.
+
+`_INDIAN_INDEX_TICKERS` is kept separate from `_JUGAAD_FALLBACK_INDEX` even though both
+currently hold the same three tickers — one means "trades on the Indian session", the other
+"has a second provider to merge from", and they would drift apart as soon as either changes
+for its own reasons.
+
 **jugaad-data is deliberately skipped mid-session.** Its feeds are EOD-derived and publish
 after the bell, so during the session it holds nothing for today that the hourly bars don't
 already have — and it is the scrape-based source with real NSE flagging risk, so calling it
