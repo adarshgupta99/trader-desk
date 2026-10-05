@@ -282,14 +282,33 @@ get_price_history(ticker, period="1mo", interval="1d", max_age_hours=6)
 clear_price_cache()                    → empties price_cache and cache_meta
 ```
 
-A `NSE:` prefix on the ticker routes to jugaad-data; everything else goes to yfinance.
+A `NSE:` prefix on the ticker routes to jugaad-data; everything else goes to yfinance —
+except Nifty 50 (`^NSEI`), Bank Nifty (`^NSEBANK`) and Nifty IT (`^CNXIT`), the three Indian
+indices that exist on **both** providers, where yfinance stays primary but every fetch also
+merges in jugaad-data's close for any date yfinance left null or omitted. Neither provider's
+Indian-index feed is reliably ahead of the other near today's session — one has shown a real
+close before the other has it, and vice versa, within the same evening — so this takes
+whichever has the data rather than trusting one source. See `_JUGAAD_FALLBACK_INDEX`. The
+other NSE-prefixed indices (Midcap, Auto, Energy, Defence) have no yfinance equivalent to
+merge against; individual equities aren't covered by this (jugaad-data can fetch them too, via
+`stock_df`, but wiring that in is a separate, bigger change, not yet built).
+
+**The cache never lets a worse fetch overwrite a better one.** `_write_to_cache()` used to
+`DELETE` every cached row for a ticker before writing a fresh fetch — so a refetch that came
+back with a null close (which yfinance's Indian-index feed can do while a session's close is
+still landing) silently erased a previously-good cached value. It's now an upsert: `COALESCE`
+keeps the old value when the new one is null, and still takes a real update when there is one,
+genuine corrections included. This required converting `NaN` to actual SQL `NULL` before the
+insert (`_none_if_nan()`) — `sqlite3` binds a `NaN` float as a real value, not `NULL`, so
+`COALESCE` would never fire on raw pandas `NaN`.
 
 **Dates are exchange-local trading dates.** yfinance returns daily bars stamped at
-exchange-local midnight (`2026-10-02 00:00:00+09:00` for KOSPI). `_write_to_cache()` keeps
+exchange-local midnight (`2026-10-02 00:00:00+09:00` for KOSPI). `_normalize_dates()` keeps
 that calendar date and re-tags it as UTC midnight — the same convention `_fetch_from_nse()`
 already used — rather than converting to true UTC, which rewound the date by a day for every
-market east of UTC. Storage stays one consistent format so `ORDER BY date` sorts correctly,
-and display sites can call `strftime` with no timezone handling of their own.
+market east of UTC. Both providers' output is normalized before being cached, compared, or
+merged, so storage stays one consistent format and the two providers' dates line up exactly
+when `_fill_gaps_from_nse()` merges them.
 
 ---
 
@@ -497,9 +516,11 @@ with `yfinance` anyway).
 | `371497b` | 5 Oct 2026 | Adarsh Gupta | Add an Events tab for F&O board meetings and corporate actions |
 | `388d1df` | 5 Oct 2026 | Adarsh Gupta | Split app.py into one module per tab plus shared modules |
 | `d327a03` | 5 Oct 2026 | Adarsh Gupta | Split data_loader.py by concern into storage/prices/watchlists/symbols |
+| `a97c532` | 5 Oct 2026 | Adarsh Gupta | Rewrite ARCHITECTURE.md for the module split |
+| `556a28b` | 6 Oct 2026 | Adarsh Gupta | Fix the price cache silently losing good closes, and merge in jugaad-data for Nifty/Bank Nifty/Nifty IT |
 
-**Deployed:** `6e603fc` is the newest commit on `origin/main`. The Events tab and the two
-refactor commits are local, on branch `refactor/split-into-modules`, and not yet pushed.
+**Deployed:** `a97c532` is the newest commit on `origin/main` — merged from
+`refactor/split-into-modules` and pushed. `556a28b` is local, not yet pushed.
 
 ---
 
