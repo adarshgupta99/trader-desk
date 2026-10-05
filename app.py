@@ -299,6 +299,16 @@ def range_history(ticker, start, end):
     return df[(on >= start) & (on <= end)]
 
 PRESET_NAMES = ["Nifty 50", "Nifty Midcap", "Nifty Auto", "Nifty IT", "Bank Nifty"]
+# Index-level ticker for each read-only view's own 1D/1W return, shown beside
+# the Change window toggle. Nifty Midcap has no dedicated index ticker in the
+# app, so it reuses Nifty Mid Select (Adarsh's call, 5 Oct 2026).
+PRESET_INDEX_TICKER = {
+    "Nifty 50": "^NSEI",
+    "Nifty Midcap": "NSE:NIFTY MID SELECT",
+    "Nifty Auto": "NSE:NIFTY AUTO",
+    "Nifty IT": "^CNXIT",
+    "Bank Nifty": "^NSEBANK",
+}
 
 TABULAR = "font-variant-numeric:tabular-nums lining-nums;"
 
@@ -828,11 +838,38 @@ if nav == "Watchlist":
         f"letter-spacing:0.08em;margin:10px 0 4px 0;'>Change window</div>",
         unsafe_allow_html=True,
     )
-    wl_period = st.segmented_control(
-        "wl_period", ["1D", "1W"], default="1D", required=True,
-        label_visibility="collapsed", key="wl_period"
-    )
+    c_toggle, c_idx = st.columns([2, 5], vertical_alignment="center")
+    with c_toggle:
+        wl_period = st.segmented_control(
+            "wl_period", ["1D", "1W"], default="1D", required=True,
+            label_visibility="collapsed", key="wl_period"
+        )
     show_1w = (wl_period == "1W")
+
+    if not is_custom:
+        idx_ticker = PRESET_INDEX_TICKER.get(active_name)
+        idf = get_price_history(idx_ticker, period="5d").dropna(subset=["Close"]) if idx_ticker else None
+        if idf is not None and not idf.empty:
+            idx_last = idf["Close"].iloc[-1]
+            idx_pct = ((idx_last / idf["Close"].iloc[0]) - 1) * 100 if show_1w else (
+                       ((idx_last / idf["Close"].iloc[-2]) - 1) * 100 if len(idf) >= 2 else 0.0)
+            idx_color = UP if idx_pct >= 0 else DOWN
+            idx_date = idf.index[-1].strftime("%d %b %Y")
+            idx_price = format_price(idx_ticker, idx_last, price_decimals(idx_ticker))
+            with c_idx:
+                st.markdown(
+                    f"<div style='display:flex;align-items:center;gap:8px;'>"
+                    f"<span style='font-size:13px;color:{T2};font-weight:600;"
+                    f"white-space:nowrap;'>{active_name}</span>"
+                    f"<span style='font-size:19px;font-weight:700;color:{T1};"
+                    f"{TABULAR}'>{idx_price}</span>"
+                    f"<span style='font-size:19px;font-weight:700;color:{idx_color};"
+                    f"{TABULAR}'>{signed_pct(idx_pct)}</span>"
+                    f"<span style='font-size:12px;color:{T2};'>{wl_period}</span>"
+                    f"<span style='font-size:12px;color:{T2};'>as of {idx_date}</span>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
 
     if not items:
         st.markdown(
