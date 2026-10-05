@@ -125,12 +125,33 @@ Size: MEASURED by step 0 on 6 Oct 2026, in this exact schema with this
 index, after VACUUM — 306,280 rows for the full 213 over 60 days is
 50.6 MB, at 165 bytes a row. That is the whole tier, not a yearly rate.
 The earlier ~40 MB estimate in this spec was about 25% low; 165 bytes a
-row is the figure to size against. Daily bars stay in the existing
-cache; do not duplicate them.
+row is the figure to size against.
 
-Retention: keep about 65 days of 15m bars and prune anything older. More
-than that serves no tier, because the 15m tier only answers lookbacks up
-to 60 days and Yahoo serves that entire window on demand.
+Daily bars: REVISED 6 Oct 2026. This spec said they stay in the existing
+cache and must not be duplicated. They now go into the same bars table
+under interval='1d', and here is why. market_cache.db's price_cache is
+keyed by (ticker, period, interval) and prices.get_price_history fetches
+ONE ticker per call with its own freshness window — it was built for the
+dozen curated instruments, not for 213 symbols. Going through it means
+213 sequential Yahoo calls on a cold cache, against one bulk download of
+all 213 in 6.0s (measured, step 0). It is both slower and less polite,
+and it would put the correlation feature's reads on a different code
+path from the 15m tier for no benefit. 213 x 250 daily rows is ~9 MB, so
+the duplication costs nothing, and daily bars are as refetchable as 15m
+ones. prices.py keeps owning the curated instruments; nothing there
+changes.
+
+Retention: keep the newest 65 SESSIONS of 15m bars and prune anything
+older. More serves no tier, because the 15m tier only answers lookbacks
+up to 60 days and Yahoo serves that entire window on demand.
+
+Sessions, not calendar days — corrected 6 Oct 2026 when the first run of
+the job deleted bars it had just fetched. A 60-session lookback spans 83
+calendar days (58 sessions from 14 Jul to 5 Oct 2026), so a 65-calendar-
+day cutoff throws away a quarter of the window the longest lookback
+needs. Counting sessions makes retention mean the same thing as the
+lookback it exists to serve, and holidays stop mattering. The daily tier
+keeps 800 sessions, covering the 500-day maximum with headroom.
 
 That last point is the whole prize from dropping 1m, so do not design
 around it being otherwise: the maximum lookback the tier serves equals
@@ -138,19 +159,39 @@ Yahoo's retention for it, so stored bars are DISPOSABLE. The DB can
 always be rebuilt from scratch, a missed fetch day costs nothing, and no
 history is ever stranded. The 1m tier had the opposite property.
 
-Rollups that MAY go into the repo (small): data/corr_rollups/
-  corr_<tier>_<lookback>d_<date>.csv.gz   (213x213 matrix, a few hundred KB)
-Only for a few standard lookbacks (e.g. 20d, 60d, 120d, 250d — 5d is
-below the tier floor now), and only the latest 1 file per lookback
-(overwrite, do not accumulate).
-The app falls back to these if the SQLite file is not available (for
-example on Streamlit Cloud).
+Rollup CSVs in the repo: DROPPED 6 Oct 2026. They existed only so a
+Streamlit Cloud deploy with no SQLite file could still answer. Adarsh
+confirmed the repo is private and the app runs on localhost only, so
+there is no deploy without the DB beside it. The rollups would have been
+an expiring binary re-committed forever, for a fallback that never
+fires. If the app is ever deployed, revisit this — do not reintroduce it
+speculatively.
 
-Table corr_cache (inside the same DB):
+Table corr_cache (inside the same DB): OPTIONAL. Schema, if built:
   tier, lookback_days, asof_date, symbol_a, symbol_b, corr, n_obs
   PRIMARY KEY (tier, lookback_days, asof_date, symbol_a, symbol_b)
 Store each pair once (symbol_a < symbol_b alphabetically) and read both
 directions through a helper.
+
+MEASURED 6 Oct 2026, on the real 306,280 bars with their real gaps:
+the worst case this feature has — 60 days, 1,450 rows, all 213 columns,
+all 22,578 pairs — correlates in 0.12s, plus 0.09s for the n_obs matrix.
+Pandas does take its pairwise path (95.09% non-null density) but
+implements it in Cython, not a Python loop. At 20 days it is 0.03s.
+So corr_cache is an OPTIMISATION, not load-bearing. A per-process memo
+on (tier, lookback, asof) is enough for the UI; a SQLite cache table
+would be storing a tenth of a second. Build the table only if a later
+feature needs correlations without loading bars first.
+
+The real cost is getting the bars into shape, not correlating them —
+1.45s against 0.12s, twelve times the correlation:
+  read 306,280 rows from sqlite   0.54s
+  parse timestamps + stale policy 0.84s
+  pivot to wide                   0.07s
+So intraday_store.py must (a) read ONLY the requested window with a
+WHERE on ts, not the whole table, and (b) store ts in a form that sorts
+and filters as text and parses with a fixed format, so no row is parsed
+that the lookback does not need. Optimise there, not in the maths.
 
 ======================================================================
 6. COMPUTE
@@ -206,8 +247,13 @@ File: analytics/correlation.py
      incomplete across all 213 would discard far more than it should.
   6. Daily tier: log returns of adjusted close, same pairwise logic.
   7. Save n_obs per pair so the UI can show how many points back it up.
-  8. Cache by (tier, lookback, asof_date). Recompute only when a new day
-     of data arrives. The app asks the cache first.
+  8. Memo by (tier, lookback, asof_date) so repeated reruns of the same
+     view do not redo the work. A per-process dict, not a SQLite table —
+     see the measurement in section 5: the correlation itself is 0.12s
+     worst case and the bar loading is 1.45s, so what is worth memoising
+     is the whole pipeline's result, in memory, for the session.
+     Do not use @st.cache_data (CLAUDE.md forbids it; it conflicts with
+     the SQLite caching and loses data on reboot).
 
 Corporate actions (splits) distort returns. Within the 15m tier's 60
 days the risk is small but real. Use auto_adjust=True and flag any
@@ -241,9 +287,9 @@ only reads the files, it never calls Yahoo for this.)
      for up to 60 days.
   4. First run: backfill 15m for the full 60d.
   5. Prune bars older than about 65 days.
-  6. After the fetch, rebuild the standard corr rollups and write the CSV
-     files from section 5.
-  7. Log: symbols fetched, bars inserted, symbols failed, runtime.
+  6. (The rollup-rebuild step is gone with the rollups — see section 5.)
+  7. Log: symbols fetched, bars inserted, symbols failed, runtime, and
+     the Volume == 0 diagnostic from section 6 item 3.
 
 Ticker mapping: use the F&O list from fno_sectors.json, append ".NS".
 Verified 6 Oct 2026: all 213 resolve that way, BAJAJ-AUTO, GVT&D, M&M
@@ -259,13 +305,16 @@ them. Still list every symbol that returns no data and show it.
   - Top-N slider (default 10).
   - Two tables side by side: Most correlated | Least correlated (the
     most negative first). Columns: symbol, sector, corr, n_obs.
-  - Colour the sector cell (or a small dot) using the sector from
-    fno_sectors.json. A stock in several sectors shows the first and a
-    tooltip listing all.
-  - Optional small bar chart of the top-N.
+  - Sector: shown as text, with rows sharing the picked stock's sector
+    marked in the accent token. REVISED 6 Oct 2026: a colour per sector
+    would mean inventing 22 hues, and the design language says plainly
+    "do not add extra accent colors". The design language wins over this
+    spec. Same-sector marking answers the real question ("is this just
+    its own sector?") without a new palette. A stock in several sectors
+    shows the first, with the full list in the cell's title attribute.
   - Footer: bar tier, stale-bar policy, as-of date, data source.
-  - If the SQLite DB is missing (cloud deploy), read the rollup CSV for
-    the nearest standard lookback and say so.
+  - If the SQLite DB or the tier's bars are missing, say so and name the
+    command that fixes it. (No rollup fallback — see section 5.)
   - No 213x213 grid. A "download full matrix as CSV" button is fine.
   - Follow the existing design doc: restyle only, no layout rewrite.
 
@@ -279,6 +328,15 @@ them. Still list every symbol that returns no data and show it.
   data_layer/intraday_store.py  (SQLite helpers)
   tests/test_correlation.py
   docs/intraday_discovery.txt
+  tabs/correlation.py           (section 8; wired into app.py's NAV)
+  fno.py                        (added 6 Oct 2026: the 213-symbol
+                                universe and sector lookup read from
+                                fno_sectors.json. Both the fetch job and
+                                the tab need it, and neither should be
+                                parsing the JSON itself. Sits at the top
+                                level beside symbols.py and
+                                watchlists.py, matching how this repo
+                                already keeps its data modules flat.)
 Document the tiers, stale-bar policy, DB location and cron setup in
 ARCHITECTURE.md — in this repo that is where technical detail of this
 kind lives, not CLAUDE.md. Update its file map, module notes and git
@@ -311,7 +369,8 @@ Write tests in tests/test_correlation.py. All must pass.
   I. Cache: a second call with the same (tier, lookback, asof) does not
      recompute (check via a timer or call counter).
   J. Missing DB: the app opens without the SQLite file and shows the
-     rollup fallback message, no crash.
+     "run the fetch job" message, no crash. (Reworded 6 Oct 2026 with
+     the rollups dropped — there is no fallback to fall back to.)
   K. Manual: the user picks RELIANCE, lookback 20 (15m tier) and
      lookback 120 (daily tier). Top-10 lists load in under 3 seconds
      from cache. Lookback 1 returns numbers with a visibly small n_obs

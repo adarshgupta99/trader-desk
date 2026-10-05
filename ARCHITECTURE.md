@@ -23,7 +23,8 @@ trader-desk/
 │   ├── watchlist.py
 │   ├── chart.py
 │   ├── asset_grids.py  #   Indices, India, FX, Commodities, Volatility (one renderer)
-│   └── events.py
+│   ├── events.py
+│   └── correlation.py  #   F&O pairwise correlation (Most/Least correlated tables)
 │
 ├── theme.py            # Both palettes, and the stylesheets built from them
 ├── formatting.py       # Number / change formatting rules (signs, decimals, INR)
@@ -37,6 +38,15 @@ trader-desk/
 ├── watchlists.py       # Custom lists, and the read-only index views
 ├── symbols.py          # The searchable instrument table
 ├── events_db.py        # Read-only access to events.db
+├── fno.py              # The 213-stock F&O universe and sector lookup (fno_sectors.json)
+│
+├── analytics/
+│   ├── tiers.py         # pick_tier(lookback_days) -> "15m" | "1d", and expected-obs sizing
+│   └── correlation.py   # Bars -> log returns -> pairwise Pearson; the stale-bar policy
+├── data_layer/
+│   └── intraday_store.py  # SQLite bar store outside the repo (~/trader_desk_data/intraday.db)
+├── jobs/
+│   └── fetch_intraday.py  # Daily cron: downloads 15m + daily F&O bars into the store
 │
 ├── data/
 │   └── symbols.csv     # Committed instrument table (3,360 rows) — search's source of truth
@@ -47,6 +57,8 @@ trader-desk/
 │   └── discover_intraday.py     # Step 0 for the correlation feature: measures Yahoo's 15m feed
 ├── docs/
 │   └── intraday_discovery.txt   # Output of the above — the numbers the feature is sized against
+├── tests/
+│   └── test_correlation.py      # Acceptance checks A-K for the correlation feature
 ├── fno_sectors.json    # 213 F&O stocks with sector labels (hand-supplied, 5 Oct 2026)
 ├── .github/workflows/
 │   └── test_nse_access.yml      # Manual-only: does NSE answer GitHub's runner IPs?
@@ -148,6 +160,7 @@ section deselects it and the app silently falls back to the first section.
 | Commodities | WTI Crude Oil, Gold, Silver |
 | Volatility | VIX (US) |
 | Events | Upcoming F&O board meetings and declared corporate actions, in two subtabs |
+| Correlation | Pick one of 213 F&O stocks; Most/Least correlated tables for any 1-500 day lookback |
 
 Rates tab is parked until `FRED_API_KEY` is added.
 
@@ -579,6 +592,139 @@ throwaway SQLite file to `scratch/` (gitignored).
 
 ---
 
+### `fno.py`, `analytics/`, `data_layer/intraday_store.py`, `jobs/fetch_intraday.py`, `tabs/correlation.py`
+
+The F&O correlation matrix (spec: `correlation_matrix_spec-43ee700c.txt`), built 6 Oct
+2026 on `feature/fno-correlation`. Correlates log returns of F&O stocks pairwise, for
+any lookback from 1 to 500 days, and shows the names most and least correlated with a
+picked stock. The full 213×213 matrix is computed and queryable but never drawn as a
+grid — about 22,000 pairs, nobody can read that.
+
+**`fno.py`** reads `fno_sectors.json` once (`functools.lru_cache`) and exposes
+`symbols()`, `yahoo_ticker()`, `display_name()`, `sectors_of()`/`primary_sector()`.
+Both the fetch job and the tab need the same universe and sector lookup, so neither
+parses the JSON itself.
+
+**Two tiers, decided in one place (`analytics/tiers.py`):**
+
+| Lookback | Bars | Why |
+|---|---|---|
+| 1-60 days | 15-minute | Yahoo's 15m retention is exactly 60 days — measured, a hard ceiling (61 days comes back empty with an explicit error) |
+| 61-500 days | daily | the existing size of history Yahoo serves on request |
+
+`pick_tier(lookback_days)` is the only place that decides; nothing else branches on bar
+size. **15 minutes is a floor, not a default** — 1-minute bars were considered and
+dropped: correlations from very fine bars are biased toward zero by asynchronous
+trading (the Epps effect), worst for exactly the illiquid F&O names where a correlation
+estimate would matter most, and no stale-bar filter fixes it because thin-but-nonzero
+bars pass every filter. The operational case against 1m was separate and is now mostly
+moot (see `data_layer/intraday_store.py` below): 1m bars older than 7 days are gone from
+Yahoo for good, which would have made the daily fetch job mandatory rather than an
+optimisation.
+
+**`data_layer/intraday_store.py`** — SQLite outside the repo, `~/trader_desk_data/
+intraday.db` by default or `TRADER_DESK_DATA_DIR` from `.env`. One `bars` table holds
+both tiers (`symbol, interval, ts, open, high, low, close, volume`, PK on
+`(symbol, interval, ts)`), so `INSERT OR IGNORE` makes refetching an overlapping window
+free. `ts` is stored as naive IST text (`YYYY-MM-DDTHH:MM:SS`) rather than ISO8601 with
+an offset — NSE bars are only ever IST, the offset would be the same string repeated
+306,280 times, and the naive text form sorts and filters lexicographically so a window
+read is a plain `WHERE ts >= ?` that SQLite can use its index for. That matters because
+of a measurement: loading and shaping the full table costs 1.45s against 0.12s for the
+correlation itself, so the store always reads a window, never the whole table.
+
+Both tiers are **disposable by design**. The 15m tier only ever has to answer lookbacks
+up to 60 days, and Yahoo serves that whole window on demand — so the file can always be
+rebuilt from scratch, a missed fetch day costs nothing, and no history is ever
+stranded. That is the real prize from dropping the 1-minute tier, which had the opposite
+property. `prune()` keeps the newest N **sessions**, not calendar days — a 60-session
+lookback spans 83 calendar days (58 real sessions, 14 Jul-5 Oct 2026), so pruning on a
+calendar cutoff deleted bars the longest lookback needed; this was caught and fixed the
+first time the full job ran. `corr_cache` exists as a table but is intentionally
+unused — see below.
+
+Daily bars live here too, under `interval='1d'`, not in `market_cache.db`'s
+`price_cache`. That table is built around one ticker per call with its own freshness
+window; getting daily history for all 213 F&O names through it would mean 213
+sequential yfinance calls on a cold cache, against the one 6.0-second bulk download this
+module already does. `prices.py` keeps owning the dozen curated instruments; nothing
+there changed.
+
+**`analytics/correlation.py`** — `compute(lookback_days)` returns a `CorrelationResult`
+(the matrix, the n_obs matrix, tier, as-of date, min_periods, flagged extreme returns).
+In order: load only the requested window, pivot to wide close prices with the stale-bar
+policy applied, log-return within each session (the first bar of a session has no
+return — including it would let the overnight gap dominate), pairwise `DataFrame.corr`
+with `min_periods` at 50% of the expected observations.
+
+**The stale-bar policy** (`STALE_POLICY`, quoted in the tab's footer) was settled by
+measurement, against this spec's own original assumption. A bar is stale only when its
+open, high, low **and** close all equal the previous bar's close — volume is never used
+as a staleness test. The spec originally proposed treating `Volume == 0` as stale, on
+the theory that a quiet bar just repeats the old price. Step 0 disproved it: of 306,280
+bars across all 213 stocks, 217 had `Volume == 0` (0.0709%), every one of them the
+15:15 bar, clustered on three specific dates rather than on particular symbols, and the
+price moved inside every one inspected. Worse for the original theory, the stale rate
+(flat-OHLC, the policy actually used) is *higher* among the 20 most liquid names
+(0.1075%) than the 20 thinnest (0.0941%) — staleness does not track illiquidity at all
+in this universe. Treating `Volume == 0` as stale would have discarded real closing
+moves on those three dates. Stale bars become `NaN`, never forward-filled; pairwise
+correlation then uses only timestamps where both stocks have a real return.
+
+**Pairwise, not `dropna(how='any')`, and this is load-bearing, not a nicety.** Step 0
+measured bar counts of min 1,423 / median 1,438 / max 1,450 across the same 58 sessions
+— most stocks miss a bar in roughly 10 sessions, and not the same bar as each other.
+Dropping any incomplete timestamp across all 213 kept only 88.2% of rows for no speed
+benefit (pandas' pairwise path is Cython, not a Python loop).
+
+**`corr_cache` is unused on purpose.** The worst case this feature has — 60 days, 1,450
+rows, all 22,578 pairs — correlates in 0.12s, measured on the real bars with their real
+gaps. A SQLite cache table would be persisting a tenth of a second. `compute()` instead
+keeps an in-process memo (`(tier, lookback_days, asof_date) -> CorrelationResult`,
+capped at 8 entries) so repeated Streamlit reruns of the same view don't redo the 1.45s
+of bar loading. No `@st.cache_data` — CLAUDE.md rules it out; it would conflict with the
+SQLite caching convention this app already uses.
+
+**`jobs/fetch_intraday.py`** — run by hand or by cron/launchd, never by the app:
+
+```
+.venv/bin/python -m jobs.fetch_intraday
+```
+
+Batches of 45 symbols with a 2s pause between batches; on an empty batch (yfinance never
+raises on a failed fetch, it returns an empty frame — so failure is tested by emptiness)
+backs off 20s and retries once, single-threaded. Decides cold-start (`period=60d`/`3y`)
+versus top-up (`5d`/`1mo`) from how old the newest stored bar is, so the daily run stays
+cheap and a first run or a long gap still backfills everything. Logs the `Volume == 0`
+diagnostic every run — not used for anything, kept so a change in Yahoo's feed doesn't
+pass unnoticed. First full run: 213 symbols, both tiers, 38.0s, zero failures, 306,280
+15m rows + 155,994 daily rows.
+
+**`tabs/correlation.py`** — stock picker (`st.selectbox` over the 213 names), a
+lookback number input (1-500, labelled with which tier and roughly how many
+observations it implies), a top-N input, and two tables: Most correlated / Least
+correlated (most negative first — the useful end for finding a hedge). Sector is shown
+as plain text per the design language ("no extra accent colors" ruled out a
+colour-per-sector scheme the spec originally asked for); a row sharing the picked
+stock's own sector is marked in the primary text token instead. Footer states the bar
+tier, the stale-bar policy, the as-of date and the data source. If the store or the
+tier's bars are missing, the tab says so and gives the exact fetch command rather than
+failing — there is no rollup-CSV fallback (see "In progress" below for why).
+
+**Acceptance checks (`tests/test_correlation.py`, run with `.venv/bin/python -m pytest
+tests/test_correlation.py -v`), all 11 passing:** self-correlation is 1.0, symmetry,
+range, tier boundaries (including that "1m" is never returned by anything), log returns
+strip price level but not shared drift, the overnight gap is excluded, stale bars become
+`NaN` without forward-filling, the memo really skips recomputation, a missing store
+raises a typed error instead of crashing, and the sector sanity check. On the last one:
+at 20 days on 15m bars HDFCBANK/ICICIBANK (+0.2297) does not clearly separate from
+HDFCBANK/SUNPHARMA (+0.1568) — short-window 15m correlation is genuinely noisy, not
+wrong. The daily tier at longer lookbacks resolves it cleanly: 120 days gives 0.3874 vs
+0.0310, 250 days gives 0.5052 vs 0.1062. The test asserts on the 120-day daily
+comparison, not the 20-day one.
+
+---
+
 ### `test_key.py`
 A scratch script. Run it once with `python test_key.py` to confirm your `GEMINI_API_KEY` in `.env` works. Not part of the app itself.
 
@@ -607,6 +753,9 @@ Holds secrets. Never committed. Required keys:
 `scripts/refresh_symbol_names.py` also uses `requests`, but it is a maintenance script that
 never runs in the app, so `requests` stays out of `requirements.txt` (it arrives transitively
 with `yfinance` anyway).
+
+`pytest` is used by `tests/test_correlation.py` but, like `pyflakes`, stays out of
+`requirements.txt` as a dev-only tool — nothing in the deployed app imports it.
 
 **Still to add** as we build: `google-genai`, `feedparser`, `fredapi`
 
@@ -667,8 +816,11 @@ are local on `main`, not yet pushed.
 to hourly-resampled daily candles (see `prices.py` above). Not merged, not pushed.
 
 `feature/fno-correlation` branches off the hourly branch and carries the F&O correlation
-matrix. Step 0 (the discovery run) is done; the store, fetch job, compute module and tab
-are not built yet. Not merged, not pushed.
+matrix, now fully built: `fno.py`, `analytics/tiers.py`, `analytics/correlation.py`,
+`data_layer/intraday_store.py`, `jobs/fetch_intraday.py`, `tests/test_correlation.py`
+(11/11 passing) and `tabs/correlation.py` wired into `app.py`'s `NAV`. The local store
+has been populated end to end (213 symbols, both tiers, zero failures). Not merged, not
+pushed.
 
 ---
 
@@ -690,14 +842,11 @@ are not built yet. Not merged, not pushed.
   `permissions: contents: write` and Adarsh's go-ahead before it runs on a schedule.
 - **Earnings call sentiment tracker:** the Week 5-6 spec in `CLAUDE.md`. It depends on the
   Events calendar already built here for results dates.
-- **F&O correlation matrix:** spec in `correlation_matrix_spec-43ee700c.txt`, on
-  `feature/fno-correlation`. Step 0 is done (see `scripts/discover_intraday.py` above);
-  still to build are `data_layer/intraday_store.py`, `jobs/fetch_intraday.py`,
-  `analytics/tiers.py`, `analytics/correlation.py`, `tests/test_correlation.py` and the
-  Correlation tab. Two tiers only — 15m bars for lookbacks of 1-60 days, the existing daily
-  cache above that. The 1-minute tier was dropped on 6 Oct 2026: the Epps effect biases
-  fine-grained correlations toward zero, worst for exactly the illiquid names where the
-  estimate would matter most, and 1m history older than 7 days is unrecoverable from Yahoo,
-  which would have made the fetch job mandatory rather than an optimisation. Open: whether
-  the bar store is ever needed on a deployed instance — the app is localhost-only and the
-  repo private, so the spec's rollup-CSV fallback is unbuilt.
+- **F&O correlation matrix:** built on `feature/fno-correlation` (spec:
+  `correlation_matrix_spec-43ee700c.txt`); see the full writeup above. Not yet merged to
+  `main`. Still open: a daily cron/launchd entry for `jobs/fetch_intraday.py` is designed
+  (spec section 7) but not installed on Adarsh's Mac — until it is, the store only has
+  whatever the manual run on 6 Oct 2026 fetched, and ages out of the 15m tier's 60-day
+  window over time without a human running the job by hand. The rollup-CSV fallback in
+  the original spec was dropped outright, not deferred: the app is localhost-only and the
+  repo private, so there is no deploy without the SQLite store sitting right beside it.
