@@ -432,7 +432,16 @@ def get_price_history(ticker, period="1mo", interval="1d", max_age_hours=6):
                 df = _fill_gaps_from_nse(ticker, df, period, interval)
 
         if df.empty:
-            return df
+            # A refetch that comes back empty - a Yahoo 429, a network blip,
+            # a provider hiccup - must not leave the caller worse off than
+            # not having refetched at all. Serve whatever is still cached:
+            # a slightly stale price beats a "Couldn't load" tile. This
+            # matters far more under the intraday window, which expires every
+            # 10 minutes and so reaches this path ~36x more often than the
+            # 6-hour one did. fetched_at is deliberately left untouched, so
+            # the next interaction retries rather than treating the failure
+            # as a successful refresh.
+            return _read_from_cache(conn, ticker, period, interval)
         _write_to_cache(conn, ticker, period, interval, df)
         return df
     finally:

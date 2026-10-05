@@ -370,6 +370,21 @@ watchlist can mean a jugaad-data call per holding, not just per index. The `max_
 cache in front of `get_price_history()` is the only throttle — there is no separate rate limit
 or backoff on the jugaad-data calls themselves.
 
+**A failed refetch falls back to the stale cache.** When the freshness window has expired the
+fetch has to happen, and if it comes back empty — a Yahoo 429, a network blip — the cached rows
+are served rather than nothing. Without this the app got 0 rows while good data sat untouched
+in SQLite, showing a "Couldn't load" tile instead of a price a few minutes old. It matters
+disproportionately under the intraday window, which expires every 10 minutes and so reaches
+this path roughly 36× more often than the 6-hour one. `fetched_at` is deliberately *not*
+updated on a failure, so the next interaction retries instead of treating the failure as a
+successful refresh. A ticker with nothing cached still returns an empty (correctly shaped)
+frame, which is what the Watchlist's "Couldn't load" tile is built on.
+
+Known and unmitigated: Yahoo's actual rate limits are undocumented and change, and Streamlit
+Community Cloud shares an egress IP between apps while Yahoo limits per IP — so a deployed
+instance can take 429s caused by unrelated apps, independent of this app's own volume. The
+fallback above is what keeps that from being user-visible as a broken tile.
+
 **The cache never lets a worse fetch overwrite a better one.** `_write_to_cache()` used to
 `DELETE` every cached row for a ticker before writing a fresh fetch — so a refetch that came
 back with a null close (which yfinance's Indian-index feed can do while a session's close is
