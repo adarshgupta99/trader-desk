@@ -3,6 +3,7 @@ from datetime import date, timedelta
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
+import streamlit.components.v1 as components
 
 from data_loader import (get_price_history, clear_price_cache, WATCHLIST_PRESETS,
                          LIST_MAX, get_custom_lists, rename_custom_list,
@@ -1365,3 +1366,36 @@ elif nav == "Volatility":
     st.markdown(_period_lbl, unsafe_allow_html=True)
     period_label = st.segmented_control("pi", list(PERIODS.keys()), default="1M", label_visibility="collapsed", key="period_volatility")
     render_grid(VOLATILITY, PERIODS[period_label or "1M"], cols=1, decimal=2, height=420, value_size=40)
+
+# ── Theme watcher ─────────────────────────────────────────────────────────────
+# Switching theme in the toolbar repaints Streamlit's own chrome but never
+# reruns the script, so the Python-side palette (Plotly figures, inline HTML)
+# would stay on the old theme until a manual refresh. This hidden button plus a
+# zero-height iframe closes that gap: the script compares the browser's live
+# colour-scheme against the theme this run rendered with and clicks the button
+# when they disagree, which is a real widget interaction and so a real rerun.
+st.button("theme sync", key="theme_sync")
+
+components.html(
+    """
+<script>
+(function () {
+  const w = window.parent, doc = w.document;
+  const app = doc.querySelector('.stApp');
+  if (!app) return;
+  const RENDERED = "__THEME__";
+  const live = () => getComputedStyle(app).colorScheme === 'dark' ? 'dark' : 'light';
+  function sync() {
+    if (live() === RENDERED) { w.__tdThemeTries = 0; return; }
+    if ((w.__tdThemeTries = (w.__tdThemeTries || 0) + 1) > 3) return;
+    const btn = doc.querySelector('.st-key-theme_sync button');
+    if (btn) btn.click();
+  }
+  sync();
+  clearInterval(w.__tdThemeTimer);
+  w.__tdThemeTimer = setInterval(sync, 500);
+})();
+</script>
+""".replace("__THEME__", THEME),
+    height=0,
+)
