@@ -2,13 +2,14 @@
 Price history, and the SQLite cache in front of it.
 
 Two providers behind one function: yfinance for everything, and jugaad-data
-for the NSE indices yfinance does not carry. For the three Indian indices
-that exist on both (Nifty 50, Bank Nifty, Nifty IT), yfinance stays primary
-but every fetch also merges in jugaad-data, so a date yfinance left null -
-or omitted entirely - still shows up if jugaad has it. Each provider's
-Indian-index feed is independently flaky about when a session's close
-lands, and not reliably in the same direction, so neither is "the" source
-on its own. get_price_history() is the only thing other modules should need.
+for the NSE indices yfinance does not carry. For anything with a jugaad-data
+equivalent - the three Indian indices on both providers (Nifty 50, Bank
+Nifty, Nifty IT), plus every NSE-listed equity - yfinance stays primary but
+every fetch also merges in jugaad-data, so a date yfinance left null or
+omitted entirely still shows up if jugaad has it. Each provider's Indian
+feed is independently flaky about when a session's close lands, and not
+reliably in the same direction, so neither is "the" source on its own.
+get_price_history() is the only thing other modules should need.
 """
 
 from datetime import datetime, timedelta, timezone, date as date_type
@@ -127,20 +128,64 @@ def _fetch_from_nse(nse_symbol, period, interval):
     return df[["Open", "High", "Low", "Close", "Volume"]].dropna()
 
 
+# ── jugaad-data path (NSE equities) ───────────────────────────────────────────
+
+def _fetch_equity_from_nse(symbol, period, interval):
+    from jugaad_data.nse import stock_df
+
+    days = _PERIOD_TO_DAYS.get(period, 35)
+    to_dt = date_type.today()
+    from_dt = to_dt - timedelta(days=days)
+
+    df = stock_df(symbol=symbol, from_date=from_dt, to_date=to_dt, series="EQ")
+    if df.empty:
+        return pd.DataFrame()
+
+    # stock_df's DATE comes back as IST midnight minus 5:30 (e.g.
+    # "2026-10-04 18:30:00" for the 5 Oct session) - the same east-of-UTC
+    # rewind _normalize_dates() exists to undo for index_raw, showing up here
+    # through a different column instead of a tz-aware index. Add the offset
+    # back before treating it as a calendar date.
+    dates = pd.to_datetime(df["DATE"]) + pd.Timedelta(hours=5, minutes=30)
+    df = df.set_index(dates).sort_index()
+    df = df.rename(columns={"OPEN": "Open", "HIGH": "High", "LOW": "Low",
+                             "CLOSE": "Close", "VOLUME": "Volume"})
+    for col in ["Open", "High", "Low", "Close", "Volume"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    return df[["Open", "High", "Low", "Close", "Volume"]].dropna(subset=["Close"])
+
+
+def _jugaad_fallback(ticker):
+    """(fetch_fn, symbol) for ticker's jugaad-data equivalent, or (None,
+    None) if there isn't one. Covers the three Indian indices on both
+    providers plus every NSE-listed equity (a yfinance ".NS" ticker, via
+    stock_df - jugaad-data's own bhavcopy-based feed). FX, commodities, US
+    and other global tickers have no jugaad equivalent."""
+    index_symbol = _JUGAAD_FALLBACK_INDEX.get(ticker)
+    if index_symbol is not None:
+        return _fetch_from_nse, index_symbol
+    if ticker.endswith(".NS"):
+        return _fetch_equity_from_nse, ticker[:-len(".NS")]
+    return None, None
+
+
 def _fill_gaps_from_nse(ticker, df, period, interval):
-    """For the three indices on both providers, patch any date yfinance left
-    null or omitted entirely using jugaad-data's close for that date instead.
-    yfinance's Indian-index feed can either return a row with a null close
-    for a date still landing, or skip the date's row altogether depending on
-    exactly when it's queried - so "no NaN in df" does not mean "nothing
-    missing", and this always merges rather than trying to detect a gap
-    first. The outer get_price_history cache (max_age_hours) is what bounds
-    how often this runs, not a check here."""
-    nse_symbol = _JUGAAD_FALLBACK_INDEX.get(ticker)
-    if nse_symbol is None or df.empty:
+    """Patch any date yfinance left null or omitted entirely using
+    jugaad-data's close for that date instead, for anything with a
+    jugaad-data equivalent (see _jugaad_fallback). yfinance's Indian feeds
+    can either return a row with a null close for a date still landing, or
+    skip the date's row altogether depending on exactly when it's queried -
+    so "no NaN in df" does not mean "nothing missing", and this always
+    merges rather than trying to detect a gap first. The outer
+    get_price_history cache (max_age_hours) is what bounds how often this
+    runs, not a check here - though with every NSE equity now in scope,
+    that cache window is the only thing standing between this and hammering
+    jugaad's scrape-based feed across a whole watchlist at once."""
+    fetch_fn, nse_symbol = _jugaad_fallback(ticker)
+    if fetch_fn is None or df.empty:
         return df
     try:
-        nse_df = _normalize_dates(_fetch_from_nse(nse_symbol, period, interval))
+        nse_df = _normalize_dates(fetch_fn(nse_symbol, period, interval))
     except Exception:
         return df  # jugaad being unreachable shouldn't break the yfinance result
     if nse_df.empty:
@@ -204,9 +249,10 @@ def get_price_history(ticker, period="1mo", interval="1d", max_age_hours=6):
     """Return OHLCV data for ticker.
 
     Prefix ticker with 'NSE:' to fetch from NSE via jugaad-data, e.g.
-    'NSE:NIFTY AUTO'. All other tickers go through yfinance - except Nifty
-    50, Bank Nifty and Nifty IT, which also get any date yfinance left null
-    filled in from jugaad-data (see _JUGAAD_FALLBACK_INDEX).
+    'NSE:NIFTY AUTO'. All other tickers go through yfinance - and anything
+    with a jugaad-data equivalent (Nifty 50, Bank Nifty, Nifty IT, and every
+    NSE-listed ".NS" equity) also gets any date yfinance left null or
+    omitted filled in from jugaad-data (see _jugaad_fallback).
     Results are cached in SQLite for max_age_hours.
     """
     conn = get_connection()
