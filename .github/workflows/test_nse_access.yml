@@ -1,0 +1,26 @@
+name: Test NSE access
+
+# Manual-only check: does NSE's site respond to GitHub's runner IPs, or does
+# it 403 like it does for most datacenter IPs? Nothing is scheduled here and
+# nothing is committed back - this just runs scripts/discover_nse.py once and
+# prints the result to the Actions log. Temporary, for the F&O events feature
+# spec in fetch_events.txt.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install nselib
+        run: pip install nselib pandas
+
+      - name: Run discovery script
+        run: python scripts/discover_nse.py

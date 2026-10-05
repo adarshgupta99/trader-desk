@@ -219,3 +219,4 @@ __marimo__/
 
 # Local SQLite cache (data_loader.py) - regenerated from yfinance, not source
 market_cache.db
+scratch/
