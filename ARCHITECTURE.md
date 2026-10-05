@@ -283,15 +283,28 @@ clear_price_cache()                    → empties price_cache and cache_meta
 ```
 
 A `NSE:` prefix on the ticker routes to jugaad-data; everything else goes to yfinance —
-except Nifty 50 (`^NSEI`), Bank Nifty (`^NSEBANK`) and Nifty IT (`^CNXIT`), the three Indian
-indices that exist on **both** providers, where yfinance stays primary but every fetch also
-merges in jugaad-data's close for any date yfinance left null or omitted. Neither provider's
-Indian-index feed is reliably ahead of the other near today's session — one has shown a real
-close before the other has it, and vice versa, within the same evening — so this takes
-whichever has the data rather than trusting one source. See `_JUGAAD_FALLBACK_INDEX`. The
-other NSE-prefixed indices (Midcap, Auto, Energy, Defence) have no yfinance equivalent to
-merge against; individual equities aren't covered by this (jugaad-data can fetch them too, via
-`stock_df`, but wiring that in is a separate, bigger change, not yet built).
+except anything with a jugaad-data equivalent, where yfinance stays primary but every fetch
+also merges in jugaad-data's close for any date yfinance left null or omitted. That's Nifty 50
+(`^NSEI`), Bank Nifty (`^NSEBANK`) and Nifty IT (`^CNXIT`) — the three Indian indices that
+exist on **both** providers, via `index_raw` — plus every NSE-listed equity (any `.NS`
+yfinance ticker), via jugaad-data's `stock_df`. Neither provider's Indian feed is reliably
+ahead of the other near today's session — one has shown a real close before the other has it,
+and vice versa, within the same evening — so this takes whichever has the data rather than
+trusting one source. See `_jugaad_fallback()`. The other NSE-prefixed indices (Midcap, Auto,
+Energy, Defence) have no yfinance equivalent to merge against. FX, commodities, and non-Indian
+tickers have no jugaad-data equivalent at all.
+
+`stock_df`'s `DATE` column needs its own fix-up before `_normalize_dates()` can treat it like
+any other provider's output: it comes back as IST midnight minus 5:30 (`2026-10-04 18:30:00`
+for the 5 Oct session) rather than a clean calendar date — the same east-of-UTC rewind already
+fixed for `index_raw` (`b5eaf84`), reaching the app again through a different column shape on a
+different jugaad-data function. `_fetch_equity_from_nse()` adds the offset back before anything
+downstream sees it.
+
+Every NSE equity now being in scope changes the cost profile: a refetch across a whole
+watchlist can mean a jugaad-data call per holding, not just per index. The `max_age_hours=6`
+cache in front of `get_price_history()` is the only throttle — there is no separate rate limit
+or backoff on the jugaad-data calls themselves.
 
 **The cache never lets a worse fetch overwrite a better one.** `_write_to_cache()` used to
 `DELETE` every cached row for a ticker before writing a fresh fetch — so a refetch that came
@@ -518,9 +531,12 @@ with `yfinance` anyway).
 | `d327a03` | 5 Oct 2026 | Adarsh Gupta | Split data_loader.py by concern into storage/prices/watchlists/symbols |
 | `a97c532` | 5 Oct 2026 | Adarsh Gupta | Rewrite ARCHITECTURE.md for the module split |
 | `556a28b` | 6 Oct 2026 | Adarsh Gupta | Fix the price cache silently losing good closes, and merge in jugaad-data for Nifty/Bank Nifty/Nifty IT |
+| `0e5a3fb` | 6 Oct 2026 | Adarsh Gupta | Document the price cache upsert fix and jugaad-data merge in ARCHITECTURE.md |
+| `bf2e49f` | 6 Oct 2026 | Adarsh Gupta | Extend the jugaad-data gap-fill to every NSE equity, not just the 3 indices |
 
 **Deployed:** `a97c532` is the newest commit on `origin/main` — merged from
-`refactor/split-into-modules` and pushed. `556a28b` is local, not yet pushed.
+`refactor/split-into-modules` and pushed. `556a28b`, `0e5a3fb` and `bf2e49f` are local,
+not yet pushed.
 
 ---
 
