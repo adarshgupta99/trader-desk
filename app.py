@@ -468,6 +468,15 @@ def instrument_options():
     return labels, by_label
 
 
+def display_name(ticker):
+    """Friendly instrument name for display, falling back to the raw ticker
+    (e.g. a US ticker typed outside the local NSE/curated table)."""
+    for s in get_all_symbols():
+        if s["ticker"] == ticker:
+            return s["name"]
+    return ticker
+
+
 def pick_instrument(key, placeholder, disabled=False, default=None):
     """Searchable dropdown over the instrument table. Returns a ticker, or None.
 
@@ -843,17 +852,6 @@ elif nav == "Chart":
 
     lbl = (f"<div style='font-size:12px;color:{T2};text-transform:uppercase;"
            f"letter-spacing:0.08em;margin:0 0 4px 0;'>{{}}</div>")
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown(lbl.format("Instrument 1"), unsafe_allow_html=True)
-        t1 = pick_instrument("chart_t1", placeholder="Search instruments",
-                             default=st.session_state["_ct1"]) or ""
-        st.session_state["_ct1"] = t1
-    with c2:
-        st.markdown(lbl.format("Instrument 2 (optional)"), unsafe_allow_html=True)
-        t2 = pick_instrument("chart_t2", placeholder="Search instruments",
-                             default=st.session_state["_ct2"]) or ""
-        st.session_state["_ct2"] = t2
 
     # ── History range ─────────────────────────────────────────────────────────
     # One range with two ways to set it: a preset writes the dates, and editing a
@@ -874,14 +872,17 @@ elif nav == "Chart":
     def _apply_dates():
         st.session_state.chart_period = None   # the dates govern now
 
-    r1, r2, r3 = st.columns([4, 2, 2])
-    with r1:
-        # This control, not the global one, governs the chart below (spec)
-        st.markdown(lbl.format("History — this chart"), unsafe_allow_html=True)
-        chart_period_label = st.segmented_control(
-            "cp", list(CHART_PRESETS), default="3M", label_visibility="collapsed",
-            key="chart_period", on_change=_apply_preset,
-        )
+    c1, c2, r2, r3 = st.columns(4)
+    with c1:
+        st.markdown(lbl.format("Instrument 1"), unsafe_allow_html=True)
+        t1 = pick_instrument("chart_t1", placeholder="Search instruments",
+                             default=st.session_state["_ct1"]) or ""
+        st.session_state["_ct1"] = t1
+    with c2:
+        st.markdown(lbl.format("Instrument 2 (optional)"), unsafe_allow_html=True)
+        t2 = pick_instrument("chart_t2", placeholder="Search instruments",
+                             default=st.session_state["_ct2"]) or ""
+        st.session_state["_ct2"] = t2
     with r2:
         st.markdown(lbl.format("Start"), unsafe_allow_html=True)
         start = st.date_input("s", key="chart_start", on_change=_apply_dates,
@@ -893,6 +894,25 @@ elif nav == "Chart":
                             min_value=earliest, max_value=today,
                             format="DD/MM/YYYY", label_visibility="collapsed")
 
+    r1, r4 = st.columns([4, 2])
+    with r1:
+        # This control, not the global one, governs the chart below (spec)
+        st.markdown(lbl.format("History — this chart"), unsafe_allow_html=True)
+        chart_period_label = st.segmented_control(
+            "cp", list(CHART_PRESETS), default="3M", label_visibility="collapsed",
+            key="chart_period", on_change=_apply_preset,
+        )
+    with r4:
+        # ── Measure ──────────────────────────────────────────────────────────
+        # Click two points on the primary series to see the change between
+        # them. A click replaces Plotly's selection outright (it does not
+        # accumulate), so the two picked points live in session_state, not in
+        # the widget's own return value — each new click is compared against
+        # the last one processed (via its x/point_index "signature") so an
+        # unrelated rerun doesn't get mistaken for a fresh click.
+        st.markdown(lbl.format("&nbsp;"), unsafe_allow_html=True)
+        measure_on = st.toggle("Measure", key="measure_on")
+
     if start > end:
         st.warning("Start date is after the end date — showing nothing. "
                    "Pick a start on or before the end.")
@@ -900,15 +920,6 @@ elif nav == "Chart":
 
     span_label = (chart_period_label if chart_period_label else
                   f"{start:%d %b %Y} – {end:%d %b %Y}")
-
-    # ── Measure ───────────────────────────────────────────────────────────────
-    # Click two points on the primary series to see the change between them.
-    # A click replaces Plotly's selection outright (it does not accumulate), so
-    # the two picked points live in session_state, not in the widget's own
-    # return value — each new click is compared against the last one processed
-    # (via its x/point_index "signature") so an unrelated rerun doesn't get
-    # mistaken for a fresh click.
-    measure_on = st.toggle("Measure", key="measure_on")
 
     scope = (t1.strip(), t2.strip(), start, end)
     if st.session_state.get("measure_scope") != scope:
@@ -939,6 +950,10 @@ elif nav == "Chart":
                        f"and {end:%d %b %Y}")
         else:
             has_t2 = df2 is not None and not df2.empty
+            # Series 2's close aligned to series 1's dates (nearest match) —
+            # needed both to tag a click with instrument B's value at that
+            # date, and later to build the hover tooltip.
+            series2_at_t1 = df2["Close"].reindex(df1.index, method="nearest") if has_t2 else None
 
             # ── Measure: process the click from the previous render ──────────
             # Streamlit syncs the plotly widget's selection into session_state
@@ -960,15 +975,14 @@ elif nav == "Chart":
                     if sig != st.session_state.measure_last_sig:
                         st.session_state.measure_last_sig = sig
                         idx = p.get("point_index")
-                        if idx is not None and 0 <= idx < len(df1):
-                            picked = {"date": df1.index[idx],
-                                      "close": float(df1["Close"].iloc[idx])}
-                        else:
+                        if idx is None or not (0 <= idx < len(df1)):
                             # Snap-to-nearest fallback if point_index is missing
-                            pos = df1.index.get_indexer(
+                            idx = df1.index.get_indexer(
                                 [pd.Timestamp(p["x"])], method="nearest")[0]
-                            picked = {"date": df1.index[pos],
-                                      "close": float(df1["Close"].iloc[pos])}
+                        picked = {"date": df1.index[idx],
+                                  "close": float(df1["Close"].iloc[idx])}
+                        if has_t2:
+                            picked["close2"] = float(series2_at_t1.iloc[idx])
 
                         a, b = st.session_state.measure_a, st.session_state.measure_b
                         if a is None:
@@ -989,7 +1003,9 @@ elif nav == "Chart":
             # Comparison identity: series 1 black solid, series 2 gray dashed
             C1, C2 = T1, T2
             name1, name2 = t1.strip(), (t2.strip() if t2 else "")
+            disp1, disp2 = display_name(name1), (display_name(name2) if name2 else "")
             m_dec = price_decimals(name1)
+            m2_dec = price_decimals(name2) if has_t2 else None
             pct1 = (df1["Close"].iloc[-1] / df1["Close"].iloc[0] - 1) * 100
             pct1_color = UP if pct1 >= 0 else DOWN
 
@@ -1002,7 +1018,7 @@ elif nav == "Chart":
                 f"<span style='display:inline-flex;align-items:center;gap:8px;'>"
                 f"<span style='width:16px;height:0;border-top:2px solid {C1};"
                 f"display:inline-block;'></span>"
-                f"<span style='font-size:14px;color:{T1};font-weight:500;'>{name1}</span>"
+                f"<span style='font-size:14px;color:{T1};font-weight:500;'>{disp1}</span>"
                 f"<span style='font-size:14px;color:{pct1_color};font-weight:600;{TABULAR}'>"
                 f"{signed_pct(pct1)}</span>"
                 f"<span style='font-size:12px;color:{T2};'>{cp_label}</span>"
@@ -1015,7 +1031,7 @@ elif nav == "Chart":
                     f"<span style='display:inline-flex;align-items:center;gap:8px;'>"
                     f"<span style='width:16px;height:0;border-top:2px dashed {C2};"
                     f"display:inline-block;'></span>"
-                    f"<span style='font-size:14px;color:{T1};font-weight:500;'>{name2}</span>"
+                    f"<span style='font-size:14px;color:{T1};font-weight:500;'>{disp2}</span>"
                     f"<span style='font-size:14px;color:{pct2_color};font-weight:600;{TABULAR}'>"
                     f"{signed_pct(pct2)}</span>"
                     f"<span style='font-size:12px;color:{T2};'>{cp_label}</span>"
@@ -1033,15 +1049,32 @@ elif nav == "Chart":
                 pos_a, pos_b = df1.index.get_loc(ma["date"]), df1.index.get_loc(mb["date"])
                 m_bars = pos_b - pos_a + 1
                 m_days = (mb["date"] - ma["date"]).days
+
+                row2 = ""
+                if has_t2 and "close2" in ma and "close2" in mb:
+                    m_chg2 = mb["close2"] - ma["close2"]
+                    m_pct2 = (((mb["close2"] / ma["close2"]) - 1) * 100
+                              if ma["close2"] else 0.0)
+                    m_color2 = UP if m_pct2 >= 0 else DOWN
+                    row2 = (
+                        f"<span style='font-size:12px;color:{T2};'>{disp2}</span>"
+                        f"<span style='font-size:19px;font-weight:700;color:{m_color2};{TABULAR}'>"
+                        f"{signed_pct(m_pct2)}</span>"
+                        f"<span style='font-size:14px;font-weight:600;color:{m_color2};{TABULAR}'>"
+                        f"{signed_price_change(name2, m_chg2, m2_dec)}</span>"
+                    )
+
                 st.markdown(
                     f"<div style='display:flex;gap:26px;align-items:center;flex-wrap:wrap;"
                     f"border:1px solid {BORDER};padding:10px 14px;margin-bottom:12px;'>"
                     f"<span style='font-size:11px;color:{T2};text-transform:uppercase;"
                     f"letter-spacing:0.08em;'>Measured, {m_dir}</span>"
+                    f"<span style='font-size:12px;color:{T2};'>{disp1}</span>"
                     f"<span style='font-size:19px;font-weight:700;color:{m_color};{TABULAR}'>"
                     f"{signed_pct(m_pct)}</span>"
                     f"<span style='font-size:14px;font-weight:600;color:{m_color};{TABULAR}'>"
                     f"{signed_price_change(t1.strip(), m_chg, m_dec)}</span>"
+                    f"{row2}"
                     f"<span style='font-size:13px;color:{T2};{TABULAR}'>{m_bars} bars</span>"
                     f"<span style='font-size:13px;color:{T2};{TABULAR}'>{elapsed_label(m_days)}</span>"
                     f"<span style='font-size:12px;color:{T2};{TABULAR}'>"
@@ -1052,7 +1085,7 @@ elif nav == "Chart":
             elif measure_armed:
                 st.markdown(
                     f"<div style='font-size:12px;color:{T2};margin-bottom:12px;'>"
-                    f"Measure — hover {name1} to preview the change, click to set "
+                    f"Measure — hover {disp1} to preview the change, click to set "
                     f"the end point.</div>",
                     unsafe_allow_html=True,
                 )
@@ -1060,7 +1093,7 @@ elif nav == "Chart":
                 st.markdown(
                     f"<div style='font-size:12px;color:{T2};margin-bottom:12px;'>"
                     f"Measure — click a start point, then an end point, on "
-                    f"{name1}.</div>",
+                    f"{disp1}.</div>",
                     unsafe_allow_html=True,
                 )
 
@@ -1078,12 +1111,12 @@ elif nav == "Chart":
             # the markers. Hover info moves to the markers trace instead.
             fig.add_trace(go.Scatter(
                 x=df1.index, y=df1["Close"],
-                name=name1, mode="lines",
+                name=disp1, mode="lines",
                 line=dict(color=C1, width=1.8),
                 yaxis="y1",
                 hoverinfo="skip" if measure_on else None,
                 hovertemplate=(None if measure_on else
-                               "<b>%{x|%d %b %Y}</b><br>%{y:,.4f}<extra>" + name1 + "</extra>"),
+                               "<b>%{x|%d %b %Y}</b><br>%{y:,.4f}<extra>" + disp1 + "</extra>"),
             ))
 
             if measure_ready:
@@ -1094,7 +1127,6 @@ elif nav == "Chart":
                 )
 
             yaxis2_cfg = None
-            series2_at_t1 = None
             if has_t2:
                 # Streamlit's selection capture drops the whole click when more
                 # than one trace reports a point for it, which happens whenever
@@ -1105,17 +1137,15 @@ elif nav == "Chart":
                 # match) rather than getting its own tooltip.
                 fig.add_trace(go.Scatter(
                     x=df2.index, y=df2["Close"],
-                    name=name2, mode="lines",
+                    name=disp2, mode="lines",
                     line=dict(color=C2, width=1.8, dash="dash"),
                     yaxis="y2",
                     hoverinfo="skip" if measure_on else None,
                     hovertemplate=(None if measure_on else
-                                   "<b>%{x|%d %b %Y}</b><br>%{y:,.4f}<extra>" + name2 + "</extra>"),
+                                   "<b>%{x|%d %b %Y}</b><br>%{y:,.4f}<extra>" + disp2 + "</extra>"),
                 ))
-                if measure_on:
-                    series2_at_t1 = df2["Close"].reindex(df1.index, method="nearest")
                 yaxis2_cfg = dict(
-                    title=dict(text=name2, font=dict(size=12, color=T2)),
+                    title=dict(text=disp2, font=dict(size=12, color=T2)),
                     tickfont=dict(size=12, color=T2), showgrid=False,
                     zeroline=False, overlaying="y", side="right",
                     tickformat=",.0f",   # match left axis; never mix raw with k
@@ -1127,25 +1157,26 @@ elif nav == "Chart":
                 # Its position must match measure_curve, computed above from
                 # the same has_t2 before any click on it could be processed.
                 assert len(fig.data) == measure_curve
-                m2_dec = price_decimals(name2) if has_t2 else None
                 if measure_armed:
                     # Point A is picked, point B isn't yet — mirror TradingView's
                     # live readout by showing the change from A to whatever the
                     # cursor is over, continuously, with no server round-trip
                     # (the hover text is computed client-side from customdata
                     # baked in at render time; moving the mouse never reruns
-                    # the app).
+                    # the app). With a second instrument, point A also pinned
+                    # its value, so both series show their own % change from
+                    # the same start date as the cursor moves.
                     base = ma["close"]
-                    if has_t2:
+                    if has_t2 and "close2" in ma:
+                        base2 = ma["close2"]
                         customdata = [
                             (signed_pct((c / base - 1) * 100),
-                             signed_price_change(name1, c - base, m_dec),
-                             format_price(name2, c2, m2_dec))
+                             signed_pct((c2 / base2 - 1) * 100) if base2 else "+0.00%")
                             for c, c2 in zip(df1["Close"], series2_at_t1)
                         ]
-                        hovertemplate = ("<b>%{x|%d %b %Y}</b><br>%{customdata[0]}<br>"
-                                          "%{customdata[1]} from start<br>"
-                                          + name2 + ": %{customdata[2]}<extra></extra>")
+                        hovertemplate = ("<b>%{x|%d %b %Y}</b><br>" + disp1 +
+                                          ": %{customdata[0]}<br>" +
+                                          disp2 + ": %{customdata[1]}<extra></extra>")
                     else:
                         customdata = [
                             (signed_pct((c / base - 1) * 100),
@@ -1157,11 +1188,11 @@ elif nav == "Chart":
                 elif has_t2:
                     customdata = [format_price(name2, c2, m2_dec) for c2 in series2_at_t1]
                     hovertemplate = ("<b>%{x|%d %b %Y}</b><br>%{y:,.4f}<br>"
-                                      + name2 + ": %{customdata}<extra>" + name1 + "</extra>")
+                                      + disp2 + ": %{customdata}<extra>" + disp1 + "</extra>")
                 else:
                     customdata = None
                     hovertemplate = ("<b>%{x|%d %b %Y}</b><br>%{y:,.4f}<extra>"
-                                      + name1 + "</extra>")
+                                      + disp1 + "</extra>")
                 fig.add_trace(go.Scatter(
                     x=df1.index, y=df1["Close"],
                     mode="markers", marker=dict(size=7, color=C1, opacity=0.02),
@@ -1189,7 +1220,7 @@ elif nav == "Chart":
                 font=dict(family="Inter, Arial, sans-serif"),
                 xaxis=dict(showgrid=False, showline=False,
                            tickfont=dict(size=12, color=T2), tickformat=tickformat_x),
-                yaxis=dict(title=dict(text=name1, font=dict(size=12, color=T2)),
+                yaxis=dict(title=dict(text=disp1, font=dict(size=12, color=T2)),
                            tickfont=dict(size=12, color=T2), showgrid=True,
                            gridcolor=GRID, zeroline=False, side="left",
                            tickformat=",.0f"),
