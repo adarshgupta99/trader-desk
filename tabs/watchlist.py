@@ -6,13 +6,14 @@ confirmation step anywhere here.
 
 import streamlit as st
 
-from data_loader import (LIST_MAX, WATCHLIST_PRESETS, add_to_list,
-                         count_list_with_data, get_custom_lists,
-                         get_list_items, get_price_history, remove_from_list,
-                         rename_custom_list)
 from formatting import format_price, price_decimals, signed_pct
-from instruments import PRESET_INDEX_TICKER, PRESET_NAMES, pick_instrument
+from instruments import pick_instrument
+from prices import get_price_history
 from theme import TABULAR, palette
+from watchlists import (LIST_MAX, PRESET_INDEX_TICKER, PRESET_NAMES,
+                        WATCHLIST_PRESETS, add_to_list, count_list_with_data,
+                        get_custom_lists, get_list_items, remove_from_list,
+                        rename_custom_list)
 
 
 def _watchlist_grid(watchlist, show_1w, list_id=None):

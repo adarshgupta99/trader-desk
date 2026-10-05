@@ -7,11 +7,16 @@ in tabs/, and anything two sections share lives in a module next to this one:
 
     theme.py         design tokens for both themes, and the stylesheets
     formatting.py    number / change formatting rules
-    periods.py       the history ranges, and date-range price lookups
-    instruments.py   asset lists, index views, the instrument picker
-    constituents.py  approximate index weights
     components.py    the price card shared by five tabs
-    data_loader.py   prices, SQLite cache, watchlist storage
+
+    periods.py       the history ranges, and date-range price lookups
+    instruments.py   curated asset lists, the instrument picker
+    constituents.py  approximate index weights
+
+    storage.py       where market_cache.db lives, and its schema
+    prices.py        price history and its cache (yfinance + jugaad-data)
+    watchlists.py    custom lists, and the read-only index views
+    symbols.py       the searchable instrument table
     events_db.py     read-only access to events.db
 
 If you are adding a section: write tabs/<name>.py with a render(), import it
@@ -22,7 +27,8 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 import theme
-from data_loader import clear_price_cache, refresh_symbols
+from prices import clear_price_cache
+from symbols import refresh_symbols
 from tabs import asset_grids, chart, events, watchlist
 
 st.set_page_config(page_title="Trader Desk", layout="wide", page_icon="📊", initial_sidebar_state="collapsed")

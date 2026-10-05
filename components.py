@@ -7,9 +7,9 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from constituents import CONSTITUENTS
-from data_loader import get_price_history
 from formatting import signed_pct
 from periods import PERIOD_LABELS
+from prices import get_price_history
 from theme import TABULAR, palette
 
 

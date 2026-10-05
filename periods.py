@@ -6,7 +6,7 @@ from datetime import date
 
 import pandas as pd
 
-from data_loader import get_price_history
+from prices import get_price_history
 
 PERIODS = {"1W": "5d", "1M": "1mo", "3M": "3mo", "6M": "6mo", "1Y": "1y", "3Y": "3y"}
 PERIOD_LABELS = {v: k for k, v in PERIODS.items()}

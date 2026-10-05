@@ -1,25 +1,13 @@
 """
-What can be plotted: the curated per-tab asset lists, the watchlist index
-views, and the searchable instrument picker over the local symbol table.
+What can be plotted: the curated per-tab asset lists, and the searchable
+instrument picker over the local symbol table.
 """
 
 from collections import Counter
 
 import streamlit as st
 
-from data_loader import CURATED_INSTRUMENTS, get_all_symbols
-
-PRESET_NAMES = ["Nifty 50", "Nifty Midcap", "Nifty Auto", "Nifty IT", "Bank Nifty"]
-# Index-level ticker for each read-only view's own 1D/1W return, shown beside
-# the Change window toggle. Nifty Midcap has no dedicated index ticker in the
-# app, so it reuses Nifty Mid Select (Adarsh's call, 5 Oct 2026).
-PRESET_INDEX_TICKER = {
-    "Nifty 50": "^NSEI",
-    "Nifty Midcap": "NSE:NIFTY MID SELECT",
-    "Nifty Auto": "NSE:NIFTY AUTO",
-    "Nifty IT": "^CNXIT",
-    "Bank Nifty": "^NSEBANK",
-}
+from symbols import CURATED_INSTRUMENTS, get_all_symbols
 
 
 def instrument_options():

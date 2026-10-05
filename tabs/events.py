@@ -9,10 +9,10 @@ from datetime import datetime, timedelta, timezone
 
 import streamlit as st
 
-from data_loader import WATCHLIST_PRESETS, get_custom_lists, get_list_items
 from events_db import IST, get_last_success, get_upcoming_events
-from instruments import PRESET_NAMES
 from theme import TABULAR, palette
+from watchlists import (PRESET_NAMES, WATCHLIST_PRESETS, get_custom_lists,
+                        get_list_items)
 
 SUBTYPE_LABELS = {
     "dividend": "Dividend", "split": "Split", "bonus": "Bonus",
