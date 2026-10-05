@@ -43,7 +43,11 @@ trader-desk/
 ├── scripts/
 │   ├── refresh_symbol_names.py  # Maintenance: pull full NSE company names into symbols.csv
 │   ├── fetch_events.py          # Writes events.db from NSE's two event feeds
-│   └── discover_nse.py          # One-off: dump nselib's real output shape
+│   ├── discover_nse.py          # One-off: dump nselib's real output shape
+│   └── discover_intraday.py     # Step 0 for the correlation feature: measures Yahoo's 15m feed
+├── docs/
+│   └── intraday_discovery.txt   # Output of the above — the numbers the feature is sized against
+├── fno_sectors.json    # 213 F&O stocks with sector labels (hand-supplied, 5 Oct 2026)
 ├── .github/workflows/
 │   └── test_nse_access.yml      # Manual-only: does NSE answer GitHub's runner IPs?
 ├── .streamlit/
@@ -534,6 +538,47 @@ whether NSE 403s datacenter IPs — it does not, 213 rows came back.
 
 ---
 
+### `scripts/discover_intraday.py`, `docs/intraday_discovery.txt` and `fno_sectors.json`
+
+Step 0 of the F&O correlation matrix (spec: `correlation_matrix_spec-43ee700c.txt`).
+A diagnostic, not part of the app — nothing imports it, and it writes no bar data
+into the repo. It exists because the feature's whole design depends on what Yahoo's
+15-minute feed actually returns, and that was worth measuring rather than assuming.
+
+`fno_sectors.json` is hand-supplied: 213 F&O stocks, each with sector labels, themes
+and a `sector_source` provenance field. Every stock has at least one sector. It has no
+turnover field, which is why the script ranks liquidity from the bars themselves.
+
+What the run on 6 Oct 2026 established:
+
+- **All 213 tickers resolve as plain `<symbol>.NS`**, zero failures, including the
+  four awkward ones (`BAJAJ-AUTO`, `GVT&D`, `M&M`, `NAM-INDIA`). No symbol-mapping
+  table is needed — the spec had asked for one.
+- **One `yf.download` of all 213 with `threads=True` took 6.0 seconds** and returned
+  306,280 bars. Batching in the eventual fetch job is therefore politeness toward
+  Yahoo's undocumented limits, not a performance measure.
+- **15m reaches exactly 60 days.** 61 days returns an empty frame with an explicit
+  "within the last 60 days" error. A hard ceiling, like the 730-day one on hourly
+  bars that `prices.py` already works around.
+- **50.6 MB for the whole tier**, 306,280 rows at 165 bytes each, measured in the
+  real schema after `VACUUM`. The spec's own ~40 MB estimate was about 25% low.
+- **Zero-volume bars are feed artifacts, not quiet bars.** 217 of 306,280 (0.0709%).
+  They are all the 15:15 bar, they cluster on three dates rather than on particular
+  symbols, and the price moved inside every one inspected. So volume is *not* used as
+  a staleness test; a bar counts as stale only when its O/H/L/C all equal the previous
+  close (231 bars, 0.0754%). The decisive number: the stale rate among the 20 thinnest
+  names by traded value is 0.0941% against 0.1075% for the 20 thickest — marginally
+  *more* common in the most liquid names, so it does not track illiquidity at all. The
+  spec's original volume-based policy rested on the opposite claim.
+- **Bars are not aligned across tickers** — min 1,423, median 1,438, max 1,440-odd
+  over the same 58 sessions, with most stocks missing a bar in ~10 of them and not the
+  same bar. Pairwise-complete correlation is required, not a refinement.
+
+Re-run with `.venv/bin/python scripts/discover_intraday.py`. The size probe writes a
+throwaway SQLite file to `scratch/` (gitignored).
+
+---
+
 ### `test_key.py`
 A scratch script. Run it once with `python test_key.py` to confirm your `GEMINI_API_KEY` in `.env` works. Not part of the app itself.
 
@@ -621,6 +666,10 @@ are local on `main`, not yet pushed.
 **In progress:** `feature/hourly-latest-close` branches off `fea18b1` and carries the shift
 to hourly-resampled daily candles (see `prices.py` above). Not merged, not pushed.
 
+`feature/fno-correlation` branches off the hourly branch and carries the F&O correlation
+matrix. Step 0 (the discovery run) is done; the store, fetch job, compute module and tab
+are not built yet. Not merged, not pushed.
+
 ---
 
 ## What's Coming
@@ -641,3 +690,14 @@ to hourly-resampled daily candles (see `prices.py` above). Not merged, not pushe
   `permissions: contents: write` and Adarsh's go-ahead before it runs on a schedule.
 - **Earnings call sentiment tracker:** the Week 5-6 spec in `CLAUDE.md`. It depends on the
   Events calendar already built here for results dates.
+- **F&O correlation matrix:** spec in `correlation_matrix_spec-43ee700c.txt`, on
+  `feature/fno-correlation`. Step 0 is done (see `scripts/discover_intraday.py` above);
+  still to build are `data_layer/intraday_store.py`, `jobs/fetch_intraday.py`,
+  `analytics/tiers.py`, `analytics/correlation.py`, `tests/test_correlation.py` and the
+  Correlation tab. Two tiers only — 15m bars for lookbacks of 1-60 days, the existing daily
+  cache above that. The 1-minute tier was dropped on 6 Oct 2026: the Epps effect biases
+  fine-grained correlations toward zero, worst for exactly the illiquid names where the
+  estimate would matter most, and 1m history older than 7 days is unrecoverable from Yahoo,
+  which would have made the fetch job mandatory rather than an optimisation. Open: whether
+  the bar store is ever needed on a deployed instance — the app is localhost-only and the
+  repo private, so the spec's rollup-CSV fallback is unbuilt.
