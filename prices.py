@@ -20,7 +20,8 @@ null or omitted.
 get_price_history() is the only thing other modules should need.
 """
 
-from datetime import datetime, timedelta, timezone, date as date_type
+from datetime import datetime, timedelta, timezone, date as date_type, time as time_type
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import yfinance as yf
@@ -41,6 +42,30 @@ _JUGAAD_FALLBACK_INDEX = {
     "^NSEBANK": "NIFTY BANK",
     "^CNXIT": "NIFTY IT",
 }
+
+
+# NSE's session, plus a tail past the 15:30 bell so the closing hourly bar is
+# picked up once it prints. Inside this window prices are actually moving and
+# the cache is allowed to go stale in minutes; outside it nothing has changed
+# and six hours is plenty.
+_IST = ZoneInfo("Asia/Kolkata")
+_SESSION_OPEN = time_type(9, 15)
+_SESSION_CLOSE = time_type(15, 45)
+_INTRADAY_CACHE_HOURS = 10 / 60
+
+
+def _in_nse_session(now=None):
+    """Whether NSE is mid-session right now, by the clock and the weekday.
+
+    No trading-holiday calendar: on a holiday this returns True and the hourly
+    fetch simply finds no new bars, which costs one wasted yfinance call and
+    changes nothing in the cache. Worth it to avoid depending on a holiday
+    list that silently goes out of date.
+    """
+    now = (now or datetime.now(timezone.utc)).astimezone(_IST)
+    if now.weekday() > 4:
+        return False
+    return _SESSION_OPEN <= now.time() <= _SESSION_CLOSE
 
 
 def clear_price_cache():
@@ -344,6 +369,12 @@ def get_price_history(ticker, period="1mo", interval="1d", max_age_hours=6):
     yfinance path always asks for hourly and aggregates. Results are cached
     in SQLite for max_age_hours.
     """
+    live = _in_nse_session()
+    if live:
+        # min(), not assignment: the session can only make the cache fresher,
+        # never staler than what the caller asked for.
+        max_age_hours = min(max_age_hours, _INTRADAY_CACHE_HOURS)
+
     conn = get_connection()
     try:
         if _is_fresh(conn, ticker, period, interval, max_age_hours):
@@ -354,7 +385,15 @@ def get_price_history(ticker, period="1mo", interval="1d", max_age_hours=6):
             df = _fetch_from_nse(nse_symbol, period, interval)
         else:
             df = _fetch_daily_via_hourly(ticker, period, interval)
-            df = _fill_gaps_from_nse(ticker, df, period, interval)
+            # jugaad-data is skipped mid-session on purpose. Its feeds are
+            # EOD-derived and publish after the bell, so during the session it
+            # has nothing today that the hourly bars don't already have - and
+            # it is the scrape-based source with real flagging risk, so
+            # calling it every 10 minutes would be all cost and no data. It
+            # runs as before once the session ends, which is when it is
+            # actually the thing that fills in an official close.
+            if not live:
+                df = _fill_gaps_from_nse(ticker, df, period, interval)
 
         if df.empty:
             return df

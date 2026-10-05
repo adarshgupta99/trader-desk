@@ -310,6 +310,23 @@ feed alone rather than taking the result down with it.
 `interval` is the cache's row identity, not a request parameter to yfinance — the yfinance path
 always asks for hourly and aggregates. All call sites pass the default `"1d"`.
 
+**The cache window tightens to 10 minutes while NSE is open.** `_in_nse_session()` is true
+Mon–Fri between 09:15 and 15:45 IST (the tail runs past the 15:30 bell so the closing hourly
+bar is picked up once it prints), and inside it `max_age_hours` drops to 10 minutes — via
+`min()`, so the session can only ever make the cache fresher than the caller asked, never
+staler. Outside the session it is the usual 6 hours. There is no trading-holiday calendar: on
+a holiday the window is still "open" and the hourly fetch just finds no new bars, costing one
+wasted yfinance call and changing nothing — preferred over depending on a holiday list that
+goes stale silently.
+
+**jugaad-data is deliberately skipped mid-session.** Its feeds are EOD-derived and publish
+after the bell, so during the session it holds nothing for today that the hourly bars don't
+already have — and it is the scrape-based source with real NSE flagging risk, so calling it
+every 10 minutes would be pure cost for zero data. It runs exactly as before once the session
+ends, which is when it is actually the thing that supplies an official close. Historical rows
+it previously filled are not at risk from this: the upsert only touches dates present in the
+new fetch, so a date the hourly feed has no bars for keeps its cached value.
+
 A `NSE:` prefix on the ticker routes to jugaad-data; everything else goes to yfinance —
 except anything with a jugaad-data equivalent, where yfinance stays primary but every fetch
 also merges in jugaad-data's close for any date the combined hourly-plus-daily result above
