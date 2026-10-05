@@ -73,6 +73,46 @@ lot, not the current week's scope. If behind by Thursday, drop the week's
 - **Week 4 (26-31 October):** Tag news with affected assets, direction, and confidence; hand-label 50 items and measure accuracy. Add batching and a cost cap. Demo: tagged news and measured accuracy. Cut first: direction score, keep asset tags.
 - **Week 5 (2-7 November):** Match news timestamps to price moves in surrounding windows; build a "Why did X move" panel with ranked candidate headlines. Demo: click a chart move to see likely drivers. Cut first: multi-asset view, start with one asset.
 - **Week 6 (9-14 November):** Store 5-minute bars daily, add z-score abnormal-move detection, tighter windows, confidence labels, and a noise filter. Demo: explanations for intraday moves on three real past days. Cut first: confidence labels.
+```
+## Week 5-6 task: Earnings call sentiment tracker
+
+GOAL
+For watchlist companies with an earnings call, fetch the transcript on/after the results date, quantify management tone, and track it quarter over quarter. The output is a sentiment TREND per company, not a one-off score.
+
+DEPENDENCIES (must exist first - do not start before these)
+- Events calendar feed (NSE corporate event calendar) supplying results dates per watchlist ticker
+- A storage layer (SQLite table) for per-quarter results
+- Gemini API access via .env key (already set up)
+
+DATA SOURCES (in priority order)
+1. NSE/BSE corporate announcement feed: companies are legally required to file concall transcripts as PDFs. Fetch the filing, extract text (pdftotext or pypdf).
+2. Screener.in Concalls section for the company, as fallback.
+3. US tickers: Financial Modeling Prep transcript API (free tier) or Motley Fool transcripts.
+If no transcript is found, mark the quarter as "transcript unavailable" - never substitute a news article or results press release and treat it as a transcript.
+
+METHOD (two tracks, both required)
+Track A - deterministic baseline: Loughran-McDonald finance dictionary counts (positive, negative, uncertainty, litigious wordlists) over the transcript text. Report counts normalized per 1000 words. No model, fully reproducible.
+Track B - LLM extraction: chunk the transcript, split "management commentary" from "analyst Q&A", and send each to Gemini (flash tier) with a prompt returning strict JSON:
+  {tone_score: -2..+2, guidance: "raised|maintained|lowered|none", key_numbers: [...], new_risks_vs_prior_quarter: [...], hedging_language_examples: [...]}
+Score management and Q&A SEPARATELY - Q&A tone divergence from management tone is itself a signal worth storing.
+Do NOT use FinBERT - it does both jobs worse than these two tracks.
+
+STORAGE SCHEMA (per company per quarter)
+ticker, quarter, call_date, transcript_source_url, lm_positive, lm_negative, lm_uncertainty, mgmt_tone, qa_tone, guidance, extraction_json, created_at
+
+UI
+- On the Chart tab for a ticker: sentiment trend line (mgmg tone and QA tone over quarters) under the price chart, aligned by date.
+- Follow the CLAUDE.md design language: black/orange convention, tabular numbers, no new panels beyond this.
+
+CONSTRAINTS
+- Polite fetching only: cache everything locally, never re-download a transcript already stored, no parallel hammering of NSE/Screener (rate limits and account flagging risk).
+- Read-only feature: it must never touch watchlist state.
+- Gemini cost guard: max ~20 calls per transcript; log token usage.
+
+ACCEPTANCE TEST
+- Run on one completed quarter for RELIANCE: LM counts reproducible on re-run, Gemini JSON parses cleanly, and the stored row links to the actual NSE/Screener transcript URL.
+- Sentiment chart renders for a ticker with >= 2 stored quarters.
+```
 - **Week 7 (16-21 November):** Telegram abnormal-move alerts with top likely driver; morning brief of overnight moves and tagged news; first parked feature. Demo: an alert arriving on the phone unprompted. Cut first: morning brief, keep alerts.
 - **Week 8 (23-28 November):** Event studies: after news type X, what did asset Y do over 1h/1d? Build a hit-rate table and the second parked feature. Demo: hit-rate page with honest sample sizes. Cut first: backtesting, keep the chosen feature.
 - **Week 9 (30 November-5 December; rest 6 December):** Buffer, bug fixes, README, screenshots, two-minute demo video, clean deploy. No new features. Portfolio demo must respect data-use limits; keep the repo private unless Adarsh chooses otherwise. Cut first: anything unfinished.
