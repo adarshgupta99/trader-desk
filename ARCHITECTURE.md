@@ -226,6 +226,13 @@ replaces nothing, so there is no confirmation step.
 
 **SQLite tables:**
 - `price_cache` — OHLCV rows keyed by (ticker, period, interval, date)
+
+**Dates are exchange-local trading dates.** yfinance returns daily bars stamped at
+exchange-local midnight (`2026-10-02 00:00:00+09:00` for KOSPI). `_write_to_cache()` keeps
+that calendar date and re-tags it as UTC midnight — the same convention `_fetch_from_nse()`
+already used — rather than converting to true UTC, which rewound the date by a day for every
+market east of UTC. Storage stays one consistent format so `ORDER BY date` sorts correctly,
+and display sites can call `strftime` with no timezone handling of their own.
 - `cache_meta` — last fetch timestamp per (ticker, period, interval)
 - `symbols` — (ticker, name, kind); rebuilt from `data/symbols.csv` on every startup
 - `symbols_meta` — bookkeeping for the symbols table
@@ -343,4 +350,7 @@ with `yfinance` anyway).
   `weight = price × freeFloat / Σ`, where `freeFloat` is a share count in crores. The formula
   was validated to the decimal against all five Indian indices but is **not yet built in**.
 - **News tab:** `news_loader.py` is in the repo but unwired; it was held back from deploy.
+- **Staleness indicator:** the `NSE:`-prefixed indices (Nifty Midcap, Nifty Auto) lag because
+  `jugaad_data.nse.index_raw` itself publishes late — a last close more than one trading day
+  old is upstream, not a cache bug. Offered but not built: flag that in the UI.
 - **Week 2 remaining:** Return heatmap (1d/1w/1m), cross-asset correlation matrix (cut-first)
