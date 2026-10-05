@@ -382,7 +382,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    f"<div style='border-top:2px solid {T1};margin:14px 0 0 0;'></div>",
+    f"<div style='border-top:2px solid {T1};margin:-8px 0 0 0;'></div>",
     unsafe_allow_html=True,
 )
 
