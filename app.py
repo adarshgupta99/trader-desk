@@ -18,6 +18,11 @@ in tabs/, and anything two sections share lives in a module next to this one:
     watchlists.py    custom lists, and the read-only index views
     symbols.py       the searchable instrument table
     events_db.py     read-only access to events.db
+    fno.py           the 213-stock F&O universe and sector lookup
+
+    analytics/       correlation.py, tiers.py - pure computation, no I/O
+    data_layer/       intraday_store.py - the bulk-bar SQLite store
+    jobs/            fetch_intraday.py - run from cron, not from the app
 
 If you are adding a section: write tabs/<name>.py with a render(), import it
 below, and add its name to NAV.
@@ -29,7 +34,7 @@ import streamlit.components.v1 as components
 import theme
 from prices import clear_price_cache
 from symbols import refresh_symbols
-from tabs import asset_grids, chart, events, watchlist
+from tabs import asset_grids, chart, correlation, events, watchlist
 
 st.set_page_config(page_title="Trader Desk", layout="wide", page_icon="📊", initial_sidebar_state="collapsed")
 
@@ -65,7 +70,7 @@ st.markdown(
 # Only the selected section is rendered. st.tabs would run every tab's body on
 # every interaction — 53 charts rebuilt to show at most 8 — which cost ~650ms a
 # click regardless of what was clicked.
-NAV = ["Watchlist", "Chart", "Indices", "India", "FX", "Commodities", "Volatility", "Events"]
+NAV = ["Watchlist", "Chart", "Indices", "India", "FX", "Commodities", "Volatility", "Events", "Correlation"]
 
 # `required` keeps a section selected: without it, clicking the active item
 # deselects it and the app falls back to the first section.
@@ -80,6 +85,8 @@ elif nav == "Chart":
     chart.render()
 elif nav == "Events":
     events.render()
+elif nav == "Correlation":
+    correlation.render()
 elif nav in asset_grids.GRIDS:
     asset_grids.render(nav)
 

@@ -1,18 +1,27 @@
 """
 Price history, and the SQLite cache in front of it.
 
-Two providers behind one function: yfinance for everything, and jugaad-data
-for the NSE indices yfinance does not carry. For anything with a jugaad-data
-equivalent - the three Indian indices on both providers (Nifty 50, Bank
-Nifty, Nifty IT), plus every NSE-listed equity - yfinance stays primary but
-every fetch also merges in jugaad-data, so a date yfinance left null or
-omitted entirely still shows up if jugaad has it. Each provider's Indian
-feed is independently flaky about when a session's close lands, and not
-reliably in the same direction, so neither is "the" source on its own.
+Every caller still gets back one daily OHLCV row per date - that external
+shape hasn't changed. What feeds those rows has: for any date within
+yfinance's 1h retention window (a rolling ~2 years back from today, capped
+at 730 days - see _HOURLY_MAX_DAYS), the daily candle is built by resampling
+hourly bars (open = first bar, high/low = session extremes, close = last
+bar) instead of trusting yfinance's own daily feed. The daily feed is only
+used for dates older than that window. This matters because the *last*
+hourly bar of a session is reliably the real close the moment it prints,
+where yfinance's daily feed for Indian tickers can come back null or
+missing entirely for hours after a session ends.
+
+On top of that, jugaad-data still fills in gaps for anything with a
+jugaad-data equivalent - the three Indian indices on both providers (Nifty
+50, Bank Nifty, Nifty IT), plus every NSE-listed equity - exactly as before:
+unchanged, and still only touching dates the combined yfinance result left
+null or omitted.
 get_price_history() is the only thing other modules should need.
 """
 
-from datetime import datetime, timedelta, timezone, date as date_type
+from datetime import datetime, timedelta, timezone, date as date_type, time as time_type
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import yfinance as yf
@@ -33,6 +42,63 @@ _JUGAAD_FALLBACK_INDEX = {
     "^NSEBANK": "NIFTY BANK",
     "^CNXIT": "NIFTY IT",
 }
+
+
+# NSE's session, plus a tail past the 15:30 bell so the closing hourly bar is
+# picked up once it prints. Inside this window prices are actually moving and
+# the cache is allowed to go stale in minutes; outside it nothing has changed
+# and six hours is plenty.
+_IST = ZoneInfo("Asia/Kolkata")
+_SESSION_OPEN = time_type(9, 15)
+_SESSION_CLOSE = time_type(15, 45)
+_INTRADAY_CACHE_HOURS = 10 / 60
+
+
+# Instruments that actually trade on the Indian session. The INR pairs are in
+# here because the rupee's onshore market runs alongside NSE - they move on
+# this clock. Everything else the app carries (US/European/Asian indices, VIX,
+# the metals and crude contracts, non-INR pairs) does not, so refreshing it on
+# an Indian clock would be requests spent on a closed or unrelated market.
+_INDIAN_INDEX_TICKERS = frozenset({"^NSEI", "^NSEBANK", "^CNXIT"})
+_INR_PAIRS = frozenset({"USDINR=X", "EURINR=X"})
+
+
+def _has_intraday_source(ticker):
+    """Whether ticker both trades on the Indian session and has a source that
+    can actually show a price mid-session.
+
+    The NSE:-prefixed indices (Nifty Auto, Energy, Mid Select, Defence) are
+    Indian but deliberately excluded: yfinance does not carry them at all, so
+    jugaad-data's EOD feed is their only source and it does not publish until
+    after the bell. Refreshing them every 10 minutes would be the same
+    all-cost-no-data scraping the mid-session jugaad skip exists to avoid.
+
+    Kept separate from _JUGAAD_FALLBACK_INDEX, which happens to hold the same
+    three index tickers but means something else entirely ("has a second
+    provider to merge from") - they would drift apart the moment either list
+    changes for its own reasons.
+    """
+    if ticker.startswith(NSE_PREFIX):
+        return False
+    return (
+        ticker.endswith(".NS")
+        or ticker in _INDIAN_INDEX_TICKERS
+        or ticker in _INR_PAIRS
+    )
+
+
+def _in_nse_session(now=None):
+    """Whether NSE is mid-session right now, by the clock and the weekday.
+
+    No trading-holiday calendar: on a holiday this returns True and the hourly
+    fetch simply finds no new bars, which costs one wasted yfinance call and
+    changes nothing in the cache. Worth it to avoid depending on a holiday
+    list that silently goes out of date.
+    """
+    now = (now or datetime.now(timezone.utc)).astimezone(_IST)
+    if now.weekday() > 4:
+        return False
+    return _SESSION_OPEN <= now.time() <= _SESSION_CLOSE
 
 
 def clear_price_cache():
@@ -89,15 +155,8 @@ def _normalize_dates(df):
     return df
 
 
-# ── yfinance path ─────────────────────────────────────────────────────────────
-
-def _fetch_from_yfinance(ticker, period, interval):
-    df = yf.Ticker(ticker).history(period=period, interval=interval)
-    return df[["Open", "High", "Low", "Close", "Volume"]]
-
-
-# ── jugaad-data path (NSE indices) ────────────────────────────────────────────
-
+# How far back each period label reaches, in calendar days. Shared: it sizes
+# the hourly request below as well as both jugaad-data fetches.
 _PERIOD_TO_DAYS = {
     "5d": 7,
     "1mo": 35,
@@ -106,6 +165,87 @@ _PERIOD_TO_DAYS = {
     "1y": 370,
     "3y": 1100,
 }
+
+
+# ── yfinance path ─────────────────────────────────────────────────────────────
+
+def _fetch_from_yfinance(ticker, period, interval):
+    df = yf.Ticker(ticker).history(period=period, interval=interval)
+    return df[["Open", "High", "Low", "Close", "Volume"]]
+
+
+# Yahoo hard-refuses a 1h request whose range starts more than 730 days back
+# ("The requested range must be within the last 730 days"), for every ticker,
+# Indian or not. Stay under it rather than on it. Note this is a *rolling*
+# window anchored to today, not a fixed archive: it slides forward daily, so
+# the daily feed below is permanently needed for anything older.
+_HOURLY_MAX_DAYS = 720
+
+
+def _fetch_hourly_from_yfinance(ticker, days):
+    df = yf.Ticker(ticker).history(
+        period=f"{min(days, _HOURLY_MAX_DAYS)}d", interval="1h"
+    )
+    if df.empty:
+        return pd.DataFrame()
+    return df[["Open", "High", "Low", "Close", "Volume"]]
+
+
+def _resample_hourly_to_daily(df):
+    """Collapse 1h bars into one candle per trading session.
+
+    Grouping is on the tz-aware index's own local date, which is the
+    exchange's calendar day - so an NSE session buckets as one Indian day and
+    a US session as one New York day, without either being split or merged by
+    a UTC conversion. The last bar's close is the session close (NSE's 15:15
+    bucket, New York's 15:30, whatever the exchange's final hour is) - taken
+    positionally rather than by hardcoded clock time so it holds across
+    exchanges, and so a session still in progress yields its latest price
+    instead of nothing.
+    """
+    if df.empty:
+        return df
+    daily = df.groupby(df.index.date).agg(
+        Open=("Open", "first"),
+        High=("High", "max"),
+        Low=("Low", "min"),
+        Close=("Close", "last"),
+        Volume=("Volume", "sum"),
+    )
+    daily.index = pd.to_datetime(daily.index, utc=True)
+    return daily.dropna(subset=["Close"])
+
+
+def _fetch_daily_via_hourly(ticker, period, interval):
+    """Daily candles for `period`, resampled from hourly bars wherever hourly
+    reaches, and from yfinance's daily feed for dates older than that.
+
+    Hourly wins on every date both cover - that is the whole point of the
+    shift. A hourly fetch that fails or comes back empty (an unsupported
+    ticker, a network blip) must not take the daily result down with it, so
+    the daily feed is fetched whenever hourly cannot cover the full span, and
+    as a standalone fallback when hourly yields nothing at all.
+    """
+    days = _PERIOD_TO_DAYS.get(period, 35)
+    try:
+        hourly = _normalize_dates(
+            _resample_hourly_to_daily(_fetch_hourly_from_yfinance(ticker, days))
+        )
+    except Exception:
+        hourly = pd.DataFrame()
+
+    if hourly.empty:
+        return _normalize_dates(_fetch_from_yfinance(ticker, period, interval))
+    if days <= _HOURLY_MAX_DAYS:
+        return hourly
+
+    daily = _normalize_dates(_fetch_from_yfinance(ticker, period, interval))
+    if daily.empty:
+        return hourly
+    return hourly.combine_first(daily)[["Open", "High", "Low", "Close", "Volume"]]
+
+
+# ── jugaad-data path (NSE indices) ────────────────────────────────────────────
 
 def _fetch_from_nse(nse_symbol, period, interval):
     from jugaad_data.nse import index_raw
@@ -248,13 +388,29 @@ def _write_to_cache(conn, ticker, period, interval, df):
 def get_price_history(ticker, period="1mo", interval="1d", max_age_hours=6):
     """Return OHLCV data for ticker.
 
+    One row per trading day, whatever the source underneath.
+
     Prefix ticker with 'NSE:' to fetch from NSE via jugaad-data, e.g.
-    'NSE:NIFTY AUTO'. All other tickers go through yfinance - and anything
-    with a jugaad-data equivalent (Nifty 50, Bank Nifty, Nifty IT, and every
-    NSE-listed ".NS" equity) also gets any date yfinance left null or
-    omitted filled in from jugaad-data (see _jugaad_fallback).
-    Results are cached in SQLite for max_age_hours.
+    'NSE:NIFTY AUTO'. All other tickers go through yfinance, where recent
+    dates are resampled from hourly bars and older ones come from the daily
+    feed (see _fetch_daily_via_hourly) - and anything with a jugaad-data
+    equivalent (Nifty 50, Bank Nifty, Nifty IT, and every NSE-listed ".NS"
+    equity) additionally gets any date still left null or omitted filled in
+    from jugaad-data (see _jugaad_fallback).
+
+    `interval` is the cache's row identity, not a request to yfinance: the
+    yfinance path always asks for hourly and aggregates. Results are cached
+    in SQLite for max_age_hours.
     """
+    # Non-Indian instruments stay on the 6-hour window even mid-session: their
+    # own markets are shut (or simply unrelated to this clock), so a 10-minute
+    # refresh would re-fetch an unchanged number.
+    live = _in_nse_session() and _has_intraday_source(ticker)
+    if live:
+        # min(), not assignment: the session can only make the cache fresher,
+        # never staler than what the caller asked for.
+        max_age_hours = min(max_age_hours, _INTRADAY_CACHE_HOURS)
+
     conn = get_connection()
     try:
         if _is_fresh(conn, ticker, period, interval, max_age_hours):
@@ -264,11 +420,28 @@ def get_price_history(ticker, period="1mo", interval="1d", max_age_hours=6):
             nse_symbol = ticker[len(NSE_PREFIX):]
             df = _fetch_from_nse(nse_symbol, period, interval)
         else:
-            df = _normalize_dates(_fetch_from_yfinance(ticker, period, interval))
-            df = _fill_gaps_from_nse(ticker, df, period, interval)
+            df = _fetch_daily_via_hourly(ticker, period, interval)
+            # jugaad-data is skipped mid-session on purpose. Its feeds are
+            # EOD-derived and publish after the bell, so during the session it
+            # has nothing today that the hourly bars don't already have - and
+            # it is the scrape-based source with real flagging risk, so
+            # calling it every 10 minutes would be all cost and no data. It
+            # runs as before once the session ends, which is when it is
+            # actually the thing that fills in an official close.
+            if not live:
+                df = _fill_gaps_from_nse(ticker, df, period, interval)
 
         if df.empty:
-            return df
+            # A refetch that comes back empty - a Yahoo 429, a network blip,
+            # a provider hiccup - must not leave the caller worse off than
+            # not having refetched at all. Serve whatever is still cached:
+            # a slightly stale price beats a "Couldn't load" tile. This
+            # matters far more under the intraday window, which expires every
+            # 10 minutes and so reaches this path ~36x more often than the
+            # 6-hour one did. fetched_at is deliberately left untouched, so
+            # the next interaction retries rather than treating the failure
+            # as a successful refresh.
+            return _read_from_cache(conn, ticker, period, interval)
         _write_to_cache(conn, ticker, period, interval, df)
         return df
     finally:

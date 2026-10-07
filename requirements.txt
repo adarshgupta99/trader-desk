@@ -5,3 +5,4 @@ plotly
 python-dotenv
 jugaad-data
 nselib==2.5.1
+scipy

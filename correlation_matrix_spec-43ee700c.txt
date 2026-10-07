@@ -1,0 +1,582 @@
+F&O CORRELATION MATRIX - SPEC FOR CLAUDE CODE
+Repo: trader-desk (Streamlit app). Uses fno_sectors.json already in the repo.
+Read CLAUDE.md first. Do the steps in order. Stop after each step and show output.
+
+======================================================================
+1. GOAL
+======================================================================
+Correlation between every pair of the 213 F&O stocks, for any lookback
+the user picks. In the app: pick a stock, see the names most and least
+correlated with it, coloured by sector. The full 213x213 matrix is
+stored and queryable but NOT drawn as a grid (about 22,000 pairs, nobody
+can read that).
+
+======================================================================
+2. NON-NEGOTIABLE RULES
+======================================================================
+  1. Correlate LOG RETURNS, never prices. Prices all trend together and
+     every pair looks correlated. Returns show real co-movement.
+       r_t = ln(P_t / P_{t-1})
+  2. Never use daily bars for lookbacks under 60 days. 20 daily points
+     is noise. 20 days of 15-min bars is about 500 points.
+  3. Handle stale bars the same way everywhere (see section 6) and
+     document the choice in the code and in CLAUDE.md.
+  4. 15 minutes is the FLOOR for bar size. Do not go finer, even though
+     Yahoo serves 1-minute bars. Correlations from very fine bars are
+     biased toward zero by asynchronous trading (the Epps effect): two
+     stocks that genuinely move together look weakly correlated simply
+     because they do not print in the same minute. It is severe for the
+     illiquid end of the F&O list, and no stale-bar policy fixes it,
+     because thin-but-nonzero bars pass every filter.
+
+======================================================================
+3. DATA TIERS (measured 6 Oct 2026, keep exactly)
+======================================================================
+  Lookback            Bars used            Why
+  ------------------  -------------------  ---------------------------
+  1 to 60 days        15-minute            Yahoo's 15m limit is 60 days
+  > 60 days           daily                existing daily cache
+
+Tier choice lives in ONE function:
+  pick_tier(lookback_days) -> "15m" | "1d"
+Boundaries: 1 -> "15m", 60 -> "15m", 61 -> "1d".
+A lookback of 0 or negative raises an error.
+
+Adarsh's decision (6 Oct 2026): the range starts at 1 day, not 5. A
+1-day lookback is about 24 returns, which clears min_periods and
+produces a real but noisy number. It is not rejected. The guard is
+visibility, not refusal: n_obs is in the results table (section 8), so
+a thin lookback is evident in the output rather than hidden behind a
+number that looks like any other.
+
+Two tiers, not three. The 1-minute tier was dropped on 6 Oct 2026 for
+the reason in rule 4 of section 2, plus its operating cost: ~0.6 GB per
+6 months, pruning logic, and a daily job that MUST run because 1m
+history older than 7 days cannot be refetched from Yahoo at any price.
+See section 11.
+
+15m, not 1h, for the middle tier. Measured, not assumed: 15m returns
+about 1,445 bars over 60 days against 1h's ~360 — four times the
+observations over the same window, and both are capped at the same 60
+days of practical reach here. Do not mix the two.
+
+Never compare returns from different bar sizes in one number. A 30-day
+correlation is from 15m bars only.
+
+======================================================================
+4. STEP 0 - DISCOVERY RUN
+======================================================================
+Write scripts/discover_intraday.py. For 5 F&O stocks:
+  RELIANCE.NS, HDFCBANK.NS, TCS.NS, INDUSINDBK.NS, one illiquid name
+  from fno_sectors.json
+fetch with yfinance:
+  interval='15m', period='60d'
+Print per stock:
+  - number of bars
+  - first and last timestamp (IST)
+  - bars per session (expect about 25)
+  - count of bars with Volume == 0
+  - count of missing bars inside sessions
+  - fetch time, and whether any 429 or error appeared
+Then time a download of ALL 213 tickers in one yf.download call (list of
+tickers, threads=True) for 15m/60d. Report seconds and failures, and the
+on-disk size of the rows that result, to check section 5's estimate.
+Save output to docs/intraday_discovery.txt and show the user.
+
+DONE 6 Oct 2026. Full output in docs/intraday_discovery.txt. Results:
+  - 15m/60d returns ~1,440 bars over 58 sessions at 24.9 a session.
+    15m/61d comes back EMPTY with an explicit Yahoo "within the last 60
+    days" error, so 60 is a hard ceiling, not a soft one.
+  - All 213 tickers returned data as plain <symbol>.NS. ZERO failures,
+    the four awkward ones included (BAJAJ-AUTO, GVT&D, M&M, NAM-INDIA).
+    No mapping table is needed; see section 7.
+  - One yf.download of all 213 with threads=True took 6.0 SECONDS and
+    returned 306,280 bars. Batching is therefore a politeness measure,
+    not a performance one — see section 7.
+  - Bars per ticker: min 1,423, median 1,438, max 1,450. Not aligned;
+    see section 6 item 5.
+  - Zero-volume and stale-bar counts: see section 6 item 3.
+  - On-disk size in the real schema: see section 5.
+  - Liquidity was ranked from the bars themselves (median close x volume
+    per bar), because fno_sectors.json carries no turnover field. The
+    thin end is IEX, BAJAJHLDNG, PIIND, GODFRYPHLP, ANANDRATHI at
+    ~Rs 1.1 crore a bar, against HDFCBANK at ~Rs 61 crore. Use one of
+    those for any "illiquid name" check rather than guessing.
+
+Re-run it with: .venv/bin/python scripts/discover_intraday.py
+
+======================================================================
+5. STORAGE
+======================================================================
+SQLite file OUTSIDE the repo, default path ~/trader_desk_data/intraday.db
+(configurable through an env var TRADER_DESK_DATA_DIR in .env). The repo
+must not contain bar data. Add the path to .gitignore anyway.
+
+Table bars:
+  symbol TEXT, interval TEXT ('15m'), ts TEXT (ISO, IST),
+  open REAL, high REAL, low REAL, close REAL, volume INTEGER,
+  PRIMARY KEY (symbol, interval, ts)
+Insert with INSERT OR IGNORE so refetching overlapping windows is safe.
+Index on (interval, ts).
+(interval stays in the key and the schema even with one tier stored, so
+adding another bar size later does not need a migration.)
+
+Size: MEASURED by step 0 on 6 Oct 2026, in this exact schema with this
+index, after VACUUM — 306,280 rows for the full 213 over 60 days is
+50.6 MB, at 165 bytes a row. That is the whole tier, not a yearly rate.
+The earlier ~40 MB estimate in this spec was about 25% low; 165 bytes a
+row is the figure to size against.
+
+Daily bars: REVISED 6 Oct 2026. This spec said they stay in the existing
+cache and must not be duplicated. They now go into the same bars table
+under interval='1d', and here is why. market_cache.db's price_cache is
+keyed by (ticker, period, interval) and prices.get_price_history fetches
+ONE ticker per call with its own freshness window — it was built for the
+dozen curated instruments, not for 213 symbols. Going through it means
+213 sequential Yahoo calls on a cold cache, against one bulk download of
+all 213 in 6.0s (measured, step 0). It is both slower and less polite,
+and it would put the correlation feature's reads on a different code
+path from the 15m tier for no benefit. 213 x 250 daily rows is ~9 MB, so
+the duplication costs nothing, and daily bars are as refetchable as 15m
+ones. prices.py keeps owning the curated instruments; nothing there
+changes.
+
+Retention: keep the newest 65 SESSIONS of 15m bars and prune anything
+older. More serves no tier, because the 15m tier only answers lookbacks
+up to 60 days and Yahoo serves that entire window on demand.
+
+Sessions, not calendar days — corrected 6 Oct 2026 when the first run of
+the job deleted bars it had just fetched. A 60-session lookback spans 83
+calendar days (58 sessions from 14 Jul to 5 Oct 2026), so a 65-calendar-
+day cutoff throws away a quarter of the window the longest lookback
+needs. Counting sessions makes retention mean the same thing as the
+lookback it exists to serve, and holidays stop mattering. The daily tier
+keeps 800 sessions, covering the 500-day maximum with headroom.
+
+That last point is the whole prize from dropping 1m, so do not design
+around it being otherwise: the maximum lookback the tier serves equals
+Yahoo's retention for it, so stored bars are DISPOSABLE. The DB can
+always be rebuilt from scratch, a missed fetch day costs nothing, and no
+history is ever stranded. The 1m tier had the opposite property.
+
+Rollup CSVs in the repo: DROPPED 6 Oct 2026. They existed only so a
+Streamlit Cloud deploy with no SQLite file could still answer. Adarsh
+confirmed the repo is private and the app runs on localhost only, so
+there is no deploy without the DB beside it. The rollups would have been
+an expiring binary re-committed forever, for a fallback that never
+fires. If the app is ever deployed, revisit this — do not reintroduce it
+speculatively.
+
+Table corr_cache (inside the same DB): OPTIONAL. Schema, if built:
+  tier, lookback_days, asof_date, symbol_a, symbol_b, corr, n_obs
+  PRIMARY KEY (tier, lookback_days, asof_date, symbol_a, symbol_b)
+Store each pair once (symbol_a < symbol_b alphabetically) and read both
+directions through a helper.
+
+MEASURED 6 Oct 2026, on the real 306,280 bars with their real gaps:
+the worst case this feature has — 60 days, 1,450 rows, all 213 columns,
+all 22,578 pairs — correlates in 0.12s, plus 0.09s for the n_obs matrix.
+Pandas does take its pairwise path (95.09% non-null density) but
+implements it in Cython, not a Python loop. At 20 days it is 0.03s.
+So corr_cache is an OPTIMISATION, not load-bearing. A per-process memo
+on (tier, lookback, asof) is enough for the UI; a SQLite cache table
+would be storing a tenth of a second. Build the table only if a later
+feature needs correlations without loading bars first.
+
+The real cost is getting the bars into shape, not correlating them —
+1.45s against 0.12s, twelve times the correlation:
+  read 306,280 rows from sqlite   0.54s
+  parse timestamps + stale policy 0.84s
+  pivot to wide                   0.07s
+So intraday_store.py must (a) read ONLY the requested window with a
+WHERE on ts, not the whole table, and (b) store ts in a form that sorts
+and filters as text and parses with a fixed format, so no row is parsed
+that the lookback does not need. Optimise there, not in the maths.
+
+======================================================================
+6. COMPUTE
+======================================================================
+File: analytics/correlation.py
+
+  1. Load bars for the tier and lookback window for all symbols.
+  2. Build a wide table: rows = timestamps, columns = symbols, values =
+     close price.
+  3. STALE BAR POLICY. Settled 6 Oct 2026 by measurement, not by
+     preference. Across 13 F&O names spanning the liquidity range,
+     60 days of 15m bars, 18,709 bars total: only 9 had Volume == 0,
+     which is 0.048%. All 9 were the 15:15 bar. They clustered on three
+     dates (6 Aug, 24 Aug, 23 Sep) rather than on particular symbols,
+     the price moved inside every one of them, and the most liquid name
+     in the sample (RELIANCE) had the most. Six of the thinner names had
+     none at all.
+     So they are feed artifacts, not quiet bars, and nothing about them
+     tracks liquidity. The original rationale here - "zero-volume bars
+     repeat the old price and fake a low correlation for illiquid
+     names" - is false for this universe at this bar size.
+       POLICY: do NOT use Volume as a staleness test. On those dates it
+       would discard a real closing move, the most informative bar of
+       the day. A bar is stale only when its open, high, low and close
+       all equal the previous bar's close. Stale bars become NaN and are
+       NOT forward-filled. Returns are computed only between two real
+       consecutive bars, and pairs are correlated on timestamps where
+       BOTH stocks have a valid return (pairwise complete obs).
+       Log the count of Volume == 0 bars in the fetch job anyway, as a
+       diagnostic, so a change in Yahoo's feed does not pass unnoticed.
+     CONFIRMED by step 0 across all 213 tickers, 306,280 bars:
+       Volume == 0        217 bars   0.0709%
+       stale (flat OHLC)  231 bars   0.0754%
+     And the decisive number — stale rate for the 20 thinnest names by
+     median traded value is 0.0941%, against 0.1075% for the 20
+     thickest. Staleness is very slightly MORE common in the most liquid
+     names, so it does not track illiquidity even in the direction the
+     original rule assumed.
+     Put the rule in a constant STALE_POLICY and note it in the UI
+     footer. At 231 bars in 306,280 this choice cannot move a
+     correlation; it is written down so the code does not quietly do
+     something else.
+  4. Log returns: np.log(price).diff(), within each session only. Do NOT
+     compute a return across the overnight gap on the 15m tier (drop the
+     first bar of each day). Otherwise the gap dominates.
+  5. Pearson, pairwise: DataFrame.corr(min_periods=N). Set min_periods
+     to 50% of the expected bars for the window; below that return NaN,
+     do not return a number from a handful of points.
+     Pairwise is REQUIRED, not a nicety. Step 0 measured bar counts per
+     ticker of min 1,423 / median 1,438 / max 1,450 over the same 58
+     sessions: most stocks are missing a bar in roughly 10 of those
+     sessions, and not the same bar. Dropping any timestamp that is
+     incomplete across all 213 would discard far more than it should.
+  6. Daily tier: log returns of adjusted close, same pairwise logic.
+  7. Save n_obs per pair so the UI can show how many points back it up.
+  8. Memo by (tier, lookback, asof_date) so repeated reruns of the same
+     view do not redo the work. A per-process dict, not a SQLite table —
+     see the measurement in section 5: the correlation itself is 0.12s
+     worst case and the bar loading is 1.45s, so what is worth memoising
+     is the whole pipeline's result, in memory, for the session.
+     Do not use @st.cache_data (CLAUDE.md forbids it; it conflicts with
+     the SQLite caching and loses data on reboot).
+
+Corporate actions (splits) distort returns. Within the 15m tier's 60
+days the risk is small but real. Use auto_adjust=True and flag any
+single-bar |return| > 20% in the log for a manual look.
+
+======================================================================
+7. FETCH JOB
+======================================================================
+File: jobs/fetch_intraday.py
+
+This job is an OPTIMISATION, not a data-preservation requirement. It
+keeps the app from refetching 60 days of bars on demand. Nothing is lost
+permanently if it does not run — see the retention note in section 5.
+That is a change from the 1m design, where the job was mandatory.
+
+Run it daily after market close, around 4:30pm IST, by cron or launchd
+on the user's Mac. (GitHub Actions is allowed as an alternative, but
+Yahoo can rate-limit datacenter IPs; the Mac is the default. The app
+only reads the files, it never calls Yahoo for this.)
+
+  1. Download 15m for all 213 tickers — period 5d normally, 60d on a
+     cold start or after a long gap — in batches of about 40-50, with a
+     pause between batches.
+     Keep the batching even though step 0 did all 213 in one call in
+     6.0s. It is there to stay under Yahoo's undocumented limits, not to
+     go faster; the speed measurement is a reason to be relaxed about
+     the pauses, not to remove them.
+  2. INSERT OR IGNORE into bars.
+  3. On a 429 or empty result, back off, retry once, then log and
+     continue. Anything still missing is recoverable on the next run,
+     for up to 60 days.
+  4. First run: backfill 15m for the full 60d.
+  5. Prune bars older than about 65 days.
+  6. (The rollup-rebuild step is gone with the rollups — see section 5.)
+  7. Log: symbols fetched, bars inserted, symbols failed, runtime, and
+     the Volume == 0 diagnostic from section 6 item 3.
+
+Ticker mapping: use the F&O list from fno_sectors.json, append ".NS".
+Verified 6 Oct 2026: all 213 resolve that way, BAJAJ-AUTO, GVT&D, M&M
+and NAM-INDIA included — do not build a special-case mapping table for
+them. Still list every symbol that returns no data and show it.
+
+======================================================================
+8. UI (new tab or section "Correlation")
+======================================================================
+  - Stock picker (selectbox over the 213 names).
+  - Lookback input: number of days, 1-500. Show which tier it maps to,
+    e.g. "20 days -> 15-minute bars, ~500 obs".
+  - Top-N slider (default 10).
+  - Two tables side by side: Most correlated | Least correlated (the
+    most negative first). Columns: symbol, sector, corr, n_obs.
+  - Sector: shown as text, with rows sharing the picked stock's sector
+    marked in the accent token. REVISED 6 Oct 2026: a colour per sector
+    would mean inventing 22 hues, and the design language says plainly
+    "do not add extra accent colors". The design language wins over this
+    spec. Same-sector marking answers the real question ("is this just
+    its own sector?") without a new palette. A stock in several sectors
+    shows the first, with the full list in the cell's title attribute.
+  - Footer: bar tier, stale-bar policy, as-of date, data source.
+  - If the SQLite DB or the tier's bars are missing, say so and name the
+    command that fixes it. (No rollup fallback — see section 5.)
+  - No 213x213 grid. A "download full matrix as CSV" button is fine.
+  - Follow the existing design doc: restyle only, no layout rewrite.
+
+======================================================================
+9. FILES TO ADD
+======================================================================
+  scripts/discover_intraday.py
+  jobs/fetch_intraday.py
+  analytics/correlation.py
+  analytics/tiers.py            (pick_tier)
+  data_layer/intraday_store.py  (SQLite helpers)
+  tests/test_correlation.py
+  docs/intraday_discovery.txt
+  tabs/correlation.py           (section 8; wired into app.py's NAV)
+  fno.py                        (added 6 Oct 2026: the 213-symbol
+                                universe and sector lookup read from
+                                fno_sectors.json. Both the fetch job and
+                                the tab need it, and neither should be
+                                parsing the JSON itself. Sits at the top
+                                level beside symbols.py and
+                                watchlists.py, matching how this repo
+                                already keeps its data modules flat.)
+Document the tiers, stale-bar policy, DB location and cron setup in
+ARCHITECTURE.md — in this repo that is where technical detail of this
+kind lives, not CLAUDE.md. Update its file map, module notes and git
+history too.
+
+======================================================================
+10. ACCEPTANCE CHECKS
+======================================================================
+Write tests in tests/test_correlation.py. All must pass.
+
+  A. Self-correlation: every stock vs itself is 1.0 (within 1e-9).
+  B. Symmetry: corr(A,B) == corr(B,A).
+  C. Range: all values in [-1, 1] or NaN.
+  D. Tier logic: pick_tier(1)=15m, (20)=15m, (60)=15m, (61)=1d,
+     (250)=1d. Lookback 0 or negative raises an error. No input ever
+     returns "1m" — that tier no longer exists.
+  E. Log-return check: feed two synthetic price series with the same
+     returns but different price levels. Correlation is 1.0. Feed two
+     random walks with a common upward drift: price correlation is high
+     but return correlation is near 0.
+  F. Overnight gap: the first bar of each day is excluded from returns.
+  G. Stale policy: a synthetic stock with half its bars repeating the
+     previous close (flat OHLC) must not produce a correlation from
+     fewer than min_periods valid pairs (returns NaN). A separate case:
+     a bar with Volume == 0 whose price moved is KEPT, not dropped.
+  H. Sector sanity check (needs real data): HDFCBANK vs ICICIBANK should
+     have a clearly higher 20-day correlation than HDFCBANK vs a
+     far-away sector (for example HDFCBANK vs SUNPHARMA). Print all
+     three numbers for the user to eyeball.
+  I. Cache: a second call with the same (tier, lookback, asof) does not
+     recompute (check via a timer or call counter).
+  J. Missing DB: the app opens without the SQLite file and shows the
+     "run the fetch job" message, no crash. (Reworded 6 Oct 2026 with
+     the rollups dropped — there is no fallback to fall back to.)
+  K. Manual: the user picks RELIANCE, lookback 20 (15m tier) and
+     lookback 120 (daily tier). Top-10 lists load in under 3 seconds
+     from cache. Lookback 1 returns numbers with a visibly small n_obs
+     rather than a traceback.
+
+======================================================================
+11. OUT OF SCOPE (later)
+======================================================================
+  - Rolling or time-varying correlation charts
+  - Beta, PCA, clustering, hedge ratios
+  - Rank (Spearman) or tail correlation
+  - Replacing Yahoo with a paid or exchange feed
+  - A 1-minute tier, and with it lookbacks under 5 days. Dropped 6 Oct
+    2026 on two grounds. Analytical: the Epps effect (section 2, rule 4)
+    biases 1m correlations toward zero, worst for exactly the illiquid
+    names where a correlation estimate would be most useful. Operational:
+    ~0.6 GB per 6 months, pruning logic, and a daily job that cannot be
+    missed, because 1m bars older than 7 days are gone from Yahoo for
+    good. Reviving it means accepting all of that again, not just adding
+    a row to the tier table.
+  - 1-hour bars for the long tier. Yahoo serves 1h back about 730 days,
+    which would give roughly 1,750 observations over a 250-day lookback
+    against daily's 250. A genuine improvement, but it needs its own
+    stored tier and the rolling-730-day retention care that prices.py
+    already documents. Daily first; revisit only if the daily tier's
+    sample sizes prove too thin in practice.
+
+
+CORRELATION VIZ SPEC - DELTA (3 additions)
+Apply these to the spec you already have. Do not replace your file.
+
+ADDITION 1 - Section 5, append after the "For S != T..." paragraph:
+If a stock belongs to BOTH S and T (multi-sector membership), exclude
+the same-symbol pair (X,X) from the S,T cell - it is a self-correlation
+of 1 and would inflate the mean. Keep X's pairs with the other stocks;
+only the identical-symbol pair is dropped. Acceptance check: a stock
+mapped to two sectors must not contribute a self-pair to that cell.
+
+ADDITION 2 - New section 5A (after Section 5):
+SECTOR DRILL-DOWN (CLICK-THROUGH)
+Clicking a sector - in the legend or its colour strip on either matrix axis -
+opens that sector's drill-down view. (Primary: Plotly selection/click events;
+fallback with identical behaviour: sector chips/pills above the matrix.)
+Drill-down shows:
+- Top summary bar: picked sector's MEAN stock-pair r vs every other sector
+  (its row/column from the section-5 matrix), fixed colour scale, hover shows
+  mean r, valid/possible pairs.
+- Below: rectangular heatmap, picked sector's stocks as ROWS x all other
+  eligible stocks as COLUMNS, columns grouped and strip-coloured by their
+  sectors, same colour scale and hover payload (pair, sectors, r, N, as-of).
+- Clicking a second sector inside drill-down narrows columns to that sector:
+  a clean S x T stock-by-stock rectangle. A 'clear sector' control or clicking
+  the active sector again returns to the full matrix.
+Multi-sector stocks appear in EACH of their sectors' rows/columns; the
+same-symbol exclusion from Addition 1 applies here too (never show an (X,X)
+cell). Drill-down reads from the same cached snapshot matrix; no recompute.
+Acceptance check: drill-down cells match the corresponding cells in the main
+matrix exactly; triggering via click and via chips gives identical views.
+
+ADDITION 3 - New section 5B (after 5A):
+DISPLAY SECTOR GROUPING (MERGE RAW LABELS)
+fno_sectors.json has 22 raw sector labels with near-duplicates. For ALL
+display (sector matrix, strips, drill-down, legend), merge into 15 display
+groups via this explicit mapping (config constant, one place only):
+  Banks                 <- Bank, Private Bank, PSU Bank
+  Financial Services    <- Financial Services
+  Energy                <- Energy, Oil & Gas
+  Healthcare & Pharma   <- Healthcare, Pharma
+  IT                    <- IT
+  Auto                  <- Auto
+  FMCG                  <- FMCG
+  Capital Goods & Infra <- Capital Goods, Construction
+  Metals                <- Metal
+  Consumer Durables     <- Consumer Durables
+  Consumer Services     <- Consumer Services, Services
+  Realty & Construction <- Realty, Construction Materials
+  Chemicals             <- Chemicals
+  Telecom               <- Telecommunication
+  Textiles              <- Textiles
+Raw labels stay in the data untouched; this is display-only. A stock whose
+raw labels merge into ONE display group counts once there. A stock spanning
+TWO different display groups is multi-group: the Addition-1 same-symbol
+exclusion applies across those two groups. Hover may show raw labels.
+Single-stock display groups (Textiles) stay visible; within-group cell is
+'no data' per section 5. Acceptance check: merged sector matrix dimensions
+match the mapping above and every stock's display groups derive only from it.
+
+PASTE FOR CLAUDE - missing Section 5 (sector matrix), with Addition 1 already integrated.
+This was in the original spec and is the left panel of the main mockup. Build it first, then apply 5A + 5B from the delta.
+
+5. SECTOR MATRIX - MEAN OF STOCK-PAIR CORRELATIONS
+For sectors S and T, take the arithmetic mean of valid STOCK-PAIR r values in
+the snapshot matrix. Equal weight each valid pair, not market-cap weight and
+not Fisher-z averaging. This is a descriptive overview, not a correlation
+matrix of tradable sector indices. Name it 'Mean stock-pair correlation'.
+
+For S != T: each cross-sector pair once. For S == T: unique unordered pairs
+only, exclude stock self-correlations. Diagonal is within-sector co-movement,
+NOT automatic 1. A one-stock sector has no within-sector value.
+If a stock belongs to BOTH S and T (multi-sector membership), exclude
+the same-symbol pair (X,X) from the S,T cell - it is a self-correlation
+of 1 and would inflate the mean. Keep X's pairs with the other stocks;
+only the identical-symbol pair is dropped. Acceptance check: a stock
+mapped to two sectors must not contribute a self-pair to that cell.
+Show symmetric cells, useful row/column labels and fixed colour scale.
+Hover: both sector names, mean r, valid/possible pairs, participating stocks,
+median paired N, lookback/frequency/as-of. If no valid pairs, show no data.
+If less than 80% of possible pairs are valid, flag low pair coverage; do not
+pretend a few survivors represent the whole sector. Hover exposes selection.
+Use sector-map order consistently; do not recluster sectors between reruns.
+
+5A. SECTOR DRILL-DOWN (CLICK-THROUGH)
+
+PASTE FOR CLAUDE - sections 6 and 7 (clean version, ignore the earlier file).
+These were in the original full spec but missing from your copy. 5A/5B numbering stays as-is; these slot in after 5B.
+
+6. STOCK MATRIX - CLUSTER FIRST, FILTER SECOND
+Hierarchical clustering discovers correlation blocks; do not merely sort by
+sector. Build the order using ALL eligible stocks, normally the 213-stock
+universe. Eligibility/exclusions must be explicit and visible.
+
+Distance recommendation: d(i,j) = sqrt(max(0, 2 * (1 - r(i,j)))).
+Positive correlation puts stocks together; negative correlation keeps them
+apart. Do not use abs(r), which would hide the opposite-direction distinction.
+Use scipy average linkage on the condensed upper-triangle distance array,
+not a 2D correlation matrix passed as observation vectors. Use deterministic
+symbol ordering to break ties. Do not use Ward on pairwise-deletion matrices;
+the distances are not guaranteed to have the Euclidean geometry Ward needs.
+
+Missing-data safety:
+- Start with stocks meeting the shared return-coverage threshold and having
+  finite variance.
+- SciPy requires finite distances. If any pair is undefined, iteratively
+  remove the stock with most undefined pairs (symbol-order tie break), until
+  the remaining matrix is finite. Report the excluded stock list and why.
+- Never substitute zero r, maximum distance or an invented r for missing pairs.
+- Excluded names remain searchable in exact-pair tables/history where valid;
+  offer a separate unclustered view with their no-data cells if useful.
+- Under two eligible names: show a clear empty state, no fake dendrogram.
+
+Default rendering: deterministic sector-balanced preview of at most 60 eligible
+stocks, including focus stock when eligible. Round-robin by sector, symbols
+alphabetical within sector; keep full-universe clustered order after selecting
+this subset. This avoids a liquidity ranking the cache may not support and
+keeps small sectors visible. Explain that it is a preview, not a ranking.
+Controls: sectors, search/multiselect, Preview 60 / All eligible, expand.
+If valid traded-value history already exists, offer '60 most liquid' as an
+additional option based on median close*volume over the selected interval;
+never use volume to infer stale bars. No data fetch just for ranking.
+
+Use identical row/column ordering and aligned sector strips on both margins.
+Hover: symbol A/B, sectors, r, paired N, as-of and frequency. Picking a pair
+should populate historical pair controls if installed Streamlit selection
+support allows it. Otherwise use the explicit pair pickers, no fragile DOM JS.
+A dendrogram is optional, not required to understand the blocks.
+
+7. HISTORICAL ROLLING CORRELATION
+7. HISTORICAL ROLLING CORRELATION
+Pair pickers: stock A defaults to focus; B is another stock, NIFTY 50, or a
+sector basket. Default B: highest current valid positive partner if available;
+otherwise retain a valid previous B or request a selection. No self-pair.
+Changing focus updates A. Display the comparison type and basket definition.
+
+Window W = shared daily lookback in TRADING SESSIONS, default 100.
+Rolling window counts indexed sessions, not the last W valid pairs; missing
+sessions consume window slots. Require W >= 3 for the rolling view. Leave any
+existing 1/2-day snapshot option intact but disable history with an explanation.
+History span is a separate control: 6 months / 1 year / 2 years, default 2 years.
+Fetch warm-up prices before the visible range: at least W earlier session
+closes so its first displayed point can have W prior returns. History length
+and window length are different controls and must not be conflated.
+
+Core computation, after session alignment:
+valid = A.notna() & B.notna()
+N_t = valid.astype(int).rolling(W, min_periods=1).sum()
+rho_t = A.rolling(W, min_periods=min_pairs).corr(B)
+Use the shared overlap default/policy on the daily window; show its threshold.
+Do not pre-drop NaNs. Mask undefined/insufficient points. With the proposed
+80% rule a 100-session window needs at least 80 valid paired returns.
+
+Line: one restrained blue series; zero baseline; y-axis [-1,+1]. Hover date,
+rho, paired N and W. Right-edge annotation is latest COMPUTABLE point with
+its date and N; if it predates the latest session, explicitly show stale result.
+Do not connect gaps. Warn for each current result whose valid paired N < 50,
+even if W >= 50; short-window results are noisy, not a trading signal.
+
+NIFTY: use the existing daily benchmark loader; verify the actual instrument
+and adjustment convention rather than guessing a ticker. Completed sessions
+only, same date alignment as stocks. A price index is not total return; label
+that distinction if applicable.
+
+Sector basket B: equal-weight mean of valid constituent daily LOG RETURNS
+at each session. Exclude A from its own sector basket so self-inclusion does
+not inflate r. This is an average-return comparator, NOT the mean stock-pair
+statistic in the sector matrix and NOT an official sector index. Require at
+least 80% of mapped eligible basket constituents that day (minimum two);
+otherwise basket return is NaN. Name it 'Sector basket (equal-weight log
+returns, excluding A)' and show constituent count/coverage. Freeze current
+mapped membership for the displayed history and disclose survivorship bias;
+point-in-time constituent reconstruction is v2, not a silent assumption.
+
+Top 5 panels: choose the current five highest signed valid partners of A from
+the DAILY snapshot using the same W and as-of. Freeze those identities across
+the plotted history; do not pick new winners each day. Shared axes/zero lines,
+sector chip, partner name, latest r/date/N. Label 'Today's top 5, shown through
+time' so retrospective selection is clear. Fewer than five valid partners:
+show fewer panels. On mobile stack. Current pair and daily table values must
+agree for identical settings; any intraday table difference is labelled.
+

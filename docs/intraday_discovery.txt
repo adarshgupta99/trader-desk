@@ -1,0 +1,146 @@
+====================================================================
+F&O CORRELATION - STEP 0 DISCOVERY
+====================================================================
+run at              2026-10-06 03:36:15.394894+05:30
+yfinance            1.7.0
+pandas              3.0.6
+F&O symbols         213 from fno_sectors.json
+request             interval=15m period=60d
+
+====================================================================
+PASS 1 - PER-STOCK DETAIL
+====================================================================
+
+--------------------------------------------------------------------
+RELIANCE  (15m / 60d)
+--------------------------------------------------------------------
+  bars                 1445
+  sessions             58
+  bars per session     24.91   (grid is 25)
+  first bar            2026-07-14 09:15:00+05:30
+  last bar             2026-10-05 15:15:00+05:30
+  fetch time           0.38s
+  Volume == 0          2   (0.138%)
+    of which price moved  2   (feed artifact, KEPT by the policy)
+    timestamps            2026-08-06 15:15:00+05:30, 2026-08-24 15:15:00+05:30
+  stale (flat OHLC)    1   (0.069%)   <- dropped by the policy
+  sessions under 25    5
+    2026-08-14  missing 1
+    2026-08-25  missing 1
+    2026-09-01  missing 1
+    2026-09-08  missing 1
+    2026-09-25  missing 1
+
+--------------------------------------------------------------------
+HDFCBANK  (15m / 60d)
+--------------------------------------------------------------------
+  bars                 1448
+  sessions             58
+  bars per session     24.97   (grid is 25)
+  first bar            2026-07-14 09:15:00+05:30
+  last bar             2026-10-05 15:15:00+05:30
+  fetch time           0.19s
+  Volume == 0          1   (0.069%)
+    of which price moved  1   (feed artifact, KEPT by the policy)
+    timestamps            2026-08-06 15:15:00+05:30
+  stale (flat OHLC)    2   (0.138%)   <- dropped by the policy
+  sessions under 25    2
+    2026-08-05  missing 1
+    2026-09-10  missing 1
+
+--------------------------------------------------------------------
+TCS  (15m / 60d)
+--------------------------------------------------------------------
+  bars                 1439
+  sessions             58
+  bars per session     24.81   (grid is 25)
+  first bar            2026-07-14 09:15:00+05:30
+  last bar             2026-10-05 15:15:00+05:30
+  fetch time           0.17s
+  Volume == 0          1   (0.069%)
+    of which price moved  1   (feed artifact, KEPT by the policy)
+    timestamps            2026-09-23 15:15:00+05:30
+  stale (flat OHLC)    0   (0.000%)   <- dropped by the policy
+  sessions under 25    11
+    2026-08-11  missing 1
+    2026-08-14  missing 1
+    2026-08-24  missing 1
+    2026-08-28  missing 1
+    2026-08-31  missing 1
+
+--------------------------------------------------------------------
+INDUSINDBK  (15m / 60d)
+--------------------------------------------------------------------
+  bars                 1440
+  sessions             58
+  bars per session     24.83   (grid is 25)
+  first bar            2026-07-14 09:15:00+05:30
+  last bar             2026-10-05 15:15:00+05:30
+  fetch time           0.18s
+  Volume == 0          2   (0.139%)
+    of which price moved  2   (feed artifact, KEPT by the policy)
+    timestamps            2026-08-06 15:15:00+05:30, 2026-08-24 15:15:00+05:30
+  stale (flat OHLC)    0   (0.000%)   <- dropped by the policy
+  sessions under 25    10
+    2026-08-03  missing 1
+    2026-08-10  missing 1
+    2026-08-11  missing 1
+    2026-08-19  missing 1
+    2026-08-20  missing 1
+
+====================================================================
+PASS 2 - ALL 213 TICKERS IN ONE yf.download
+====================================================================
+  wall clock           6.0s
+  frame shape          (1450, 1065)
+  tickers with data    213 / 213
+  tickers failed       0
+  bars per ticker      min 1423  median 1438  max 1450
+  total bars           306,280
+
+====================================================================
+PASS 3 - ON-DISK SIZE IN THE SECTION 5 SCHEMA
+====================================================================
+  rows inserted        306,280
+  db file              50.6 MB
+  bytes per row        165
+  spec 5 estimate      ~40 MB for ~320,000 rows
+  probe path           scratch/intraday_size_probe.db  (scratch/, gitignored)
+
+====================================================================
+PASS 4 - LIQUIDITY RANKING (measured, not guessed)
+====================================================================
+  Median traded value per 15m bar = median(close x volume).
+  fno_sectors.json has no turnover field, so the spec's
+  'one illiquid name' is chosen from this instead.
+
+  thinnest 10 by median traded value per bar:
+    IEX            Rs     108.0 lakh/bar   bars= 1440  zerovol=  2  stale=  1
+    BAJAJHLDNG     Rs     111.4 lakh/bar   bars= 1424  zerovol=  2  stale=  1
+    PIIND          Rs     112.2 lakh/bar   bars= 1434  zerovol=  0  stale=  2
+    GODFRYPHLP     Rs     112.3 lakh/bar   bars= 1433  zerovol=  0  stale=  2
+    ANANDRATHI     Rs     116.3 lakh/bar   bars= 1449  zerovol=  0  stale=  0
+    SHREECEM       Rs     123.2 lakh/bar   bars= 1426  zerovol=  1  stale=  0
+    PETRONET       Rs     124.7 lakh/bar   bars= 1439  zerovol=  2  stale=  1
+    SUPREMEIND     Rs     126.8 lakh/bar   bars= 1426  zerovol=  0  stale=  0
+    IREDA          Rs     132.2 lakh/bar   bars= 1440  zerovol=  0  stale=  5
+    NBCC           Rs     133.7 lakh/bar   bars= 1444  zerovol=  2  stale=  0
+
+  most liquid 5 for contrast:
+    HDFCBANK       Rs    6096.9 lakh/bar   bars= 1448  zerovol=  1  stale=  2
+    RELIANCE       Rs    4134.5 lakh/bar   bars= 1445  zerovol=  2  stale=  1
+    ICICIBANK      Rs    3886.4 lakh/bar   bars= 1439  zerovol=  0  stale=  2
+    BSE            Rs    3773.2 lakh/bar   bars= 1443  zerovol=  1  stale=  2
+    INFY           Rs    3130.3 lakh/bar   bars= 1442  zerovol=  2  stale=  2
+
+  ACROSS ALL 213 TICKERS:
+    bars               306,280
+    Volume == 0        217  (0.0709%)
+    stale (flat OHLC)  231  (0.0754%)
+
+  stale rate, thinnest 20:  0.0941%
+  stale rate, thickest 20:  0.1075%
+
+====================================================================
+STOP HERE - confirm before building the store, job or tab.
+====================================================================

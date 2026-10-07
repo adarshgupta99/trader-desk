@@ -1,0 +1,2271 @@
+{
+ "generated": "2026-10-05",
+ "fo_universe_count": 213,
+ "stocks": {
+  "360ONE": {
+   "name": "360 ONE WAM Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "ABB": {
+   "name": "ABB India Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "MNC"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "ABCAPITAL": {
+   "name": "Aditya Birla Capital Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "ADANIENSOL": {
+   "name": "Adani Energy Solutions Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "Commodities"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "ADANIENT": {
+   "name": "Adani Enterprises Ltd.",
+   "sectors": [
+    "Metal"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "ADANIGREEN": {
+   "name": "Adani Green Energy Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "Commodities",
+    "Infrastructure"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "ADANIPORTS": {
+   "name": "Adani Ports and Special Economic Zone Ltd.",
+   "sectors": [
+    "Services"
+   ],
+   "themes": [
+    "Infrastructure"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "ADANIPOWER": {
+   "name": "Adani Power Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "Commodities",
+    "Infrastructure"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "ALKEM": {
+   "name": "Alkem Laboratories Ltd.",
+   "sectors": [
+    "Pharma",
+    "Healthcare"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "AMBER": {
+   "name": "Amber Enterprises India Ltd.",
+   "sectors": [
+    "Consumer Durables"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "AMBUJACEM": {
+   "name": "Ambuja Cements Ltd.",
+   "sectors": [
+    "Construction Materials"
+   ],
+   "themes": [
+    "Commodities",
+    "MNC"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "ANANDRATHI": {
+   "name": "Anand Rathi Wealth Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "ANGELONE": {
+   "name": "Angel One Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "APLAPOLLO": {
+   "name": "APL Apollo Tubes Ltd.",
+   "sectors": [
+    "Metal"
+   ],
+   "themes": [
+    "Commodities"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "APOLLOHOSP": {
+   "name": "Apollo Hospitals Enterprise Ltd.",
+   "sectors": [
+    "Healthcare"
+   ],
+   "themes": [
+    "India Consumption",
+    "Infrastructure"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "ASHOKLEY": {
+   "name": "Ashok Leyland Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [
+    "Infrastructure",
+    "MNC"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "ASIANPAINT": {
+   "name": "Asian Paints Ltd.",
+   "sectors": [
+    "Consumer Durables"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "ASTRAL": {
+   "name": "Astral Ltd.",
+   "sectors": [
+    "Capital Goods"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "ATHERENERG": {
+   "name": "Ather Energy Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "AUBANK": {
+   "name": "AU Small Finance Bank Ltd.",
+   "sectors": [
+    "Bank"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "AUROPHARMA": {
+   "name": "Aurobindo Pharma Ltd.",
+   "sectors": [
+    "Pharma",
+    "Healthcare"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "AXISBANK": {
+   "name": "Axis Bank Ltd.",
+   "sectors": [
+    "Bank",
+    "Private Bank",
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "BAJAJ-AUTO": {
+   "name": "Bajaj Auto Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "BAJAJFINSV": {
+   "name": "Bajaj Finserv Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "BAJAJHLDNG": {
+   "name": "Bajaj Holdings & Investment Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "BAJFINANCE": {
+   "name": "Bajaj Finance Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "BANDHANBNK": {
+   "name": "Bandhan Bank Ltd.",
+   "sectors": [
+    "Private Bank"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "BANKBARODA": {
+   "name": "Bank of Baroda",
+   "sectors": [
+    "Bank",
+    "PSU Bank"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "BANKINDIA": {
+   "name": "Bank of India",
+   "sectors": [
+    "PSU Bank"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "BDL": {
+   "name": "Bharat Dynamics Ltd.",
+   "sectors": [
+    "Capital Goods"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "BEL": {
+   "name": "Bharat Electronics Ltd.",
+   "sectors": [
+    "Capital Goods"
+   ],
+   "themes": [
+    "PSE",
+    "CPSE"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "BHARATFORG": {
+   "name": "Bharat Forge Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [
+    "Infrastructure"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "BHARTIARTL": {
+   "name": "Bharti Airtel Ltd.",
+   "sectors": [
+    "Telecommunication"
+   ],
+   "themes": [
+    "India Consumption",
+    "Infrastructure"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "BHEL": {
+   "name": "Bharat Heavy Electricals Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "PSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "BIOCON": {
+   "name": "Biocon Ltd.",
+   "sectors": [
+    "Pharma",
+    "Healthcare"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "BLUESTARCO": {
+   "name": "Blue Star Ltd.",
+   "sectors": [
+    "Consumer Durables"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "BOSCHLTD": {
+   "name": "Bosch Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [
+    "MNC"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "BPCL": {
+   "name": "Bharat Petroleum Corporation Ltd.",
+   "sectors": [
+    "Energy",
+    "Oil & Gas"
+   ],
+   "themes": [
+    "Commodities",
+    "Infrastructure",
+    "PSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "BRITANNIA": {
+   "name": "Britannia Industries Ltd.",
+   "sectors": [
+    "FMCG"
+   ],
+   "themes": [
+    "India Consumption",
+    "MNC"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "BSE": {
+   "name": "BSE Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "CAMS": {
+   "name": "Computer Age Management Services Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "CANBK": {
+   "name": "Canara Bank",
+   "sectors": [
+    "Bank",
+    "PSU Bank"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "CDSL": {
+   "name": "Central Depository Services (India) Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "CGPOWER": {
+   "name": "CG Power and Industrial Solutions Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "Infrastructure"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "CHOLAFIN": {
+   "name": "Cholamandalam Investment and Finance Company Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "CIPLA": {
+   "name": "Cipla Ltd.",
+   "sectors": [
+    "Pharma",
+    "Healthcare"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "COALINDIA": {
+   "name": "Coal India Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "Commodities",
+    "PSE",
+    "CPSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "COCHINSHIP": {
+   "name": "Cochin Shipyard Ltd.",
+   "sectors": [
+    "Capital Goods"
+   ],
+   "themes": [
+    "CPSE"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "COFORGE": {
+   "name": "Coforge Ltd.",
+   "sectors": [
+    "IT"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "COLPAL": {
+   "name": "Colgate Palmolive (India) Ltd.",
+   "sectors": [
+    "FMCG"
+   ],
+   "themes": [
+    "MNC"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "CONCOR": {
+   "name": "Container Corporation of India Ltd.",
+   "sectors": [
+    "Services"
+   ],
+   "themes": [
+    "PSE"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "CROMPTON": {
+   "name": "Crompton Greaves Consumer Electricals Ltd.",
+   "sectors": [
+    "Consumer Durables"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "CUMMINSIND": {
+   "name": "Cummins India Ltd.",
+   "sectors": [
+    "Capital Goods"
+   ],
+   "themes": [
+    "Infrastructure",
+    "MNC"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "DABUR": {
+   "name": "Dabur India Ltd.",
+   "sectors": [
+    "FMCG"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "DELHIVERY": {
+   "name": "Delhivery Ltd.",
+   "sectors": [
+    "Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "DIVISLAB": {
+   "name": "Divi's Laboratories Ltd.",
+   "sectors": [
+    "Pharma",
+    "Healthcare"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "DIXON": {
+   "name": "Dixon Technologies (India) Ltd.",
+   "sectors": [
+    "Consumer Durables"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "DLF": {
+   "name": "DLF Ltd.",
+   "sectors": [
+    "Realty"
+   ],
+   "themes": [
+    "India Consumption",
+    "Infrastructure"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "DMART": {
+   "name": "Avenue Supermarts Ltd.",
+   "sectors": [
+    "Consumer Services"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "DRREDDY": {
+   "name": "Dr. Reddy's Laboratories Ltd.",
+   "sectors": [
+    "Pharma",
+    "Healthcare"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "EICHERMOT": {
+   "name": "Eicher Motors Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "ENRIN": {
+   "name": "Siemens Energy India Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "MNC"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "ETERNAL": {
+   "name": "Eternal Ltd.",
+   "sectors": [
+    "Consumer Services"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "FEDERALBNK": {
+   "name": "Federal Bank Ltd.",
+   "sectors": [
+    "Bank",
+    "Private Bank"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "FORCEMOT": {
+   "name": "Force Motors Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "FORTIS": {
+   "name": "Fortis Healthcare Ltd.",
+   "sectors": [
+    "Healthcare"
+   ],
+   "themes": [
+    "India Consumption",
+    "Infrastructure"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "GAIL": {
+   "name": "GAIL (India) Ltd.",
+   "sectors": [
+    "Energy",
+    "Oil & Gas"
+   ],
+   "themes": [
+    "Infrastructure",
+    "PSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "GLENMARK": {
+   "name": "Glenmark Pharmaceuticals Ltd.",
+   "sectors": [
+    "Pharma",
+    "Healthcare"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "GMRAIRPORT": {
+   "name": "GMR Airports Ltd.",
+   "sectors": [
+    "Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "GODFRYPHLP": {
+   "name": "Godfrey Phillips India Ltd.",
+   "sectors": [
+    "FMCG"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "GODREJCP": {
+   "name": "Godrej Consumer Products Ltd.",
+   "sectors": [
+    "FMCG"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "GODREJPROP": {
+   "name": "Godrej Properties Ltd.",
+   "sectors": [
+    "Realty"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "GRASIM": {
+   "name": "Grasim Industries Ltd.",
+   "sectors": [
+    "Construction Materials"
+   ],
+   "themes": [
+    "Commodities",
+    "Infrastructure"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "GVT&D": {
+   "name": "GE Vernova T&D India Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "Infrastructure"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "HAL": {
+   "name": "Hindustan Aeronautics Ltd.",
+   "sectors": [
+    "Capital Goods"
+   ],
+   "themes": [
+    "PSE"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "HAVELLS": {
+   "name": "Havells India Ltd.",
+   "sectors": [
+    "Consumer Durables"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "HCLTECH": {
+   "name": "HCL Technologies Ltd.",
+   "sectors": [
+    "IT"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "HDFCAMC": {
+   "name": "HDFC Asset Management Company Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "HDFCBANK": {
+   "name": "HDFC Bank Ltd.",
+   "sectors": [
+    "Bank",
+    "Private Bank",
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "HDFCLIFE": {
+   "name": "HDFC Life Insurance Company Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "HEROMOTOCO": {
+   "name": "Hero MotoCorp Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "HINDALCO": {
+   "name": "Hindalco Industries Ltd.",
+   "sectors": [
+    "Metal"
+   ],
+   "themes": [
+    "Commodities"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "HINDPETRO": {
+   "name": "Hindustan Petroleum Corporation Ltd.",
+   "sectors": [
+    "Energy",
+    "Oil & Gas"
+   ],
+   "themes": [
+    "Commodities",
+    "Infrastructure",
+    "PSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "HINDUNILVR": {
+   "name": "Hindustan Unilever Ltd.",
+   "sectors": [
+    "FMCG"
+   ],
+   "themes": [
+    "India Consumption",
+    "MNC"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "HINDZINC": {
+   "name": "Hindustan Zinc Ltd.",
+   "sectors": [
+    "Metal"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "HYUNDAI": {
+   "name": "Hyundai Motor India Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [
+    "MNC"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "ICICIBANK": {
+   "name": "ICICI Bank Ltd.",
+   "sectors": [
+    "Bank",
+    "Private Bank",
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "ICICIGI": {
+   "name": "ICICI Lombard General Insurance Company Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "ICICIPRULI": {
+   "name": "ICICI Prudential Life Insurance Company Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "IDEA": {
+   "name": "Vodafone Idea Ltd.",
+   "sectors": [
+    "Telecommunication"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "IDFCFIRSTB": {
+   "name": "IDFC First Bank Ltd.",
+   "sectors": [
+    "Bank",
+    "Private Bank"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "IEX": {
+   "name": "Indian Energy Exchange Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "INDHOTEL": {
+   "name": "Indian Hotels Co. Ltd.",
+   "sectors": [
+    "Consumer Services"
+   ],
+   "themes": [
+    "India Consumption",
+    "Infrastructure"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "INDIANB": {
+   "name": "Indian Bank",
+   "sectors": [
+    "PSU Bank"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "INDIGO": {
+   "name": "InterGlobe Aviation Ltd.",
+   "sectors": [
+    "Services"
+   ],
+   "themes": [
+    "India Consumption",
+    "Infrastructure"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "INDUSINDBK": {
+   "name": "IndusInd Bank Ltd.",
+   "sectors": [
+    "Bank",
+    "Private Bank"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "INDUSTOWER": {
+   "name": "Indus Towers Ltd.",
+   "sectors": [
+    "Telecommunication"
+   ],
+   "themes": [
+    "Infrastructure"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "INFY": {
+   "name": "Infosys Ltd.",
+   "sectors": [
+    "IT"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "INOXWIND": {
+   "name": "Inox Wind Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "IOC": {
+   "name": "Indian Oil Corporation Ltd.",
+   "sectors": [
+    "Energy",
+    "Oil & Gas"
+   ],
+   "themes": [
+    "Commodities",
+    "Infrastructure",
+    "PSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "IREDA": {
+   "name": "Indian Renewable Energy Development Agency Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "IRFC": {
+   "name": "Indian Railway Finance Corporation Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [
+    "PSE"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "ITC": {
+   "name": "ITC Ltd.",
+   "sectors": [
+    "FMCG"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "JINDALSTEL": {
+   "name": "Jindal Steel Ltd.",
+   "sectors": [
+    "Metal"
+   ],
+   "themes": [
+    "Commodities"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "JIOFIN": {
+   "name": "Jio Financial Services Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "JSWENERGY": {
+   "name": "JSW Energy Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "Commodities"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "JSWSTEEL": {
+   "name": "JSW Steel Ltd.",
+   "sectors": [
+    "Metal"
+   ],
+   "themes": [
+    "Commodities"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "JUBLFOOD": {
+   "name": "Jubilant Foodworks Ltd.",
+   "sectors": [
+    "Consumer Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "KALYANKJIL": {
+   "name": "Kalyan Jewellers India Ltd.",
+   "sectors": [
+    "Consumer Durables"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "KAYNES": {
+   "name": "Kaynes Technology India Ltd.",
+   "sectors": [
+    "Capital Goods"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "KEI": {
+   "name": "KEI Industries Ltd.",
+   "sectors": [
+    "Capital Goods"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "KFINTECH": {
+   "name": "Kfin Technologies Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "KOTAKBANK": {
+   "name": "Kotak Mahindra Bank Ltd.",
+   "sectors": [
+    "Bank",
+    "Private Bank",
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "KPITTECH": {
+   "name": "KPIT Technologies Ltd.",
+   "sectors": [
+    "IT"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "LAURUSLABS": {
+   "name": "Laurus Labs Ltd.",
+   "sectors": [
+    "Pharma",
+    "Healthcare"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "LICHSGFIN": {
+   "name": "LIC Housing Finance Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "LICI": {
+   "name": "Life Insurance Corporation of India",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "LODHA": {
+   "name": "Lodha Developers Ltd.",
+   "sectors": [
+    "Realty"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "LT": {
+   "name": "Larsen & Toubro Ltd.",
+   "sectors": [
+    "Construction"
+   ],
+   "themes": [
+    "Infrastructure"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "LTF": {
+   "name": "L&T Finance Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "LTM": {
+   "name": "LTM Ltd.",
+   "sectors": [
+    "IT"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "LUPIN": {
+   "name": "Lupin Ltd.",
+   "sectors": [
+    "Pharma",
+    "Healthcare"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "M&M": {
+   "name": "Mahindra & Mahindra Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "MAHABANK": {
+   "name": "Bank of Maharashtra",
+   "sectors": [
+    "PSU Bank"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "MANAPPURAM": {
+   "name": "Manappuram Finance Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "MANKIND": {
+   "name": "Mankind Pharma Ltd.",
+   "sectors": [
+    "Pharma",
+    "Healthcare"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "MARICO": {
+   "name": "Marico Ltd.",
+   "sectors": [
+    "FMCG"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "MARUTI": {
+   "name": "Maruti Suzuki India Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [
+    "India Consumption",
+    "MNC"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "MAXHEALTH": {
+   "name": "Max Healthcare Institute Ltd.",
+   "sectors": [
+    "Healthcare"
+   ],
+   "themes": [
+    "India Consumption",
+    "Infrastructure"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "MAZDOCK": {
+   "name": "Mazagoan Dock Shipbuilders Ltd.",
+   "sectors": [
+    "Capital Goods"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "MCX": {
+   "name": "Multi Commodity Exchange of India Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "MFSL": {
+   "name": "Max Financial Services Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "MOTHERSON": {
+   "name": "Samvardhana Motherson International Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [
+    "Infrastructure"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "MOTILALOFS": {
+   "name": "Motilal Oswal Financial Services Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "MPHASIS": {
+   "name": "MphasiS Ltd.",
+   "sectors": [
+    "IT"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "MUTHOOTFIN": {
+   "name": "Muthoot Finance Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "NAM-INDIA": {
+   "name": "Nippon Life India Asset Management Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [
+    "MNC"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "NATIONALUM": {
+   "name": "National Aluminium Co. Ltd.",
+   "sectors": [
+    "Metal"
+   ],
+   "themes": [
+    "PSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "NAUKRI": {
+   "name": "Info Edge (India) Ltd.",
+   "sectors": [
+    "Consumer Services"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "NBCC": {
+   "name": "NBCC (India) Ltd.",
+   "sectors": [
+    "Construction"
+   ],
+   "themes": [
+    "CPSE"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "NESTLEIND": {
+   "name": "Nestle India Ltd.",
+   "sectors": [
+    "FMCG"
+   ],
+   "themes": [
+    "India Consumption",
+    "MNC"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "NHPC": {
+   "name": "NHPC Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "Commodities",
+    "PSE",
+    "CPSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "NMDC": {
+   "name": "NMDC Ltd.",
+   "sectors": [
+    "Metal"
+   ],
+   "themes": [
+    "Commodities",
+    "PSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "NTPC": {
+   "name": "NTPC Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "Commodities",
+    "Infrastructure",
+    "PSE",
+    "CPSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "NYKAA": {
+   "name": "FSN E-Commerce Ventures Ltd.",
+   "sectors": [
+    "Consumer Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "OBEROIRLTY": {
+   "name": "Oberoi Realty Ltd.",
+   "sectors": [
+    "Realty"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "OFSS": {
+   "name": "Oracle Financial Services Software Ltd.",
+   "sectors": [
+    "IT"
+   ],
+   "themes": [
+    "MNC"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "OIL": {
+   "name": "Oil India Ltd.",
+   "sectors": [
+    "Energy",
+    "Oil & Gas"
+   ],
+   "themes": [
+    "Commodities",
+    "PSE",
+    "CPSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "ONGC": {
+   "name": "Oil & Natural Gas Corporation Ltd.",
+   "sectors": [
+    "Energy",
+    "Oil & Gas"
+   ],
+   "themes": [
+    "Commodities",
+    "Infrastructure",
+    "PSE",
+    "CPSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "PAGEIND": {
+   "name": "Page Industries Ltd.",
+   "sectors": [
+    "Textiles"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "PATANJALI": {
+   "name": "Patanjali Foods Ltd.",
+   "sectors": [
+    "FMCG"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "PAYTM": {
+   "name": "One 97 Communications Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "PERSISTENT": {
+   "name": "Persistent Systems Ltd.",
+   "sectors": [
+    "IT"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "PETRONET": {
+   "name": "Petronet LNG Ltd.",
+   "sectors": [
+    "Energy",
+    "Oil & Gas"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "PFC": {
+   "name": "Power Finance Corporation Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [
+    "PSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "PGEL": {
+   "name": "PG Electroplast Ltd.",
+   "sectors": [
+    "Consumer Durables"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "PHOENIXLTD": {
+   "name": "Phoenix Mills Ltd.",
+   "sectors": [
+    "Realty"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "PIDILITIND": {
+   "name": "Pidilite Industries Ltd.",
+   "sectors": [
+    "Chemicals"
+   ],
+   "themes": [
+    "Commodities"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "PIIND": {
+   "name": "PI Industries Ltd.",
+   "sectors": [
+    "Chemicals"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "PNB": {
+   "name": "Punjab National Bank",
+   "sectors": [
+    "Bank",
+    "PSU Bank"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "PNBHOUSING": {
+   "name": "PNB Housing Finance Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "POLICYBZR": {
+   "name": "PB Fintech Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "POLYCAB": {
+   "name": "Polycab India Ltd.",
+   "sectors": [
+    "Capital Goods"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "POWERGRID": {
+   "name": "Power Grid Corporation of India Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "Infrastructure",
+    "PSE",
+    "CPSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "POWERINDIA": {
+   "name": "Hitachi Energy India Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "MNC"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "PREMIERENE": {
+   "name": "Premier Energies Ltd.",
+   "sectors": [
+    "Capital Goods"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "PRESTIGE": {
+   "name": "Prestige Estates Projects Ltd.",
+   "sectors": [
+    "Realty"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "RADICO": {
+   "name": "Radico Khaitan Ltd",
+   "sectors": [
+    "FMCG"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "RBLBANK": {
+   "name": "RBL Bank Ltd.",
+   "sectors": [
+    "Private Bank"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "RECLTD": {
+   "name": "REC Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [
+    "PSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "RELIANCE": {
+   "name": "Reliance Industries Ltd.",
+   "sectors": [
+    "Energy",
+    "Oil & Gas"
+   ],
+   "themes": [
+    "Commodities",
+    "Infrastructure"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "RVNL": {
+   "name": "Rail Vikas Nigam Ltd.",
+   "sectors": [
+    "Construction"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "SAGILITY": {
+   "name": "Sagility Ltd.",
+   "sectors": [
+    "IT"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "SAIL": {
+   "name": "Steel Authority of India Ltd.",
+   "sectors": [
+    "Metal"
+   ],
+   "themes": [
+    "PSE"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "SBICARD": {
+   "name": "SBI Cards and Payment Services Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "SBILIFE": {
+   "name": "SBI Life Insurance Company Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "SBIN": {
+   "name": "State Bank of India",
+   "sectors": [
+    "Bank",
+    "PSU Bank",
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "SHREECEM": {
+   "name": "Shree Cement Ltd.",
+   "sectors": [
+    "Construction Materials"
+   ],
+   "themes": [
+    "Commodities"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "SHRIRAMFIN": {
+   "name": "Shriram Finance Ltd.",
+   "sectors": [
+    "Financial Services"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "SIEMENS": {
+   "name": "Siemens Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "MNC"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "SOLARINDS": {
+   "name": "Solar Industries India Ltd.",
+   "sectors": [
+    "Chemicals"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "SONACOMS": {
+   "name": "Sona BLW Precision Forgings Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "SRF": {
+   "name": "SRF Ltd.",
+   "sectors": [
+    "Chemicals"
+   ],
+   "themes": [
+    "Commodities"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "SUNPHARMA": {
+   "name": "Sun Pharmaceutical Industries Ltd.",
+   "sectors": [
+    "Pharma",
+    "Healthcare"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "SUPREMEIND": {
+   "name": "Supreme Industries Ltd.",
+   "sectors": [
+    "Capital Goods"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "SUZLON": {
+   "name": "Suzlon Energy Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "Infrastructure"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "SWIGGY": {
+   "name": "Swiggy Ltd.",
+   "sectors": [
+    "Consumer Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "TATACONSUM": {
+   "name": "Tata Consumer Products Ltd.",
+   "sectors": [
+    "FMCG"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "TATAELXSI": {
+   "name": "Tata Elxsi Ltd.",
+   "sectors": [
+    "IT"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "TATAPOWER": {
+   "name": "Tata Power Co. Ltd.",
+   "sectors": [
+    "Energy"
+   ],
+   "themes": [
+    "India Consumption",
+    "Commodities",
+    "Infrastructure"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "TATASTEEL": {
+   "name": "Tata Steel Ltd.",
+   "sectors": [
+    "Metal"
+   ],
+   "themes": [
+    "Commodities"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "TCS": {
+   "name": "Tata Consultancy Services Ltd.",
+   "sectors": [
+    "IT"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "TECHM": {
+   "name": "Tech Mahindra Ltd.",
+   "sectors": [
+    "IT"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "TIINDIA": {
+   "name": "Tube Investments of India Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "TITAN": {
+   "name": "Titan Company Ltd.",
+   "sectors": [
+    "Consumer Durables"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "TMPV": {
+   "name": "Tata Motors Passenger Vehicles Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "TORNTPHARM": {
+   "name": "Torrent Pharmaceuticals Ltd.",
+   "sectors": [
+    "Pharma",
+    "Healthcare"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "TRENT": {
+   "name": "Trent Ltd.",
+   "sectors": [
+    "Consumer Services"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "TVSMOTOR": {
+   "name": "TVS Motor Company Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "UJJIVANSFB": {
+   "name": "Ujjivan Small Finance Bank Ltd.",
+   "sectors": [
+    "Bank"
+   ],
+   "themes": [],
+   "sector_source": "et_fallback"
+  },
+  "ULTRACEMCO": {
+   "name": "UltraTech Cement Ltd.",
+   "sectors": [
+    "Construction Materials"
+   ],
+   "themes": [
+    "Commodities",
+    "Infrastructure"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "UNIONBANK": {
+   "name": "Union Bank of India",
+   "sectors": [
+    "Bank",
+    "PSU Bank"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "UNITDSPR": {
+   "name": "United Spirits Ltd.",
+   "sectors": [
+    "FMCG"
+   ],
+   "themes": [
+    "India Consumption",
+    "MNC"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "UNOMINDA": {
+   "name": "UNO Minda Ltd.",
+   "sectors": [
+    "Auto"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "UPL": {
+   "name": "UPL Ltd.",
+   "sectors": [
+    "Chemicals"
+   ],
+   "themes": [
+    "Commodities"
+   ],
+   "sector_source": "nse_industry_label"
+  },
+  "VBL": {
+   "name": "Varun Beverages Ltd.",
+   "sectors": [
+    "FMCG"
+   ],
+   "themes": [
+    "India Consumption"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "VEDL": {
+   "name": "Vedanta Ltd.",
+   "sectors": [
+    "Metal"
+   ],
+   "themes": [
+    "Commodities",
+    "MNC"
+   ],
+   "sector_source": "sectoral_index"
+  },
+  "VMM": {
+   "name": "Vishal Mega Mart Ltd.",
+   "sectors": [
+    "Consumer Services"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "VOLTAS": {
+   "name": "Voltas Ltd.",
+   "sectors": [
+    "Consumer Durables"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "WAAREEENER": {
+   "name": "Waaree Energies Ltd.",
+   "sectors": [
+    "Capital Goods"
+   ],
+   "themes": [],
+   "sector_source": "nse_industry_label"
+  },
+  "WIPRO": {
+   "name": "Wipro Ltd.",
+   "sectors": [
+    "IT"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "YESBANK": {
+   "name": "Yes Bank Ltd.",
+   "sectors": [
+    "Bank",
+    "Private Bank"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  },
+  "ZYDUSLIFE": {
+   "name": "Zydus Lifesciences Ltd.",
+   "sectors": [
+    "Pharma",
+    "Healthcare"
+   ],
+   "themes": [],
+   "sector_source": "sectoral_index"
+  }
+ },
+ "sectors": {
+  "Auto": [
+   "ASHOKLEY",
+   "ATHERENERG",
+   "BAJAJ-AUTO",
+   "BHARATFORG",
+   "BOSCHLTD",
+   "EICHERMOT",
+   "FORCEMOT",
+   "HEROMOTOCO",
+   "HYUNDAI",
+   "M&M",
+   "MARUTI",
+   "MOTHERSON",
+   "SONACOMS",
+   "TIINDIA",
+   "TMPV",
+   "TVSMOTOR",
+   "UNOMINDA"
+  ],
+  "Bank": [
+   "AUBANK",
+   "AXISBANK",
+   "BANKBARODA",
+   "CANBK",
+   "FEDERALBNK",
+   "HDFCBANK",
+   "ICICIBANK",
+   "IDFCFIRSTB",
+   "INDUSINDBK",
+   "KOTAKBANK",
+   "PNB",
+   "SBIN",
+   "UJJIVANSFB",
+   "UNIONBANK",
+   "YESBANK"
+  ],
+  "Capital Goods": [
+   "ASTRAL",
+   "BDL",
+   "BEL",
+   "COCHINSHIP",
+   "CUMMINSIND",
+   "HAL",
+   "KAYNES",
+   "KEI",
+   "MAZDOCK",
+   "POLYCAB",
+   "PREMIERENE",
+   "SUPREMEIND",
+   "WAAREEENER"
+  ],
+  "Chemicals": [
+   "PIDILITIND",
+   "PIIND",
+   "SOLARINDS",
+   "SRF",
+   "UPL"
+  ],
+  "Construction": [
+   "LT",
+   "NBCC",
+   "RVNL"
+  ],
+  "Construction Materials": [
+   "AMBUJACEM",
+   "GRASIM",
+   "SHREECEM",
+   "ULTRACEMCO"
+  ],
+  "Consumer Durables": [
+   "AMBER",
+   "ASIANPAINT",
+   "BLUESTARCO",
+   "CROMPTON",
+   "DIXON",
+   "HAVELLS",
+   "KALYANKJIL",
+   "PGEL",
+   "TITAN",
+   "VOLTAS"
+  ],
+  "Consumer Services": [
+   "DMART",
+   "ETERNAL",
+   "INDHOTEL",
+   "JUBLFOOD",
+   "NAUKRI",
+   "NYKAA",
+   "SWIGGY",
+   "TRENT",
+   "VMM"
+  ],
+  "Energy": [
+   "ABB",
+   "ADANIENSOL",
+   "ADANIGREEN",
+   "ADANIPOWER",
+   "BHEL",
+   "BPCL",
+   "CGPOWER",
+   "COALINDIA",
+   "ENRIN",
+   "GAIL",
+   "GVT&D",
+   "HINDPETRO",
+   "INOXWIND",
+   "IOC",
+   "JSWENERGY",
+   "NHPC",
+   "NTPC",
+   "OIL",
+   "ONGC",
+   "PETRONET",
+   "POWERGRID",
+   "POWERINDIA",
+   "RELIANCE",
+   "SIEMENS",
+   "SUZLON",
+   "TATAPOWER"
+  ],
+  "FMCG": [
+   "BRITANNIA",
+   "COLPAL",
+   "DABUR",
+   "GODFRYPHLP",
+   "GODREJCP",
+   "HINDUNILVR",
+   "ITC",
+   "MARICO",
+   "NESTLEIND",
+   "PATANJALI",
+   "RADICO",
+   "TATACONSUM",
+   "UNITDSPR",
+   "VBL"
+  ],
+  "Financial Services": [
+   "360ONE",
+   "ABCAPITAL",
+   "ANANDRATHI",
+   "ANGELONE",
+   "AXISBANK",
+   "BAJAJFINSV",
+   "BAJAJHLDNG",
+   "BAJFINANCE",
+   "BSE",
+   "CAMS",
+   "CDSL",
+   "CHOLAFIN",
+   "HDFCAMC",
+   "HDFCBANK",
+   "HDFCLIFE",
+   "ICICIBANK",
+   "ICICIGI",
+   "ICICIPRULI",
+   "IEX",
+   "IREDA",
+   "IRFC",
+   "JIOFIN",
+   "KFINTECH",
+   "KOTAKBANK",
+   "LICHSGFIN",
+   "LICI",
+   "LTF",
+   "MANAPPURAM",
+   "MCX",
+   "MFSL",
+   "MOTILALOFS",
+   "MUTHOOTFIN",
+   "NAM-INDIA",
+   "PAYTM",
+   "PFC",
+   "PNBHOUSING",
+   "POLICYBZR",
+   "RECLTD",
+   "SBICARD",
+   "SBILIFE",
+   "SBIN",
+   "SHRIRAMFIN"
+  ],
+  "Healthcare": [
+   "ALKEM",
+   "APOLLOHOSP",
+   "AUROPHARMA",
+   "BIOCON",
+   "CIPLA",
+   "DIVISLAB",
+   "DRREDDY",
+   "FORTIS",
+   "GLENMARK",
+   "LAURUSLABS",
+   "LUPIN",
+   "MANKIND",
+   "MAXHEALTH",
+   "SUNPHARMA",
+   "TORNTPHARM",
+   "ZYDUSLIFE"
+  ],
+  "IT": [
+   "COFORGE",
+   "HCLTECH",
+   "INFY",
+   "KPITTECH",
+   "LTM",
+   "MPHASIS",
+   "OFSS",
+   "PERSISTENT",
+   "SAGILITY",
+   "TATAELXSI",
+   "TCS",
+   "TECHM",
+   "WIPRO"
+  ],
+  "Metal": [
+   "ADANIENT",
+   "APLAPOLLO",
+   "HINDALCO",
+   "HINDZINC",
+   "JINDALSTEL",
+   "JSWSTEEL",
+   "NATIONALUM",
+   "NMDC",
+   "SAIL",
+   "TATASTEEL",
+   "VEDL"
+  ],
+  "Oil & Gas": [
+   "BPCL",
+   "GAIL",
+   "HINDPETRO",
+   "IOC",
+   "OIL",
+   "ONGC",
+   "PETRONET",
+   "RELIANCE"
+  ],
+  "PSU Bank": [
+   "BANKBARODA",
+   "BANKINDIA",
+   "CANBK",
+   "INDIANB",
+   "MAHABANK",
+   "PNB",
+   "SBIN",
+   "UNIONBANK"
+  ],
+  "Pharma": [
+   "ALKEM",
+   "AUROPHARMA",
+   "BIOCON",
+   "CIPLA",
+   "DIVISLAB",
+   "DRREDDY",
+   "GLENMARK",
+   "LAURUSLABS",
+   "LUPIN",
+   "MANKIND",
+   "SUNPHARMA",
+   "TORNTPHARM",
+   "ZYDUSLIFE"
+  ],
+  "Private Bank": [
+   "AXISBANK",
+   "BANDHANBNK",
+   "FEDERALBNK",
+   "HDFCBANK",
+   "ICICIBANK",
+   "IDFCFIRSTB",
+   "INDUSINDBK",
+   "KOTAKBANK",
+   "RBLBANK",
+   "YESBANK"
+  ],
+  "Realty": [
+   "DLF",
+   "GODREJPROP",
+   "LODHA",
+   "OBEROIRLTY",
+   "PHOENIXLTD",
+   "PRESTIGE"
+  ],
+  "Services": [
+   "ADANIPORTS",
+   "CONCOR",
+   "DELHIVERY",
+   "GMRAIRPORT",
+   "INDIGO"
+  ],
+  "Telecommunication": [
+   "BHARTIARTL",
+   "IDEA",
+   "INDUSTOWER"
+  ],
+  "Textiles": [
+   "PAGEIND"
+  ]
+ }
+}

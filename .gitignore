@@ -220,3 +220,9 @@ __marimo__/
 # Local SQLite cache (storage.py) - regenerated from yfinance, not source
 market_cache.db
 scratch/
+
+# F&O intraday/daily bar store (data_layer/intraday_store.py). Lives at
+# ~/trader_desk_data by default, outside the repo - this guards only
+# against TRADER_DESK_DATA_DIR ever pointing inside it by mistake.
+trader_desk_data/
+intraday.db
