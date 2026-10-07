@@ -1166,8 +1166,40 @@ defaults to off and flips on correctly; a kaleido render with the checkbox's
 equivalent state (`rows` passed as just the 3 isolated symbols) shows the
 grid correctly narrowed to exactly those 3 rows against every column, same
 layout and alignment the original narrowed view had. pyflakes clean,
-15-case `pytest` still passes. Not yet confirmed by Adarsh in a real
-browser.
+15-case `pytest` still passes. Confirmed by Adarsh in a real browser (8 Oct
+2026): "yeah its good now" - committed as `ffd3721`.
+
+**Box-select restored, then its actual blocker found (8 Oct 2026).** Adarsh
+separately reported two things no longer worked: (1) the "Focus (always
+included)" dropdown only ever took one stock - not a regression, `sm_focus`
+has been a single-select `st.selectbox` since the Stock matrix was first
+built (commit `1167612`); what he remembered as multi-select is the separate
+"Isolate rows" control covered above. (2) Dragging a rectangle over the
+heatmap used to zoom/narrow to the stocks inside it and no longer did -
+this one was real. `fixedrange=True` on every axis (added in `085ea41` to
+kill a subplot-misalignment bug) only disables the zoom/pan drag modes, not
+box-select, so re-enabling it didn't need to touch any axis range or risk
+reintroducing that drift. Added `"box"` to `st.plotly_chart`'s
+`selection_mode` and extended `_apply_pending_stock_matrix_click`: when a
+single on_select event carries more than one point for a curve (only
+possible from a box drag, confirmed via the payload's `selection.box` key -
+a plain click always sends exactly one), the union of every x/y in the
+box becomes the new `sm_isolate` list with `sm_narrow` forced on, covering
+both the isolate strip and the main grid. Existing single-point behavior
+(toggle-isolate, click-a-cell-for-History) is untouched - a new `AppTest`
+case drives both box shapes through synthetic payloads and reconfirms the
+old single-click path alongside them, all passing.
+
+That shipped but still didn't work in the browser - the real blocker was
+`config={"displayModeBar": False}`, which hides the toolbar button that
+normally switches Plotly's dragmode into `"select"`. With no toolbar and no
+other way to flip it, the chart stayed on its default `"zoom"` dragmode,
+which does nothing against `fixedrange=True` axes - dragging silently had
+no effect regardless of the selection_mode fix. Fixed by setting
+`dragmode="select"` directly in `fig.update_layout`, so the gesture works
+with no toolbar needed; a plain click still registers as a single-point
+selection under this dragmode, so nothing else changed. Confirmed working
+by Adarsh in a real browser. pyflakes clean, 15-case `pytest` passes.
 
 **Acceptance checks (`tests/test_correlation.py`, run with `.venv/bin/python -m pytest
 tests/test_correlation.py -v`), all 15 passing — unchanged by Sections 6/7, which have
