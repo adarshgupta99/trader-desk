@@ -186,6 +186,27 @@ def read_bars(conn, interval, start_ts=None, symbols=None):
     return raw
 
 
+def read_bars_with_volume(conn, interval, start_ts=None, symbols=None):
+    """Like read_bars, but keeps volume - only for spec section 6's "most
+    liquid" stock-matrix preview ranking (median close*volume). Volume is
+    still never a staleness test; this path never touches close_frame.
+    """
+    sql = ["SELECT symbol, ts, close, volume FROM bars WHERE interval = ?"]
+    params = [interval]
+    if start_ts:
+        sql.append(" AND ts >= ?")
+        params.append(start_ts)
+    if symbols:
+        sql.append(f" AND symbol IN ({','.join('?' * len(symbols))})")
+        params.extend(symbols)
+    sql.append(" ORDER BY symbol, ts")
+
+    raw = pd.read_sql("".join(sql), conn, params=params)
+    if not raw.empty:
+        raw["ts"] = pd.to_datetime(raw["ts"], format=TS_FORMAT)
+    return raw
+
+
 def zero_volume_count(conn, interval, start_ts=None):
     """Diagnostic for the fetch job: how many bars report no trades.
 

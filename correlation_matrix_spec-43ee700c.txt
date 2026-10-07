@@ -397,3 +397,186 @@ Write tests in tests/test_correlation.py. All must pass.
     stored tier and the rolling-730-day retention care that prices.py
     already documents. Daily first; revisit only if the daily tier's
     sample sizes prove too thin in practice.
+
+
+CORRELATION VIZ SPEC - DELTA (3 additions)
+Apply these to the spec you already have. Do not replace your file.
+
+ADDITION 1 - Section 5, append after the "For S != T..." paragraph:
+If a stock belongs to BOTH S and T (multi-sector membership), exclude
+the same-symbol pair (X,X) from the S,T cell - it is a self-correlation
+of 1 and would inflate the mean. Keep X's pairs with the other stocks;
+only the identical-symbol pair is dropped. Acceptance check: a stock
+mapped to two sectors must not contribute a self-pair to that cell.
+
+ADDITION 2 - New section 5A (after Section 5):
+SECTOR DRILL-DOWN (CLICK-THROUGH)
+Clicking a sector - in the legend or its colour strip on either matrix axis -
+opens that sector's drill-down view. (Primary: Plotly selection/click events;
+fallback with identical behaviour: sector chips/pills above the matrix.)
+Drill-down shows:
+- Top summary bar: picked sector's MEAN stock-pair r vs every other sector
+  (its row/column from the section-5 matrix), fixed colour scale, hover shows
+  mean r, valid/possible pairs.
+- Below: rectangular heatmap, picked sector's stocks as ROWS x all other
+  eligible stocks as COLUMNS, columns grouped and strip-coloured by their
+  sectors, same colour scale and hover payload (pair, sectors, r, N, as-of).
+- Clicking a second sector inside drill-down narrows columns to that sector:
+  a clean S x T stock-by-stock rectangle. A 'clear sector' control or clicking
+  the active sector again returns to the full matrix.
+Multi-sector stocks appear in EACH of their sectors' rows/columns; the
+same-symbol exclusion from Addition 1 applies here too (never show an (X,X)
+cell). Drill-down reads from the same cached snapshot matrix; no recompute.
+Acceptance check: drill-down cells match the corresponding cells in the main
+matrix exactly; triggering via click and via chips gives identical views.
+
+ADDITION 3 - New section 5B (after 5A):
+DISPLAY SECTOR GROUPING (MERGE RAW LABELS)
+fno_sectors.json has 22 raw sector labels with near-duplicates. For ALL
+display (sector matrix, strips, drill-down, legend), merge into 15 display
+groups via this explicit mapping (config constant, one place only):
+  Banks                 <- Bank, Private Bank, PSU Bank
+  Financial Services    <- Financial Services
+  Energy                <- Energy, Oil & Gas
+  Healthcare & Pharma   <- Healthcare, Pharma
+  IT                    <- IT
+  Auto                  <- Auto
+  FMCG                  <- FMCG
+  Capital Goods & Infra <- Capital Goods, Construction
+  Metals                <- Metal
+  Consumer Durables     <- Consumer Durables
+  Consumer Services     <- Consumer Services, Services
+  Realty & Construction <- Realty, Construction Materials
+  Chemicals             <- Chemicals
+  Telecom               <- Telecommunication
+  Textiles              <- Textiles
+Raw labels stay in the data untouched; this is display-only. A stock whose
+raw labels merge into ONE display group counts once there. A stock spanning
+TWO different display groups is multi-group: the Addition-1 same-symbol
+exclusion applies across those two groups. Hover may show raw labels.
+Single-stock display groups (Textiles) stay visible; within-group cell is
+'no data' per section 5. Acceptance check: merged sector matrix dimensions
+match the mapping above and every stock's display groups derive only from it.
+
+PASTE FOR CLAUDE - missing Section 5 (sector matrix), with Addition 1 already integrated.
+This was in the original spec and is the left panel of the main mockup. Build it first, then apply 5A + 5B from the delta.
+
+5. SECTOR MATRIX - MEAN OF STOCK-PAIR CORRELATIONS
+For sectors S and T, take the arithmetic mean of valid STOCK-PAIR r values in
+the snapshot matrix. Equal weight each valid pair, not market-cap weight and
+not Fisher-z averaging. This is a descriptive overview, not a correlation
+matrix of tradable sector indices. Name it 'Mean stock-pair correlation'.
+
+For S != T: each cross-sector pair once. For S == T: unique unordered pairs
+only, exclude stock self-correlations. Diagonal is within-sector co-movement,
+NOT automatic 1. A one-stock sector has no within-sector value.
+If a stock belongs to BOTH S and T (multi-sector membership), exclude
+the same-symbol pair (X,X) from the S,T cell - it is a self-correlation
+of 1 and would inflate the mean. Keep X's pairs with the other stocks;
+only the identical-symbol pair is dropped. Acceptance check: a stock
+mapped to two sectors must not contribute a self-pair to that cell.
+Show symmetric cells, useful row/column labels and fixed colour scale.
+Hover: both sector names, mean r, valid/possible pairs, participating stocks,
+median paired N, lookback/frequency/as-of. If no valid pairs, show no data.
+If less than 80% of possible pairs are valid, flag low pair coverage; do not
+pretend a few survivors represent the whole sector. Hover exposes selection.
+Use sector-map order consistently; do not recluster sectors between reruns.
+
+5A. SECTOR DRILL-DOWN (CLICK-THROUGH)
+
+PASTE FOR CLAUDE - sections 6 and 7 (clean version, ignore the earlier file).
+These were in the original full spec but missing from your copy. 5A/5B numbering stays as-is; these slot in after 5B.
+
+6. STOCK MATRIX - CLUSTER FIRST, FILTER SECOND
+Hierarchical clustering discovers correlation blocks; do not merely sort by
+sector. Build the order using ALL eligible stocks, normally the 213-stock
+universe. Eligibility/exclusions must be explicit and visible.
+
+Distance recommendation: d(i,j) = sqrt(max(0, 2 * (1 - r(i,j)))).
+Positive correlation puts stocks together; negative correlation keeps them
+apart. Do not use abs(r), which would hide the opposite-direction distinction.
+Use scipy average linkage on the condensed upper-triangle distance array,
+not a 2D correlation matrix passed as observation vectors. Use deterministic
+symbol ordering to break ties. Do not use Ward on pairwise-deletion matrices;
+the distances are not guaranteed to have the Euclidean geometry Ward needs.
+
+Missing-data safety:
+- Start with stocks meeting the shared return-coverage threshold and having
+  finite variance.
+- SciPy requires finite distances. If any pair is undefined, iteratively
+  remove the stock with most undefined pairs (symbol-order tie break), until
+  the remaining matrix is finite. Report the excluded stock list and why.
+- Never substitute zero r, maximum distance or an invented r for missing pairs.
+- Excluded names remain searchable in exact-pair tables/history where valid;
+  offer a separate unclustered view with their no-data cells if useful.
+- Under two eligible names: show a clear empty state, no fake dendrogram.
+
+Default rendering: deterministic sector-balanced preview of at most 60 eligible
+stocks, including focus stock when eligible. Round-robin by sector, symbols
+alphabetical within sector; keep full-universe clustered order after selecting
+this subset. This avoids a liquidity ranking the cache may not support and
+keeps small sectors visible. Explain that it is a preview, not a ranking.
+Controls: sectors, search/multiselect, Preview 60 / All eligible, expand.
+If valid traded-value history already exists, offer '60 most liquid' as an
+additional option based on median close*volume over the selected interval;
+never use volume to infer stale bars. No data fetch just for ranking.
+
+Use identical row/column ordering and aligned sector strips on both margins.
+Hover: symbol A/B, sectors, r, paired N, as-of and frequency. Picking a pair
+should populate historical pair controls if installed Streamlit selection
+support allows it. Otherwise use the explicit pair pickers, no fragile DOM JS.
+A dendrogram is optional, not required to understand the blocks.
+
+7. HISTORICAL ROLLING CORRELATION
+7. HISTORICAL ROLLING CORRELATION
+Pair pickers: stock A defaults to focus; B is another stock, NIFTY 50, or a
+sector basket. Default B: highest current valid positive partner if available;
+otherwise retain a valid previous B or request a selection. No self-pair.
+Changing focus updates A. Display the comparison type and basket definition.
+
+Window W = shared daily lookback in TRADING SESSIONS, default 100.
+Rolling window counts indexed sessions, not the last W valid pairs; missing
+sessions consume window slots. Require W >= 3 for the rolling view. Leave any
+existing 1/2-day snapshot option intact but disable history with an explanation.
+History span is a separate control: 6 months / 1 year / 2 years, default 2 years.
+Fetch warm-up prices before the visible range: at least W earlier session
+closes so its first displayed point can have W prior returns. History length
+and window length are different controls and must not be conflated.
+
+Core computation, after session alignment:
+valid = A.notna() & B.notna()
+N_t = valid.astype(int).rolling(W, min_periods=1).sum()
+rho_t = A.rolling(W, min_periods=min_pairs).corr(B)
+Use the shared overlap default/policy on the daily window; show its threshold.
+Do not pre-drop NaNs. Mask undefined/insufficient points. With the proposed
+80% rule a 100-session window needs at least 80 valid paired returns.
+
+Line: one restrained blue series; zero baseline; y-axis [-1,+1]. Hover date,
+rho, paired N and W. Right-edge annotation is latest COMPUTABLE point with
+its date and N; if it predates the latest session, explicitly show stale result.
+Do not connect gaps. Warn for each current result whose valid paired N < 50,
+even if W >= 50; short-window results are noisy, not a trading signal.
+
+NIFTY: use the existing daily benchmark loader; verify the actual instrument
+and adjustment convention rather than guessing a ticker. Completed sessions
+only, same date alignment as stocks. A price index is not total return; label
+that distinction if applicable.
+
+Sector basket B: equal-weight mean of valid constituent daily LOG RETURNS
+at each session. Exclude A from its own sector basket so self-inclusion does
+not inflate r. This is an average-return comparator, NOT the mean stock-pair
+statistic in the sector matrix and NOT an official sector index. Require at
+least 80% of mapped eligible basket constituents that day (minimum two);
+otherwise basket return is NaN. Name it 'Sector basket (equal-weight log
+returns, excluding A)' and show constituent count/coverage. Freeze current
+mapped membership for the displayed history and disclose survivorship bias;
+point-in-time constituent reconstruction is v2, not a silent assumption.
+
+Top 5 panels: choose the current five highest signed valid partners of A from
+the DAILY snapshot using the same W and as-of. Freeze those identities across
+the plotted history; do not pick new winners each day. Shared axes/zero lines,
+sector chip, partner name, latest r/date/N. Label 'Today's top 5, shown through
+time' so retrospective selection is clear. Fewer than five valid partners:
+show fewer panels. On mobile stack. Current pair and daily table values must
+agree for identical settings; any intraday table difference is labelled.
+

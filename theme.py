@@ -19,6 +19,20 @@ import streamlit as st
 
 # `accent` and `selected` are split from `down` on purpose: in dark they are
 # accent_selected, never loss_color, so a blind hex swap would be wrong.
+#
+# `corr_pos`/`corr_neg`/`corr_mid` are a second scoped exception, agreed with
+# Adarsh 7 Oct 2026: the Correlation tab's heatmap cells (sector matrix,
+# drill-down, stock matrix) are data ink, not chrome, so they are exempt from
+# the matte/single-accent rule the same way sector_colors() already is. A
+# richer blue-white-red diverging scale replaces the old approach of reusing
+# UP/DOWN (muted green/terracotta) for r-values, which read as mud at low
+# saturation. Blue = positive correlation, red = negative - the opposite of
+# this app's price-direction convention (green up / red down) everywhere
+# else, which is deliberate: correlation isn't a gain or a loss, and reusing
+# green/red here previously implied one wrongly. Used ONLY inside the
+# correlation-value colorscale (see _value_colorscale in tabs/correlation.py)
+# - never for sector identity (that stays sector_colors()), navigation, or
+# anywhere else.
 _LIGHT = dict(
     canvas="#DFDACB", card_bg="#D7D2C1", card_border="#BDB7A5",
     t1="#1F1D19", t2="#6B675F", t3="#9C988D",
@@ -26,6 +40,7 @@ _LIGHT = dict(
     accent="#C25C36", selected="#1F1D19",
     rule="#BDB7A5", tooltip_bg="#FFFFFF",
     down_rgb="194,92,54",
+    corr_pos="#1D5B8A", corr_neg="#B3261E", corr_mid="#F2EFE4",
 )
 _DARK = dict(
     canvas="#24211E", card_bg="#302B27", card_border="#554A40",
@@ -34,6 +49,7 @@ _DARK = dict(
     accent="#D8B58A", selected="#D8B58A",
     rule="#96816A", tooltip_bg="#302B27",
     down_rgb="232,160,120",
+    corr_pos="#6FA8D8", corr_neg="#E2654C", corr_mid="#3A352F",
 )
 
 
@@ -60,6 +76,9 @@ class Palette:
         self.SELECTED   = raw["selected"]    # filled selected control, pinned mark
         self.RULE       = raw["rule"]        # editorial rules, chart axis lines
         self.TOOLTIP_BG = raw["tooltip_bg"]
+        self.CORR_POS   = raw["corr_pos"]    # correlation heatmap cells only, see below
+        self.CORR_NEG   = raw["corr_neg"]    # correlation heatmap cells only, see below
+        self.CORR_MID   = raw["corr_mid"]    # correlation heatmap cells only, see below
 
 
 # Palettes are immutable, so one instance per theme can be reused for the life
@@ -76,6 +95,35 @@ def palette():
 
 
 TABULAR = "font-variant-numeric:tabular-nums lining-nums;"
+
+#: Scoped exception to the single-accent rule, agreed with Adarsh 6 Oct
+#: 2026: the sector matrix (tabs/correlation.py) needs 15 sector identities
+#: distinguishable at a glance, and a 15-cell grid with no colour is the
+#: unreadable wall the design review already complained about once. These
+#: muted, desaturated hues are used ONLY for sector identity there (chips,
+#: legend swatches, drill-down column grouping) - never for navigation,
+#: controls, or anywhere else in the app, and never for correlation VALUES
+#: (those use CORR_POS/CORR_NEG/CORR_MID below, a separate scoped exception).
+#: Centralised here, in fno.DISPLAY_GROUPS order, so it is the one place to
+#: revise.
+_SECTOR_HUES_LIGHT = [
+    "#A75947", "#A77F47", "#A7A547", "#83A747", "#5DA747",
+    "#47A759", "#47A77F", "#47A7A5", "#4783A7", "#475DA7",
+    "#5947A7", "#7F47A7", "#A547A7", "#A74783", "#A7475D",
+]
+_SECTOR_HUES_DARK = [
+    "#C5958A", "#C5AD8A", "#C5C48A", "#AFC58A", "#97C58A",
+    "#8AC595", "#8AC5AD", "#8AC5C4", "#8AAFC5", "#8A97C5",
+    "#958AC5", "#AD8AC5", "#C48AC5", "#C58AAF", "#C58A97",
+]
+
+
+def sector_colors():
+    """{display group: hex} for the current theme, fno.DISPLAY_GROUPS order."""
+    import fno
+    P = palette()
+    hues = _SECTOR_HUES_DARK if P.name == "dark" else _SECTOR_HUES_LIGHT
+    return dict(zip(fno.DISPLAY_GROUPS, hues))
 
 
 # Static sheet: every colour in it reads a custom property set by _root_css, so
@@ -270,7 +318,7 @@ _MAIN_CSS = """
         font-size: 12px; color: var(--secondary-text); text-transform: uppercase;
         letter-spacing: 0.08em; margin-bottom: 4px;
     }
-    .st-key-wl_idx button, .st-key-wl_cst button {
+    .st-key-wl_idx button, .st-key-wl_cst button, .st-key-corr_section button {
         background: transparent !important;
         border: 1px solid var(--card-border) !important;
         border-radius: 0 !important;
@@ -280,19 +328,22 @@ _MAIN_CSS = """
         box-shadow: none !important;
         font-family: 'Inter', Arial, sans-serif !important;
     }
-    .st-key-wl_idx button p, .st-key-wl_cst button p {
+    .st-key-wl_idx button p, .st-key-wl_cst button p, .st-key-corr_section button p {
         font-size: 13px !important; font-weight: 500 !important;
         color: inherit !important; margin: 0 !important;
     }
-    .st-key-wl_idx button:hover, .st-key-wl_cst button:hover {
+    .st-key-wl_idx button:hover, .st-key-wl_cst button:hover,
+    .st-key-corr_section button:hover {
         border-color: var(--secondary-text) !important; color: var(--primary-text) !important;
     }
-    .st-key-wl_idx button[aria-checked="true"], .st-key-wl_cst button[aria-checked="true"] {
+    .st-key-wl_idx button[aria-checked="true"], .st-key-wl_cst button[aria-checked="true"],
+    .st-key-corr_section button[aria-checked="true"] {
         background: var(--selected) !important; border-color: var(--selected) !important;
         color: var(--canvas) !important;
     }
     .st-key-wl_idx button[aria-checked="true"] p,
-    .st-key-wl_cst button[aria-checked="true"] p { font-weight: 600 !important; }
+    .st-key-wl_cst button[aria-checked="true"] p,
+    .st-key-corr_section button[aria-checked="true"] p { font-weight: 600 !important; }
 
     /* ── Inline confirm buttons: sized to their text ── */
     .confirm-row { display: flex; gap: 8px; margin: 6px 0 2px 0; }

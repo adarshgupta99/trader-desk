@@ -42,7 +42,10 @@ trader-desk/
 │
 ├── analytics/
 │   ├── tiers.py         # pick_tier(lookback_days) -> "15m" | "1d", and expected-obs sizing
-│   └── correlation.py   # Bars -> log returns -> pairwise Pearson; the stale-bar policy
+│   ├── correlation.py   # Bars -> log returns -> pairwise Pearson; the stale-bar policy
+│   ├── sector_matrix.py # 15x15 mean-correlation rollup + drill-down data (spec sections 5/5A/5B)
+│   ├── stock_matrix.py  # Cluster order + preview selection for the stock-level matrix (spec section 6)
+│   └── rolling.py       # Rolling correlation vs NIFTY/another stock/sector basket, top-5 partners (spec section 7)
 ├── data_layer/
 │   └── intraday_store.py  # SQLite bar store outside the repo (~/trader_desk_data/intraday.db)
 ├── jobs/
@@ -160,7 +163,7 @@ section deselects it and the app silently falls back to the first section.
 | Commodities | WTI Crude Oil, Gold, Silver |
 | Volatility | VIX (US) |
 | Events | Upcoming F&O board meetings and declared corporate actions, in two subtabs |
-| Correlation | Pick one of 213 F&O stocks; Most/Least correlated tables for any 1-500 day lookback |
+| Correlation | Four chip-selected sections (`st.pills`, one shown at a time): Sector overview (15x15 mean correlation with click-through drill-down), Stock matrix (cluster-ordered heatmap of the full eligible universe, previewed down to 60), History (rolling correlation vs NIFTY 50 / another stock / a sector basket, plus frozen top-5 partner panels), Pick one stock (Most/Least correlated tables, any 1-500 day lookback) |
 
 Rates tab is parked until `FRED_API_KEY` is added.
 
@@ -268,6 +271,13 @@ are built once and reused — only the choice between them is per-run.
 `ACCENT` and `SELECTED` are deliberately separate from `DOWN`. In light all three happen to
 be the same terracotta, so a blind hex swap would have turned the active-nav underline and
 the selected chip into "loss" colours in dark. See the dark-mode section of CLAUDE.md.
+
+**`sector_colors()` is a scoped exception to the one-accent rule**, agreed with Adarsh 6 Oct
+2026: 15 muted, desaturated hues (`_SECTOR_HUES_LIGHT`/`_SECTOR_HUES_DARK`), one per
+`fno.DISPLAY_GROUPS` entry, used *only* inside the Correlation tab's sector matrix and
+drill-down (legend swatches, column grouping) — never for navigation, controls, or anywhere
+else in the app. Correlation *values* still render on the existing `UP`/`DOWN` scale; this
+palette is sector identity only, so the new-colour footprint stays confined to one feature.
 
 ---
 
@@ -605,6 +615,16 @@ grid — about 22,000 pairs, nobody can read that.
 Both the fetch job and the tab need the same universe and sector lookup, so neither
 parses the JSON itself.
 
+**`DISPLAY_GROUPS` merges the 22 raw sector labels down to 15** (spec section 5B, 6 Oct
+2026): `fno_sectors.json`'s raw labels have near-duplicates (`Bank`/`Private Bank`/
+`PSU Bank`, `Energy`/`Oil & Gas`, ...) that make a sector-level matrix no more readable
+than the 213x213 stock grid it's meant to replace. `_RAW_TO_GROUP` is the one place the
+merge happens; raw labels in the underlying data are untouched. `display_groups_of(symbol)`
+can return more than one group — 5 of the 213 stocks (`AXISBANK`, `HDFCBANK`, `ICICIBANK`,
+`KOTAKBANK`, `SBIN`) span two merged groups, which is what `analytics/sector_matrix.py`'s
+same-symbol exclusion exists to handle. `symbols_in_display_group(group)` is the reverse
+lookup, built once via `_group_membership()`.
+
 **Two tiers, decided in one place (`analytics/tiers.py`):**
 
 | Lookback | Bars | Why |
@@ -700,19 +720,260 @@ diagnostic every run — not used for anything, kept so a change in Yahoo's feed
 pass unnoticed. First full run: 213 symbols, both tiers, 38.0s, zero failures, 306,280
 15m rows + 155,994 daily rows.
 
-**`tabs/correlation.py`** — stock picker (`st.selectbox` over the 213 names), a
+**`tabs/correlation.py`** opens with the sector-level overview, *then* the per-stock
+picker (retitled "Pick one stock"): stock picker (`st.selectbox` over the 213 names), a
 lookback number input (1-500, labelled with which tier and roughly how many
 observations it implies), a top-N input, and two tables: Most correlated / Least
 correlated (most negative first — the useful end for finding a hedge). Sector is shown
-as plain text per the design language ("no extra accent colors" ruled out a
-colour-per-sector scheme the spec originally asked for); a row sharing the picked
-stock's own sector is marked in the primary text token instead. Footer states the bar
-tier, the stale-bar policy, the as-of date and the data source. If the store or the
+as plain text per the design language in that per-stock section; a row sharing the
+picked stock's own sector is marked in the primary text token instead. Footer states the
+bar tier, the stale-bar policy, the as-of date and the data source. If the store or the
 tier's bars are missing, the tab says so and gives the exact fetch command rather than
 failing — there is no rollup-CSV fallback (see "In progress" below for why).
 
+**The sector matrix and drill-down (spec sections 5/5A/5B, 6 Oct 2026)** sit above the
+per-stock section, built from the same `CorrelationResult` (`analytics/sector_matrix.py`
+does no fetching or pairwise math of its own — it only aggregates). A 15x15 heatmap of
+mean pairwise correlation per `fno.DISPLAY_GROUPS` pair, legend swatches in
+`sector_colors()`, then `st.pills` to drill into one sector: a summary bar of that
+sector's mean r against every other sector, then a rectangle of its stocks against every
+other eligible stock (narrowed to a clean S×T rectangle once a second sector is picked
+via a second `st.pills` row). A "Clear" button resets both picks.
+
+*Same-symbol exclusion (spec Addition 1)* — a stock in both sectors S and T (5 of the
+213 stocks span two display groups) would otherwise contribute a self-correlation of
+1.0 to the S,T cell, inflating the mean. `_off_diagonal_cell()` excludes it via
+`np.equal.outer` on the row/column symbol lists. Verified against real 120-day daily
+data: Banks x Financial Services has `possible == 835` (20x42 minus the 5 known
+overlapping banks) and no value of exactly 1.0 in that cell.
+
+*Diagonal cells* use unique unordered pairs of distinct stocks only — a one-stock sector
+(Textiles) has no within-sector pair and correctly shows "no data" rather than a forced
+1.0.
+
+*Drill-down reads the cached snapshot matrix, never recomputes* — so its cells match the
+main matrix exactly by construction, not by re-derivation.
+
+*Two decisions made without a separate round of confirmation, flagged for the record:*
+`st.pills` chips are the actual click mechanism, not a fallback — the spec's "Primary:
+Plotly selection/click events" was judged too fragile to get right without live browser
+verification (axis tick labels aren't clickable Plotly data points; multi-trace subplot
+colour strips are easy to get subtly wrong). And the drill-down rectangle's "all other
+stocks" column view excludes a multi-sector stock already shown as a row, rather than
+letting it also appear as a column under a different sector's grouping (avoiding
+duplicate-column complexity) — a deliberate simplification of the spec's "appears in
+EACH of their sectors' rows/columns" wording.
+
+*The pills' own session-state keys are never written to directly* — a nonce
+(`sector_drill_nonce`) is bumped and `st.rerun()` called instead, same pattern as
+`tabs/watchlist.py`'s `add_nonce`. Directly assigning
+`st.session_state.sector_drill_a = None` from the Clear button raised
+`StreamlitWidgetAlreadyInstantiatedError`, because that pills widget had already been
+instantiated earlier in the same script run by the time the button's code executes.
+`sector_b`'s key also folds in the current `sector_a`, so switching the top-level sector
+resets the second pick instead of carrying over a stale selection — caught via `AppTest`,
+not just the unit tests.
+
+**The tab is now four chip-selected sections (`st.pills("corr_section", ...)`), not one
+long scroll** — Sector overview, Stock matrix, History, Pick one stock. Only the picked
+section's body runs each rerun (same `if/elif` reasoning as the top-level nav in
+`app.py`), and the chip row's CSS is the Watchlist view chips' existing `.st-key-wl_idx`/
+`.st-key-wl_cst` selector list in `theme.py`, extended to include `.st-key-corr_section`
+rather than duplicated.
+
+**Stock matrix (spec section 6, 6 Oct 2026) — cluster first, filter second.**
+`analytics/stock_matrix.py`'s `compute_order()` always clusters the *full* eligible
+universe (after any sector/stock filter) before anything is hidden; the preview
+functions only select a subset of, and re-sort into, that one stable order — never a
+fresh re-clustering of whatever happens to be visible. Distance comes from the already-
+computed `CorrelationResult.corr`, not raw returns: `d(i,j) = sqrt(max(0, 2*(1-r(i,j))))`,
+then `scipy.cluster.hierarchy.linkage(..., method="average")` — average linkage because
+correlation-derived distances aren't guaranteed true-Euclidean, which Ward's method
+assumes. A pair with no valid correlation at all is repaired by repeatedly dropping the
+symbol with the most undefined distances (alphabetical tie-break, so the result is
+deterministic) until the remaining submatrix is fully finite; dropped symbols stay
+searchable elsewhere and are disclosed under the heatmap, never silently hidden.
+
+The tab shows at most 60 stocks at once (`STOCK_MATRIX_CAP`) via two preview modes, both
+re-sorting into the cluster order rather than re-clustering: **Sector-balanced** (round-
+robin across `fno.DISPLAY_GROUPS`, alphabetical within each group, so no single sector
+crowds out the rest) and **Most liquid** (median `close × volume`, via the new
+`intraday_store.read_bars_with_volume()` — volume is read here only for this ranking;
+the stale-bar policy still never uses it). A focus stock, if picked, is always kept in
+whichever preview is showing. The heatmap itself is a `plotly.subplots.make_subplots`
+2x2 grid: the main pairwise correlation heatmap plus two thin "sector strip" heatmaps
+(top edge = columns, right edge = rows) sharing its axes, each strip using a hand-built
+stepped colorscale (`_discrete_colorscale`) because Plotly has no native way to colour
+individual axis tick labels — reusing `theme.sector_colors()`, the same scoped per-
+sector palette the Sector overview section already uses. Both strips also carry
+hover text (`_group_label`) naming the sector, added 7 Oct 2026 after Adarsh asked what
+the strip colours meant — they used to be `hoverinfo="skip"`.
+
+**Correlation-value colour fix (7 Oct 2026).** Adarsh flagged the heatmap cells (not the
+sector strips) as too muted to read. Two causes, both fixed: (1) `zmin`/`zmax` used to be
+a flat `[-1, 1]` regardless of what the data held, so real-world `r` (usually 0.05-0.5)
+always landed in the palest slice of any palette — `_symmetric_zrange()` now fits the
+range to the matrix's own largest magnitude each render (rounded up to the next 0.1,
+floored/capped to `[0.1, 1.0]`), applied at all three heatmap call sites
+(`_sector_heatmap`, `_drill_rectangle`, `_stock_matrix_heatmap`). (2) the muted green/
+terracotta value palette was swapped for a richer blue-white-red diverging scale —
+`theme.CORR_POS`/`CORR_NEG`/`CORR_MID`, a second scoped exception to the one-accent rule
+alongside `sector_colors()`, documented the same way in `theme.py`. This is a **deliberate
+inversion** of the app's usual green-gain/red-loss convention — blue is positive, red is
+negative here — flagged to and accepted by Adarsh before building, on the reasoning that
+"correlation isn't a gain or a loss." Sector identity colouring is untouched by this change.
+
+**Isolating rows, two ways (7 Oct 2026).** `_stock_matrix_heatmap(P, result, cols, rows=None)`
+takes `rows` separately from `cols` now — `cols` is always the full displayed universe (so
+an isolated row is still read against everything, not just against other isolated stocks).
+Two ways to isolate: the **"Isolate rows" multiselect** (`sm_isolate`, typed or picked from
+its dropdown — no typing required, it opens on click), and **clicking the heatmap itself**
+— see the click-interaction writeup immediately below, which supersedes the earlier "no
+click-to-populate wiring" unilateral call.
+
+**History (spec section 7, 6 Oct 2026) — rolling correlation through time.**
+`analytics/rolling.py` is always the daily tier (the 2-year default span is far past the
+15m tier's 60-day Yahoo ceiling, so there's no tier choice to make the way
+`analytics/correlation.py` has to make one). A focus stock is compared against one of
+three things, picked by `st.pills`: **NIFTY 50** (`^NSEI` via `periods.range_history`,
+confirmed `Close == Adj Close` for this ticker — a plain price index, no dividend
+adjustment to reconcile), **another stock**, or a **sector basket** (equal-weight mean
+log return of a `fno.DISPLAY_GROUPS` group's constituents, excluding the focus stock
+itself, using the 15 *merged* display groups rather than the 22 raw sector labels — the
+same merge the Sector overview heatmap already uses). A basket day is `NaN` unless at
+least 80% of its mapped constituents (minimum 2) have a return that day; the UI discloses
+the constituent count and that membership is held fixed, not reconstructed point-in-time.
+
+The rolling window (sessions, default 100, minimum 3) is a separate control from the
+History span (6mo/1yr/2yr, default 2yr) — the window is how the correlation is averaged,
+the span is how far back the line is drawn, and fetching the span needs extra calendar-
+day warm-up before the visible range starts. `rolling_correlation()` doesn't pre-drop
+NaNs from either series; it masks a window point only when fewer than 80% of its sessions
+have a valid pair (`min_pairs`), and separately reports the raw valid-pair count so the UI
+can warn (not mask) below 50. **Top 5 partners** are the five highest signed partners from
+a dedicated daily-tier snapshot (`daily_tier_result`) taken *today* and then plotted
+through the whole history — frozen identities, not re-picked at each date — so the panel
+is explicitly labelled "Today's top 5, shown through time" to disclose the retrospective
+selection.
+
+Found and fixed during AppTest smoke-testing, not reported by a user: yfinance's daily
+index for `^NSEI` is UTC-midnight stamped as a *nominal session date*, not a real UTC
+instant. The first fix (`tz_convert("Asia/Kolkata")`) stopped a tz-aware/tz-naive
+`pd.concat` crash but silently shifted every timestamp to 05:30, which no longer matched
+the stored daily bars' pure-midnight-naive index — so History rendered "not enough
+overlapping data" against 744 real stored sessions. The correct fix is a bare
+`tz_localize(None)` (strip the label, don't shift the clock) in `nifty_log_returns()`.
+
+**Unilateral calls made building Sections 6/7, flagged for the record, not yet
+re-confirmed with Adarsh:** the single comparison line in History uses `P.T1` (the
+existing neutral chart token) rather than a new blue accent, to keep the no-new-colour
+rule; and the optional dendrogram the spec mentions for Section 6 was skipped.
+
+**Clicking the Stock matrix heatmap directly (7 Oct 2026, revised same day).** Plotly axis
+tick *labels* are never clickable — only real trace data points are — so there is no way to
+make clicking a row's name itself do anything. The subplot now has four traces, laid out
+left to right as: a dedicated click-to-isolate strip (col 1, right next to the row-label
+axis), the main correlation grid (col 2), and the sector-colour strip, back in its original
+position on the right edge (col 3) — plus the top sector-colour strip (row 1, above col 2).
+
+The click-to-isolate strip is a `go.Scatter` of one square marker per row, **not** a
+`go.Heatmap`. First attempt made it a heatmap cell (like the sector strip), and clicking it
+never produced a selection event — Plotly's point-selection model, which Streamlit's
+`on_select` reads, only exists for point-based traces (scatter, bar, …), not heatmaps. That
+is the same reason the Chart tab's Measure tool uses a scatter trace rather than drawing on
+the price heatmap. The main grid stays a heatmap (it needs a continuous colour-mapped
+value), so a click there is still unconfirmed in a real browser; the sector strips are
+colour context only and are not click targets.
+
+Both remaining click targets are wired via `st.plotly_chart(..., key=STOCK_MATRIX_PLOT_KEY,
+on_select="rerun", selection_mode=("points",))`, reusing the Chart tab's Measure-tool
+timing: `_apply_pending_stock_matrix_click()`, called at the very top of `render()` (before
+`corr_section`, `hist_*` or `sm_isolate` are instantiated this run), reads
+`st.session_state[STOCK_MATRIX_PLOT_KEY]` — Streamlit syncs the click that triggered this
+rerun into there before the script runs — dedupes it against `sm_click_last_sig`, and
+acts on it:
+- **Click-to-isolate strip click** (`curve_number == 1`, one marker per row): isolates
+  that row by setting `st.session_state["sm_isolate"] = [symbol]` directly — the same
+  effect as picking it from the multiselect, just reachable by clicking next to the name.
+- **Main grid cell click** (`curve_number == 2`, the row/column intersection): jumps to
+  History pre-loaded with that exact pair — sets `corr_section` to `"History"` and seeds
+  `hist_symbol`/`hist_mode="Another stock"`/`hist_other` before those widgets exist yet
+  this run.
+
+Both writes land *before* their widgets are instantiated in the same run, so this is a
+plain pre-seeded default, not the nonce+rerun dance `sector_drill_nonce` needs elsewhere
+in this file — that pattern is only required when a widget with the same key has *already*
+rendered earlier in the same run. No index lookup is needed either: for both the scatter
+strip and the categorical-axis main heatmap, Plotly's selection point gives `x`/`y` as the
+actual tick label strings, not numeric positions, so the clicked symbols are read straight
+off the click event. The two y-axes (col 1's strip and col 2's grid) are kept row-aligned
+with an explicit matching `categoryorder="array", categoryarray=rows` on each, rather than
+`shared_yaxes`, because sharing an axis across subplots can make Plotly report a click from
+more than one trace for the same point — and Streamlit silently drops the whole click when
+that happens.
+
+Verified via `AppTest` by writing a synthetic selection payload straight into
+`st.session_state[STOCK_MATRIX_PLOT_KEY]` and asserting the resulting widget state (no real
+browser click, since AppTest can't drive Plotly's JS) — not yet confirmed in an actual
+browser. No Playwright/Selenium/node/npx tooling exists in this environment to check it
+directly, so that confirmation still depends on Adarsh testing in a real browser after
+reloading the app.
+
+**Label/marker overlap bug, found and fixed in a real browser (7 Oct 2026).** Confirmed
+working: the click-to-isolate strip does register clicks. But its first version put the
+row-name text on col 2's (the main grid's) y-axis, as the original single-heatmap version
+had. A subplot's y-axis tick labels render just *outside* its own domain by default, which
+put the names in the narrow gap between col 1 and col 2 - directly on top of the col 1
+click markers, a jumbled overlap Adarsh caught from a full-browser-window screenshot.
+Reproduced locally by rendering the real `_stock_matrix_heatmap()` output to a PNG with
+`kaleido` (not a project dependency - installed only for this one diagnostic run, then
+removed) at both a phone-width (430px) and a desktop-width (1400px) render, which showed
+the exact same collision kaleido-side, confirming it wasn't a Streamlit-only artifact.
+Fixed by moving the tick labels onto col 1's own y-axis instead (`ticks=""`,
+`showline=False` so there's no second axis line) — labels now render in the figure's left
+margin (sized via `margin.l`, bumped from a flat `10` to `58`/`72` depending on row count),
+clear of the markers, which sit inside col 1's own domain just to the labels' right. Col 2's
+y-axis is now `showticklabels=False`. Re-verified clean at both widths via the same kaleido
+render.
+
+**Strip width tuning, then two real bugs found in a real browser (7-8 Oct 2026).** After
+several rounds of narrowing both sector-colour strips and the click-to-isolate strip on
+request (`column_widths` down to `[0.015, 0.95, 0.035]`, markers down to size 5, then
+`row_heights`/`column_widths` for the sector strips down again to `[0.018, 0.982]` /
+`[..., 0.018]`), Adarsh reported two real problems, not just more width requests:
+
+1. **Click-to-isolate precision:** clicking directly on a visible marker did nothing;
+   clicking slightly to its left did. Column 1 had been narrowed to `0.015` of the figure
+   width - at that point the marker's own diameter exceeded the subplot's pixel width, so
+   its right side was clipped by the domain boundary. The *visible* sliver of colour sat
+   left of the marker's true data-coordinate centre, which is where Plotly actually does
+   hit-testing - so the visible colour and the clickable point were no longer the same
+   pixel. Fixed by widening col 1 back out to `0.028` (markers to size 9) - enough pixel
+   room for the full marker to render unclipped, confirmed with the same kaleido PNG
+   render used above (no clipping at either a phone-width or desktop-width render).
+2. **Main grid cell click never worked, confirmed in a real browser:** this was the
+   suspected-but-unconfirmed risk flagged when Section 6/7 first shipped - a `go.Heatmap`
+   simply does not emit Plotly's point-selection event, in any browser, at any column
+   width. No amount of width tuning could have fixed it. Fixed properly: the main grid
+   heatmap (curve_number 2) now has `hoverinfo="skip"` and carries colour only; a new
+   invisible `go.Scatter` trace (curve_number 3), one marker per cell at `marker.opacity=0`
+   with a generous `size=16` hit area, is stacked on the exact same `row=2, col=2` subplot
+   and carries both the hover tooltip text and the click handling.
+   `_apply_pending_stock_matrix_click()`'s cell-click branch now keys off `curve_number ==
+   3`, not `2`. Opacity-0 markers stay fully hit-testable in Plotly - this is the standard
+   invisible-hover-target technique, not a hack specific to this chart.
+
+Trace order is now five deep: 0 top strip, 1 click-to-isolate strip, 2 main grid colour
+(no hover/click), 3 main grid invisible click/hover overlay, 4 sector-colour strip (right
+edge). Re-verified: pyflakes clean, the `AppTest` click harness passes for both curve 1
+and curve 3, all 15 `pytest` cases pass, and the kaleido PNG render is unclipped at both
+widths. Still open: Adarsh has not yet confirmed the main-grid-cell-to-History click in an
+actual browser - the overlay is new and only `AppTest`-verified so far.
+
 **Acceptance checks (`tests/test_correlation.py`, run with `.venv/bin/python -m pytest
-tests/test_correlation.py -v`), all 11 passing:** self-correlation is 1.0, symmetry,
+tests/test_correlation.py -v`), all 15 passing — unchanged by Sections 6/7, which have
+so far been verified by ad-hoc synthetic/real-data smoke scripts and `AppTest` UI-level
+runs rather than committed pytest functions:** self-correlation is 1.0, symmetry,
 range, tier boundaries (including that "1m" is never returned by anything), log returns
 strip price level but not shared drift, the overnight gap is excluded, stale bars become
 `NaN` without forward-filling, the memo really skips recomputation, a missing store
@@ -721,7 +982,10 @@ at 20 days on 15m bars HDFCBANK/ICICIBANK (+0.2297) does not clearly separate fr
 HDFCBANK/SUNPHARMA (+0.1568) — short-window 15m correlation is genuinely noisy, not
 wrong. The daily tier at longer lookbacks resolves it cleanly: 120 days gives 0.3874 vs
 0.0310, 250 days gives 0.5052 vs 0.1062. The test asserts on the 120-day daily
-comparison, not the 20-day one.
+comparison, not the 20-day one. Plus four sector-matrix tests: same-symbol exclusion on
+a synthetic 3-stock case, a one-stock sector's diagonal correctly returning no data,
+every F&O symbol mapping into at least one display group, and the real-data no-self-pairs
+check above.
 
 ---
 
@@ -749,6 +1013,7 @@ Holds secrets. Never committed. Required keys:
 | `python-dotenv` | Load `.env` secrets |
 | `jugaad-data` | Indian NSE index history (Nifty Auto, Energy, Mid Select, Defence) |
 | `nselib` | NSE corporate actions and board-meeting calendar, for the Events tab |
+| `scipy` | Hierarchical clustering (average linkage) for the Correlation tab's Stock matrix section |
 
 `scripts/refresh_symbol_names.py` also uses `requests`, but it is a maintenance script that
 never runs in the app, so `requests` stays out of `requirements.txt` (it arrives transitively
@@ -817,10 +1082,24 @@ to hourly-resampled daily candles (see `prices.py` above). Not merged, not pushe
 
 `feature/fno-correlation` branches off the hourly branch and carries the F&O correlation
 matrix, now fully built: `fno.py`, `analytics/tiers.py`, `analytics/correlation.py`,
+`analytics/sector_matrix.py`, `analytics/stock_matrix.py`, `analytics/rolling.py`,
 `data_layer/intraday_store.py`, `jobs/fetch_intraday.py`, `tests/test_correlation.py`
-(11/11 passing) and `tabs/correlation.py` wired into `app.py`'s `NAV`. The local store
-has been populated end to end (213 symbols, both tiers, zero failures). Not merged, not
-pushed.
+(15/15 passing) and `tabs/correlation.py` wired into `app.py`'s `NAV`. The local store
+has been populated end to end (213 symbols, both tiers, zero failures). The sector
+matrix + drill-down (spec sections 5/5A/5B) was added 6 Oct 2026 on top of the per-stock
+tab, with a scoped categorical colour-palette exception in `theme.py` (`sector_colors()`)
+agreed with Adarsh for that one feature. The Stock matrix (section 6, cluster-ordered
+heatmap) and History (section 7, rolling correlation) sections were added 6 Oct 2026 on
+top of that, together, with the tab restructured into four `st.pills`-selected sections
+so each is shown one at a time. On 7 Oct 2026: sector-strip hover text, a data-fit
+correlation-value colour scale plus a second scoped colour exception
+(`theme.CORR_POS`/`CORR_NEG`/`CORR_MID`), row isolation via a multiselect, and two click
+interactions directly on the Stock matrix heatmap (click a marker on the dedicated
+click-to-isolate strip to isolate that row, click a cell to jump to History pre-loaded
+with that pair) were all added, with the isolate-click strip rebuilt as a `go.Scatter`
+(heatmap traces don't support Plotly's point-selection) and the sector-colour strip
+restored to the right edge — see the Correlation tab writeup above for each. Not merged,
+not pushed.
 
 ---
 
@@ -843,10 +1122,21 @@ pushed.
 - **Earnings call sentiment tracker:** the Week 5-6 spec in `CLAUDE.md`. It depends on the
   Events calendar already built here for results dates.
 - **F&O correlation matrix:** built on `feature/fno-correlation` (spec:
-  `correlation_matrix_spec-43ee700c.txt`); see the full writeup above. Not yet merged to
-  `main`. Still open: a daily cron/launchd entry for `jobs/fetch_intraday.py` is designed
-  (spec section 7) but not installed on Adarsh's Mac — until it is, the store only has
-  whatever the manual run on 6 Oct 2026 fetched, and ages out of the 15m tier's 60-day
-  window over time without a human running the job by hand. The rollup-CSV fallback in
-  the original spec was dropped outright, not deferred: the app is localhost-only and the
-  repo private, so there is no deploy without the SQLite store sitting right beside it.
+  `correlation_matrix_spec-43ee700c.txt`), including the sector matrix and drill-down
+  (spec sections 5/5A/5B), the Stock matrix (section 6) and History (section 7)
+  sections; see the full writeup above. Not yet merged to `main`. Still open: a daily
+  cron/launchd entry for `jobs/fetch_intraday.py` is designed (spec section 5) but not
+  installed on Adarsh's Mac — until it is, the store only has whatever the manual run on
+  6 Oct 2026 fetched, and ages out of the 15m tier's 60-day window over time without a
+  human running the job by hand. The rollup-CSV fallback in the original spec was
+  dropped outright, not deferred: the app is localhost-only and the repo private, so
+  there is no deploy without the SQLite store sitting right beside it. Also open: no UI
+  screenshot/browser pass on any of the four Correlation sections beyond `AppTest` — worth
+  a real-browser look (sector colours against the beige theme, the History chip row).
+  Confirmed by Adarsh in a real browser (7 Oct 2026): the Stock matrix click-to-isolate
+  strip registers clicks correctly, and the label/marker overlap that first produced is
+  fixed (see the Correlation tab writeup above). Still unconfirmed in a real browser: a
+  main-grid cell click jumping to History. No Playwright/Selenium/node/npx tooling is
+  available in this environment to check that directly, so it needs Adarsh's own eyes.
+  `analytics/stock_matrix.py`/`analytics/rolling.py` also have no committed pytest
+  functions yet, only ad-hoc smoke scripts and AppTest runs.

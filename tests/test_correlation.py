@@ -13,8 +13,10 @@ import pandas as pd
 import pytest
 
 from analytics import correlation as corr
+from analytics import sector_matrix as sm
 from analytics import tiers
 from data_layer import intraday_store
+import fno
 
 HAS_STORE = intraday_store.exists()
 skip_no_store = pytest.mark.skipif(not HAS_STORE, reason="no local bar store")
@@ -283,6 +285,86 @@ def test_k_manual_lookbacks_load_fast():
     assert r1.n_sessions == 1
     some_pair = r1.n_obs.to_numpy()
     assert np.nanmax(some_pair) < 30  # one session of 15m bars is ~24 obs
+
+
+# ---------------------------------------------------------------------
+# Sector matrix: Addition 1 (same-symbol exclusion) and 5B (display
+# grouping). Synthetic for the exclusion maths, real data for the
+# end-to-end check.
+# ---------------------------------------------------------------------
+
+def test_l_sector_cell_excludes_same_symbol_pair():
+    # X sits in both sector S and sector T (multi-sector membership).
+    # Pair (X, X) must never enter the S,T cell: it is corr==1.0 and would
+    # inflate the mean toward a self-correlation that says nothing about
+    # S-vs-T co-movement.
+    stocks = ["X", "A", "B"]
+    corr_vals = pd.DataFrame(
+        [[1.00, 0.40, 0.10],
+         [0.40, 1.00, 0.20],
+         [0.10, 0.20, 1.00]],
+        index=stocks, columns=stocks,
+    )
+    n_obs = pd.DataFrame(100, index=stocks, columns=stocks)
+
+    class FakeResult:
+        pass
+    fake = FakeResult()
+    fake.corr, fake.n_obs = corr_vals, n_obs
+
+    # S = {X, A}, T = {X, B} -- X is the multi-sector stock.
+    vals, ns, possible = sm._off_diagonal_cell(fake, ["X", "A"], ["X", "B"])
+    assert possible == 3          # (X,X) excluded from the 2x2=4 candidates
+    assert len(vals) == 3
+    assert all(abs(v - 1.0) > 1e-9 for v in vals)   # no self-correlation got in
+    assert 0.40 in vals and 0.10 in vals and 0.20 in vals
+
+
+def test_m_sector_diagonal_needs_two_stocks():
+    stocks = ["A"]
+    corr_vals = pd.DataFrame([[1.0]], index=stocks, columns=stocks)
+    n_obs = pd.DataFrame(100, index=stocks, columns=stocks)
+
+    class FakeResult:
+        pass
+    fake = FakeResult()
+    fake.corr, fake.n_obs = corr_vals, n_obs
+
+    vals, ns, possible = sm._diagonal_cell(fake, ["A"])
+    assert vals == [] and possible == 0   # a one-stock sector has no data
+
+
+def test_n_display_groups_cover_every_symbol_once_or_more():
+    # 5B: every symbol maps into at least one of the 15 groups, and the
+    # 22 raw labels all land somewhere (no silently dropped sector).
+    for symbol in fno.symbols():
+        assert len(fno.display_groups_of(symbol)) >= 1
+    mapped_raw = {raw for g in fno.DISPLAY_GROUPS
+                 for s in fno.symbols_in_display_group(g)
+                 for raw in fno.sectors_of(s)}
+    all_raw = {raw for s in fno.symbols() for raw in fno.sectors_of(s)}
+    assert all(fno.display_group_of(r) for r in all_raw)
+    assert mapped_raw == all_raw
+
+
+@skip_no_store
+def test_o_sector_matrix_real_data_no_self_pairs():
+    corr.clear_memo()
+    r = corr.compute(120)
+    smr = sm.compute(r)
+
+    banks = set(fno.symbols_in_display_group("Banks"))
+    fin = set(fno.symbols_in_display_group("Financial Services"))
+    overlap = banks & fin
+    assert overlap   # the known multi-sector banks, or this test is stale
+
+    vals, _, possible = sm._off_diagonal_cell(r, list(banks), list(fin))
+    assert possible == len(banks) * len(fin) - len(overlap)
+    assert all(abs(v - 1.0) > 1e-9 for v in vals)
+
+    # Textiles has exactly one F&O stock -- no within-sector pair exists.
+    assert smr.possible_pairs.at["Textiles", "Textiles"] == 0
+    assert pd.isna(smr.mean_corr.at["Textiles", "Textiles"])
 
 
 if __name__ == "__main__":
