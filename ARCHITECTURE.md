@@ -1030,6 +1030,145 @@ own label) and confirmed every row's label, isolate-strip marker, and diagonal c
 line up. 15-case `pytest` and the `AppTest` click harness still pass. Not yet confirmed by
 Adarsh in a real browser.
 
+**History chart y-axis zoomed to the data, not fixed at [-1, 1] (8 Oct 2026).** Adarsh
+reported the rolling-r line chart (e.g. "INDUSTOWER vs ASIANPAINT — 100-session rolling r")
+was hard to read: real rolling correlations usually live in a narrow band (often 0-0.5),
+but the y-axis was pinned to the coefficient's full theoretical range of `[-1, 1]`, so the
+actual line rode flat and cramped near the bottom quarter of the plot. `[-1, 1]` is the
+range `r` *can* take, not the range it typically *does* take for any one pair. Fixed with a
+new `_rolling_range(rho)` helper in `tabs/correlation.py`: drops NaNs, takes the series' own
+min/max, pads by `max(0.05, (max-min)*0.1)` so the line never touches the plot edge, clamps
+back to `[-1, 1]`, and falls back to `[-1, 1]` only when the series has nothing to measure.
+`_rolling_chart` passes this instead of a hardcoded range; both call sites (the single
+History chart and the compact Top-5-partners grid) pick it up automatically since the range
+is computed inside `_rolling_chart`, not at each call site. Verified with a synthetic series
+shaped like the reported case (mean ~0.25, amplitude ~0.1): the axis now reads `[0.047,
+0.429]` instead of `[-1, 1]`, and a kaleido render confirms the line now fills the plot
+instead of riding flat near the bottom. `numpy` was added as an import to `tabs/correlation.py`
+for this (previously unused in the file). pyflakes clean, 15-case `pytest` still passes. Not
+yet confirmed by Adarsh in a real browser.
+
+**Multi-row isolate via shift-click was silently collapsing to one row (8 Oct
+2026).** Adarsh reported that holding ctrl (cmd on Mac) and clicking several row
+markers didn't select more than one row. Two separate things were going on. First,
+Plotly's own multi-select modifier for a click on a point trace is **shift**, not
+ctrl/cmd - that's fixed inside Plotly.js itself, not something this app's Python
+code or Streamlit's wrapper can remap, so ctrl/cmd was never going to do anything
+regardless of the second bug. Second, there was a real bug: `_apply_pending_stock_
+matrix_click()` read `points[-1]` only, discarding every other point in the
+payload. On a shift-click, Plotly re-sends *all* currently-selected points (not
+just the newly added one) each time, so a three-row shift-click arrived as three
+`curve_number == 1` points and the old code kept only the last, silently
+collapsing it back to a single isolated row. Fixed by collecting every
+`curve_number == 1` point in the payload and setting `sm_isolate` to the full
+list; a plain click with no modifier still isolates just one row, because
+Plotly itself only ever sends that single point back in that case. Verified with
+a new `AppTest` case that writes a synthetic three-point shift-click payload and
+asserts `sm_isolate` ends up with all three symbols, then a follow-up plain
+single-click payload that correctly replaces it with one. The existing click
+harness (single isolate-strip click, main-grid cell click) still passes
+unchanged. pyflakes clean, 15-case `pytest` still passes. Not yet confirmed by
+Adarsh in a real browser - he should use shift, not ctrl/cmd, when he tries it.
+
+**Still not working after that fix - the real cause was a missing `uirevision`
+(8 Oct 2026).** Adarsh reported multi-select still didn't work after the
+points[-1] fix above. The remaining cause: `st.plotly_chart(..., on_select=
+"rerun", ...)` triggers a full Streamlit rerun after every click, and that
+rerun calls `_stock_matrix_heatmap()` again, sending the browser a brand-new
+figure spec. Plotly.js decides whether to treat a new figure as "the same
+chart, just updated" or "a different chart" using `layout.uirevision` - this
+figure had none, so every post-click rerun looked like a different chart to
+Plotly.js, which resets its own client-side selection state on that boundary.
+Concretely: shift-click row A arrives correctly, triggers a rerun, the new
+figure comes back with no `uirevision`, Plotly wipes the selection it was
+tracking, and the next shift-click on row B starts from empty instead of
+adding to A - so the end result always looked like "only one row, no matter
+what." This fully explains the symptom even with the earlier points[-1] fix
+correctly deployed; the two bugs were independent and both had to be fixed.
+Fixed by setting a constant `uirevision="stock_matrix"` on the figure's
+layout, telling Plotly.js this is the same chart across reruns, so it keeps
+its selection state between clicks instead of resetting it. This is a
+browser-side state-persistence behaviour with no Python-observable effect -
+`AppTest` writes directly into `st.session_state` and bypasses the real
+Plotly.js client entirely, so it cannot confirm or refute this fix the way it
+could the points[-1] bug. pyflakes clean, 15-case `pytest` still passes
+(no behavioural change observable outside the browser). This one genuinely
+needs Adarsh to confirm with a real shift-click in a real browser - there is
+no remaining automated way to verify it in this environment.
+
+**The actual root cause: isolating a row hid every other row's marker (8 Oct
+2026).** Adarsh reported it still didn't work after both fixes above. Those
+fixes were real but addressed symptoms, not the structural cause: `_stock_
+matrix_section` set `rows = isolate if isolate else shown` and passed that
+narrowed `rows` straight into `_stock_matrix_heatmap`. The instant one row
+was isolated - by click or by the multiselect - the heatmap re-rendered
+showing *only* that isolated row. Every other row's click-to-isolate marker
+disappeared along with it, so there was no second marker left to click,
+shift-held or not. No modifier key, and no amount of `uirevision` tuning,
+could have fixed this - the marker for the second stock simply wasn't being
+drawn after the first click landed.
+
+Fixed by decoupling "what's isolated" from "what's shown": the grid now
+always renders every row in `shown` (`rows = shown`, unconditionally), and
+`_stock_matrix_heatmap(..., isolated=set(isolate))` only changes how
+isolated rows' markers are *drawn* - bigger (size 12 vs 9) with a 2px accent-
+coloured (`P.ACCENT`) outline, everything else left at its normal size with
+no outline - rather than filtering any row out of the matrix. Click handling
+in `_apply_pending_stock_matrix_click()` changed to match: a plain click (no
+modifier needed at all now) toggles that one row's membership in `sm_isolate`
+- adds it if absent, removes it if already there - instead of replacing the
+whole list. Multiple rows accumulate one plain click at a time because
+nothing about the grid changes shape as you go. The "Isolate rows" multi-
+select's placeholder/caption text changed from "see only their rows" to
+"highlight their rows" to match - narrowing-the-view is no longer what this
+control does.
+
+Verified with a new `AppTest` case: three sequential plain single-point
+clicks (A, then B, then C) land as `['A']`, then `['A','B']`, then
+`['A','B','C']` - confirming accumulation needs no shift/ctrl/cmd at all now
+- and a fourth click re-clicking A drops it back to `['B','C']`, confirming
+toggle-off. The existing click harness (isolate-strip single click, main-
+grid cell click to History) still passes unchanged. A kaleido render with
+three isolated rows out of ten shows all ten rows present with the three
+isolated ones visibly larger and outlined, confirming the view genuinely
+stops narrowing. pyflakes clean, 15-case `pytest` still passes. The earlier
+two fixes (points[-1] merge, `uirevision`) are kept - both are real,
+independently-correct fixes for problems that existed - but neither was
+sufficient on its own because this structural issue sat underneath both of
+them. Not yet confirmed by Adarsh in a real browser, but this fix no longer
+depends on any particular modifier key or browser-side state-persistence
+behaviour, so it should be more robust to verify than the previous two
+attempts.
+
+**Narrowing is back, as an explicit opt-in checkbox, not automatic (8 Oct
+2026).** Adarsh confirmed multi-select-by-click now worked (a screenshot
+showed four highlighted, outlined rows among the full 60), then asked why
+the matrix wasn't actually filtering down to just those rows - the
+highlight-only fix above solved "select several by clicking" but silently
+dropped the original "isolate = see only these rows" behaviour the feature
+was named for, since that's exactly what caused the earlier bug (narrowing
+immediately hid the markers needed to pick more). These two things are
+structurally exclusive on the same chart at the same moment - a row's
+marker can't stay clickable to add more AND be absent because it's not in
+the narrowed set. Resolved by splitting them into two explicit steps instead
+of one implicit one: a new "Show only isolated rows" checkbox (`sm_narrow`,
+default off, disabled when nothing is isolated) controls `rows = isolate if
+(isolate and narrow_only) else shown` - unchecked, every row stays visible
+and clickable exactly as the highlight-only fix left it; checked, the grid
+narrows to just the isolated rows, same as the original pre-bug behaviour.
+Building the list (by click or by typing in the "Isolate rows" dropdown,
+which always lists the full `shown` set regardless of the checkbox) and
+narrowing down to it are now two deliberate actions - pick first, then
+narrow, rather than narrowing automatically cutting off your own ability to
+keep picking. The caption under the chart spells out the workflow so this
+isn't a hidden control. Verified: a new `AppTest` case confirms the checkbox
+defaults to off and flips on correctly; a kaleido render with the checkbox's
+equivalent state (`rows` passed as just the 3 isolated symbols) shows the
+grid correctly narrowed to exactly those 3 rows against every column, same
+layout and alignment the original narrowed view had. pyflakes clean,
+15-case `pytest` still passes. Not yet confirmed by Adarsh in a real
+browser.
+
 **Acceptance checks (`tests/test_correlation.py`, run with `.venv/bin/python -m pytest
 tests/test_correlation.py -v`), all 15 passing — unchanged by Sections 6/7, which have
 so far been verified by ad-hoc synthetic/real-data smoke scripts and `AppTest` UI-level

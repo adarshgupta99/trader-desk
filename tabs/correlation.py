@@ -16,6 +16,7 @@ calls Yahoo itself.
 import math
 from datetime import date, timedelta
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -88,10 +89,14 @@ def _apply_pending_stock_matrix_click():
     which Streamlit's on_select reads, only exists for point-based traces,
     confirmed in a real browser: heatmap cells never fire a selection
     event at all) - clicking a marker isolates that row, the same effect
-    as picking it in the "Isolate rows" multiselect. curve_number 3 is an
-    invisible go.Scatter overlay, one marker per cell, stacked exactly on
-    top of the main grid heatmap (curve_number 2, which has
-    hoverinfo="skip" and is colour-only) - clicking a cell jumps to
+    as picking it in the "Isolate rows" multiselect. Shift-click (Plotly's
+    own multi-select modifier for point traces - not ctrl/cmd, which
+    Plotly's click handler doesn't recognise) isolates more than one row:
+    Plotly re-sends every currently-selected point on each shift-click, so
+    all curve_number 1 points in the payload are read, not just the latest
+    one. curve_number 3 is an invisible go.Scatter overlay, one marker per
+    cell, stacked exactly on top of the main grid heatmap (curve_number 2,
+    which has hoverinfo="skip" and is colour-only) - clicking a cell jumps to
     History pre-loaded with that row/column pair. The sector-colour strip
     (curve_number 4, back on the right edge) is colour context only and is
     not wired here. For both handled traces, Plotly's selection point
@@ -103,18 +108,42 @@ def _apply_pending_stock_matrix_click():
     points = (payload or {}).get("selection", {}).get("points", [])
     if not points:
         return
-    p = points[-1]
-    sig = (p.get("curve_number"), p.get("x"), p.get("y"))
+    sig = tuple((p.get("curve_number"), p.get("x"), p.get("y")) for p in points)
     if sig == st.session_state.get("sm_click_last_sig"):
         return
     st.session_state["sm_click_last_sig"] = sig
 
-    curve = p.get("curve_number")
-    if curve == 1:
-        symbol = p.get("y")
-        if symbol:
-            st.session_state["sm_isolate"] = [symbol]
-    elif curve == 3:
+    # Plotly accumulates every currently-selected point into this same list
+    # on a shift-click (its own multi-select modifier - not ctrl/cmd, which
+    # Plotly's click handler doesn't recognise at all), so a shift-click of
+    # three rows arrives here as three curve_number==1 points, not one. The
+    # old code took only points[-1], which silently collapsed any multi-row
+    # click back down to a single isolated row. Read every curve_number==1
+    # point instead; a plain click (no shift) still replaces the isolation
+    # with one row because Plotly itself only ever sends that one point back.
+    isolate_points = [p for p in points if p.get("curve_number") == 1]
+    cell_points = [p for p in points if p.get("curve_number") == 3]
+
+    if isolate_points:
+        # Toggle membership rather than replace: the heatmap no longer
+        # narrows down to only the isolated rows (see _stock_matrix_section),
+        # so every row's marker stays clickable for the life of the view.
+        # That means a plain click - no shift, no ctrl/cmd needed at all -
+        # can add a second, third, fourth row one at a time, same as
+        # checking boxes in a list. Clicking an already-isolated row's
+        # marker again removes it.
+        current = list(st.session_state.get("sm_isolate", []))
+        for p in isolate_points:
+            symbol = p.get("y")
+            if not symbol:
+                continue
+            if symbol in current:
+                current.remove(symbol)
+            else:
+                current.append(symbol)
+        st.session_state["sm_isolate"] = current
+    elif cell_points:
+        p = cell_points[-1]
         row_symbol, col_symbol = p.get("y"), p.get("x")
         if row_symbol and col_symbol and row_symbol != col_symbol:
             st.session_state["corr_section"] = "History"
@@ -520,18 +549,35 @@ def _stock_matrix_section(P, result):
                 "Isolate rows (optional)</div>", unsafe_allow_html=True)
     isolate = st.multiselect(
         "sm_isolate", shown, key="sm_isolate", label_visibility="collapsed",
-        placeholder="Pick one or more stocks to see only their rows "
-                    "against everything shown",
+        placeholder="Pick one or more stocks to highlight their rows",
     )
-    rows = isolate if isolate else shown
+    narrow_only = st.checkbox(
+        "Show only isolated rows", key="sm_narrow", value=False,
+        disabled=not isolate,
+    )
+    # Two separate concerns, no longer conflated: BUILDING the isolate list
+    # (by click or by typing) always sees every row in `shown`, so there's
+    # always a marker left to click for the next pick or removal - narrowing
+    # the instant one row was picked used to hide every other row's marker,
+    # making it structurally impossible to add a second row by clicking (no
+    # modifier key could have fixed that - the marker just wasn't there).
+    # DISPLAYING the narrowed matrix is now a separate, explicit opt-in via
+    # this checkbox, so picking several rows first and narrowing down to
+    # just them second are two deliberate steps instead of one step that
+    # blocked the other.
+    rows = isolate if (isolate and narrow_only) else shown
 
     st.markdown(
         f"<div style='color:{P.T3};font-size:12px;margin-top:8px;'>"
-        f"Click a row's square marker to isolate it here; click any cell to "
-        f"open that pair's correlation history.</div>", unsafe_allow_html=True,
+        f"Click a row's square marker to highlight it here (click again to "
+        f"remove); click any cell to open that pair's correlation history. "
+        f"Tick “Show only isolated rows” to narrow the matrix down "
+        f"to your picks - add more from the dropdown above first, since a "
+        f"narrowed row's marker is the only one left to click.</div>",
+        unsafe_allow_html=True,
     )
     st.plotly_chart(
-        _stock_matrix_heatmap(P, result, shown, rows=rows),
+        _stock_matrix_heatmap(P, result, shown, rows=rows, isolated=set(isolate)),
         width="stretch", key=STOCK_MATRIX_PLOT_KEY,
         on_select="rerun", selection_mode=("points",),
         config={"displayModeBar": False},
@@ -548,15 +594,18 @@ def _discrete_colorscale(colors):
     return scale
 
 
-def _stock_matrix_heatmap(P, result, cols, rows=None):
+def _stock_matrix_heatmap(P, result, cols, rows=None, isolated=None):
     """`cols` is the displayed universe (x-axis, and the strip along the
-    top). `rows` defaults to the same set (a square matrix) but can be a
-    narrower list - isolating a chosen stock's row(s) against every column
-    still shown, rather than a fresh square subset of just the isolated
-    stocks.
+    top). `rows` defaults to the same set (a square matrix). `isolated` is
+    the subset of `rows` the user has clicked/picked to highlight - it no
+    longer filters `rows` down (see _stock_matrix_section for why: hiding
+    every other row the instant one got isolated made it impossible to
+    click a second one), it only changes how those rows' click-to-isolate
+    markers are drawn.
     """
     if rows is None:
         rows = cols
+    isolated = isolated or set()
 
     colors = sector_colors()
     group_colors = [colors[g] for g in fno.DISPLAY_GROUPS]
@@ -639,10 +688,17 @@ def _stock_matrix_heatmap(P, result, cols, rows=None):
         text=top_text, hovertemplate="%{text}<extra></extra>",
     ), row=1, col=2)
     # curve_number 1: click-to-isolate strip (new) - one marker per row.
+    # Isolated rows get a bigger marker with an accent-coloured outline
+    # instead of disappearing from the strip - see the docstring above for
+    # why rows is no longer filtered down to just the isolated set.
     side_colors = [group_colors[_group_idx(s)] for s in rows]
+    marker_sizes = [12 if s in isolated else 9 for s in rows]
+    marker_line_colors = [P.ACCENT if s in isolated else "rgba(0,0,0,0)" for s in rows]
+    marker_line_widths = [2 if s in isolated else 0 for s in rows]
     fig.add_trace(go.Scatter(
         x=[0] * n, y=rows, mode="markers",
-        marker=dict(size=9, symbol="square", color=side_colors, line=dict(width=0)),
+        marker=dict(size=marker_sizes, symbol="square", color=side_colors,
+                    line=dict(width=marker_line_widths, color=marker_line_colors)),
         text=[s for s in rows], hovertemplate="%{text}<extra></extra>",
         showlegend=False,
     ), row=2, col=1)
@@ -694,6 +750,15 @@ def _stock_matrix_heatmap(P, result, cols, rows=None):
         paper_bgcolor=P.BG, plot_bgcolor=P.SURFACE,
         font=dict(family="Inter, Arial, sans-serif"),
         clickmode="event+select",
+        # A constant uirevision tells Plotly.js this is "the same chart" across
+        # reruns, so it keeps its own client-side selection state instead of
+        # resetting it. Without this, on_select="rerun" sends a brand-new
+        # figure spec after every click (the Python side regenerates it from
+        # scratch), and Plotly.react() treats that as an unrelated chart -
+        # wiping any shift-accumulated selection before the next click can add
+        # to it, so multi-row shift-click could never have worked regardless
+        # of the points[-1] bug fixed earlier the same day.
+        uirevision="stock_matrix",
         hoverlabel=dict(bgcolor=P.TOOLTIP_BG, bordercolor=P.BORDER,
                         font=dict(size=12, color=P.T1,
                                   family="Inter, Arial, sans-serif")),
@@ -954,10 +1019,28 @@ def _history_section(P):
             )
 
 
+def _rolling_range(rho):
+    """[-1, 1] is the correlation coefficient's theoretical range, but real
+    rolling-r series rarely swing anywhere near it - a series living
+    entirely between 0 and 0.3 looks like a flat line against a fixed
+    [-1, 1] axis. Zoom to the data's own min/max instead, with a little
+    padding so the line never touches the plot edge, and fall back to
+    [-1, 1] only when there's nothing to measure.
+    """
+    vals = rho.to_numpy()
+    vals = vals[~np.isnan(vals)]
+    if vals.size == 0:
+        return [-1, 1]
+    vmin, vmax = float(vals.min()), float(vals.max())
+    pad = max(0.05, (vmax - vmin) * 0.1)
+    return [max(-1.0, vmin - pad), min(1.0, vmax + pad)]
+
+
 def _rolling_chart(P, rho, label_a, label_b, window, compact=False):
     """One neutral line (P.T1, not a new blue accent - the design language
     forbids colors outside the granted sector-identity exception), zero
-    baseline, fixed [-1, 1] range, and real gaps left as gaps.
+    baseline, a y-range zoomed to the data's own min/max, and real gaps
+    left as gaps.
     """
     fig = go.Figure(go.Scatter(
         x=rho.index, y=rho.to_numpy(), mode="lines",
@@ -972,7 +1055,8 @@ def _rolling_chart(P, rho, label_a, label_b, window, compact=False):
         font=dict(family="Inter, Arial, sans-serif"),
         xaxis=dict(tickfont=dict(size=9 if compact else 11, color=P.T2),
                   showgrid=False),
-        yaxis=dict(range=[-1, 1], tickfont=dict(size=9 if compact else 11, color=P.T2),
+        yaxis=dict(range=_rolling_range(rho),
+                  tickfont=dict(size=9 if compact else 11, color=P.T2),
                   showgrid=True, gridcolor=P.GRID, zeroline=False),
         showlegend=False,
         hoverlabel=dict(bgcolor=P.TOOLTIP_BG, bordercolor=P.BORDER,
