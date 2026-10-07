@@ -970,6 +970,66 @@ and curve 3, all 15 `pytest` cases pass, and the kaleido PNG render is unclipped
 widths. Still open: Adarsh has not yet confirmed the main-grid-cell-to-History click in an
 actual browser - the overlay is new and only `AppTest`-verified so far.
 
+**Colorbar gap fixed (8 Oct 2026).** Adarsh reported too much empty canvas-colored space
+framing the Stock matrix heatmap. A kaleido render at realistic width pinned it down: the
+main grid's colorbar was anchored at `x=1.06` with no explicit `thickness` - past the
+right-edge sector strip's own domain, so Plotly's automargin expanded the right margin to
+fit it, leaving a wide blank gap between the strip and the colorbar. Fixed by pulling the
+colorbar in to `x=1.015` with `thickness=12`, and tightening the figure's own right margin
+from `r=60` to `r=40` now that it no longer needs to reserve room for the wider automargin.
+Re-rendered with kaleido: the gap is gone, colorbar sits tight against the strip. Re-ran the
+15-case `pytest` suite and the `AppTest` click harness (curve 1 isolate, curve 3 cell-click)
+- both still pass unchanged, since this is a pure layout/visual change with no effect on
+trace structure or click logic. Not yet confirmed by Adarsh in a real browser.
+
+**That colorbar fix wasn't the real cause (8 Oct 2026).** Adarsh reported the chart looked
+identical and that he could drag the whole heatmap around inside its own margins - direct
+proof the plot area was bigger than the actual grid and pannable into the slack. None of the
+four subplot axis pairs had `fixedrange` set, so each one autoranged with its usual padding
+beyond the real categories, and that padding was draggable. Fixed by setting
+`fixedrange=True` on every x and y axis across all four subplots (top strip, isolate strip,
+main grid, right strip) - this is a fixed-size correlation matrix, not something that needs
+zoom or pan, so locking the axes removes the slack space entirely rather than just
+relocating the colorbar closer to the edge. Re-ran the 15-case `pytest` suite and the
+`AppTest` click harness again - both still pass, confirming `fixedrange` doesn't interfere
+with Plotly's click/hover event path. Not yet confirmed by Adarsh in a real browser.
+
+**The actual gap: an unranged axis shared by a heatmap and a scatter trace (8 Oct
+2026).** Adarsh's own screenshot (119x579px, cropped right at the boundary) showed
+genuinely flat background pixels after the isolate strip, not just low-contrast cells -
+proof the grid's first real column wasn't starting where its domain said it should. Pixel-
+diffed against a kaleido render with saturated test data (not near-zero correlations, to
+rule out a contrast illusion) and found a consistent ~50px dead zone on every row before
+the first cell, regardless of row. Isolated with a series of minimal repros: a bare
+`go.Heatmap` alone in a figure has no such gap; the same heatmap inside this exact 2x3
+subplot layout still has no gap; adding back the invisible `go.Scatter` click/hover overlay
+(curve 3) into the same subplot reproduces the gap exactly. Plotly's combined auto-range
+for a heatmap and a scatter trace sharing one axis works out some range wider than the
+categories actually need, and kaleido (confirmed against the real screenshot) renders that
+extra range as literal blank canvas before the first column. Fixed by pinning both axes of
+the main grid (`row=2, col=2`) to an explicit `range` matching the category span exactly
+(`[-0.5, len(cols)-0.5]` / `[len(rows)-0.5, -0.5]`), the same approach col 1's isolate strip
+axis already used. Re-rendered: gap closed on every row, confirmed with both the earlier
+low-correlation synthetic data and the high-correlation stress test. 15-case `pytest` and
+the `AppTest` click harness both still pass unchanged. Not yet confirmed by Adarsh in a
+real browser.
+
+**Row labels drifting out of alignment with their own grid row (8 Oct 2026).** Adarsh's
+screenshot showed row labels and the isolate strip visibly shifted relative to the main
+grid's rows - a hover near the ANANDRATHI label returned BAJAJ-AUTO in the tooltip.
+Root cause was the same class of bug as the horizontal gap just above: col 1's y-axis still
+used `autorange="reversed"` while col 2's had just been pinned to an explicit `range`. Three
+separate subplots (col 1's label/strip axis, col 2's grid axis, col 3's sector-strip axis)
+each resolve their own y-axis independently even over the identical `categoryarray=rows` -
+a scatter trace (col 1) and heatmaps (col 2, col 3) don't autorange identically over the
+same categories, so the rows drifted apart instead of landing on the same pixel per row.
+Fixed by pinning all three y-axes to the same explicit `range=[len(rows)-0.5, -0.5]`
+instead of mixing autorange and explicit range. Re-rendered with a diagonal-highlighted
+test matrix (where misalignment is obvious - the diagonal should land exactly on each row's
+own label) and confirmed every row's label, isolate-strip marker, and diagonal cell now
+line up. 15-case `pytest` and the `AppTest` click harness still pass. Not yet confirmed by
+Adarsh in a real browser.
+
 **Acceptance checks (`tests/test_correlation.py`, run with `.venv/bin/python -m pytest
 tests/test_correlation.py -v`), all 15 passing — unchanged by Sections 6/7, which have
 so far been verified by ad-hoc synthetic/real-data smoke scripts and `AppTest` UI-level

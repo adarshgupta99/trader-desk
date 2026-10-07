@@ -653,7 +653,7 @@ def _stock_matrix_heatmap(P, result, cols, rows=None):
         z=z, x=cols, y=rows, zmin=zmin, zmax=zmax, colorscale=_value_colorscale(P),
         colorbar=dict(title=dict(text="r", font=dict(size=11, color=P.T2)),
                       tickfont=dict(size=11, color=P.T2), outlinewidth=0,
-                      len=0.9, x=1.06),
+                      len=0.9, x=1.015, thickness=12),
         xgap=0.3, ygap=0.3, hoverinfo="skip",
     ), row=2, col=2)
     # curve_number 3: invisible one-marker-per-cell overlay, exact same
@@ -690,7 +690,7 @@ def _stock_matrix_heatmap(P, result, cols, rows=None):
     label_margin = min(130, max(56, int(max_label_len * tick_size * 0.62) + 16))
     fig.update_layout(
         height=max(240, 15 * n + 90),
-        margin=dict(l=label_margin, r=60, t=10, b=10),
+        margin=dict(l=label_margin, r=40, t=10, b=10),
         paper_bgcolor=P.BG, plot_bgcolor=P.SURFACE,
         font=dict(family="Inter, Arial, sans-serif"),
         clickmode="event+select",
@@ -698,21 +698,49 @@ def _stock_matrix_heatmap(P, result, cols, rows=None):
                         font=dict(size=12, color=P.T1,
                                   family="Inter, Arial, sans-serif")),
     )
-    fig.update_xaxes(showticklabels=False, showgrid=False, row=1, col=2)
-    fig.update_yaxes(showticklabels=False, showgrid=False, row=1, col=2)
-    fig.update_xaxes(showticklabels=False, showgrid=False, range=[-1, 1], row=2, col=1)
+    # fixedrange=True on every axis: this is a fixed-size matrix, not a
+    # zoomable/pannable chart. Without it, each subplot's axis autoranges
+    # with its usual padding beyond the actual categories, and that padding
+    # is draggable - the heatmap visibly slides around inside its own
+    # margins. Locking every axis removes that slack entirely.
+    fig.update_xaxes(showticklabels=False, showgrid=False, fixedrange=True,
+                     row=1, col=2)
+    fig.update_yaxes(showticklabels=False, showgrid=False, fixedrange=True,
+                     row=1, col=2)
+    fig.update_xaxes(showticklabels=False, showgrid=False, range=[-0.3, 0.3],
+                     fixedrange=True, row=2, col=1)
+    # Explicit range here too, not autorange="reversed" - col 1, col 2 and
+    # col 3 must land on pixel-identical row positions since they're the
+    # row labels, the grid, and the sector strip for the SAME rows. Each
+    # subplot has its own y-axis, and autorange resolves independently per
+    # axis; a scatter trace (col 1's isolate markers) and a heatmap (col 2,
+    # col 3) autorange slightly differently even over the same categories,
+    # which showed up as whole rows drifting out of alignment with their
+    # own labels. Pinning all three to the identical explicit range removes
+    # the drift instead of relying on them to agree by coincidence.
     fig.update_yaxes(tickfont=dict(size=tick_size, color=P.T2), showgrid=False,
                      showline=False, ticks="", categoryorder="array",
-                     categoryarray=rows, autorange="reversed", row=2, col=1)
+                     categoryarray=rows, range=[len(rows) - 0.5, -0.5],
+                     fixedrange=True, row=2, col=1)
+    # Explicit range on both axes here, not just autorange - the invisible
+    # click/hover overlay (curve 3) is a go.Scatter sharing this subplot,
+    # and Plotly's combined auto-range for a heatmap + scatter on the same
+    # axis leaves a large unexplained dead zone before the first cell (found
+    # by bisecting a minimal repro; removing the overlay trace removes the
+    # gap, but the overlay is required for clicking). Pinning the range to
+    # exactly the category span, the same way col 1's isolate strip already
+    # does, removes it.
     fig.update_xaxes(tickfont=dict(size=tick_size, color=P.T2), side="bottom",
-                     tickangle=-60, showgrid=False, row=2, col=2)
+                     tickangle=-60, showgrid=False, fixedrange=True,
+                     range=[-0.5, len(cols) - 0.5], row=2, col=2)
     fig.update_yaxes(showticklabels=False, showgrid=False,
                      categoryorder="array", categoryarray=rows,
-                     autorange="reversed", row=2, col=2)
-    fig.update_xaxes(showticklabels=False, showgrid=False, row=2, col=3)
+                     range=[len(rows) - 0.5, -0.5], fixedrange=True, row=2, col=2)
+    fig.update_xaxes(showticklabels=False, showgrid=False, fixedrange=True,
+                     row=2, col=3)
     fig.update_yaxes(showticklabels=False, showgrid=False,
                      categoryorder="array", categoryarray=rows,
-                     autorange="reversed", row=2, col=3)
+                     range=[len(rows) - 0.5, -0.5], fixedrange=True, row=2, col=3)
     return fig
 
 
