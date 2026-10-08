@@ -24,3 +24,6 @@ jobs:
 
       - name: Run discovery script
         run: python scripts/discover_nse.py
+
+      - name: Run NSE corporate-announcements archive discovery
+        run: python scripts/discover_nse_archive.py

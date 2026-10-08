@@ -1,0 +1,116 @@
+
+======================================================================
+A. get_earnings_dates coverage (5 names, limit=12)
+======================================================================
+TCS: 25 rows total, tz=America/New_York, 25 past, 0 future
+  columns: ['EPS Estimate', 'Reported EPS', 'Surprise(%)']
+  earliest: 2020-10-07 09:00:00-04:00  latest: 2026-10-08 06:00:00-04:00
+RELIANCE: 25 rows total, tz=America/New_York, 24 past, 1 future
+  columns: ['EPS Estimate', 'Reported EPS', 'Surprise(%)']
+  earliest: 2020-10-30 10:00:00-04:00  latest: 2026-10-16 06:00:00-04:00
+HDFCBANK: 25 rows total, tz=America/New_York, 24 past, 1 future
+  columns: ['EPS Estimate', 'Reported EPS', 'Surprise(%)']
+  earliest: 2020-10-17 07:00:00-04:00  latest: 2026-10-17 06:00:00-04:00
+INFY: 25 rows total, tz=America/New_York, 24 past, 1 future
+  columns: ['EPS Estimate', 'Reported EPS', 'Surprise(%)']
+  earliest: 2020-10-14 06:00:00-04:00  latest: 2026-10-23 06:00:00-04:00
+WIPRO: 25 rows total, tz=America/New_York, 24 past, 1 future
+  columns: ['EPS Estimate', 'Reported EPS', 'Surprise(%)']
+  earliest: 2020-10-13 06:00:00-04:00  latest: 2026-10-15 06:00:00-04:00
+
+======================================================================
+D. interval='1h' depth probe (period='max' and explicit start)
+======================================================================
+TCS: 5031 hourly bars, earliest=2023-10-31 09:15:00+05:30  latest=2026-10-08 14:15:00+05:30
+  span = 1073 calendar days
+RELIANCE: 5041 hourly bars, earliest=2023-10-31 09:15:00+05:30  latest=2026-10-08 15:15:00+05:30
+  span = 1073 calendar days
+HDFCBANK: 5039 hourly bars, earliest=2023-10-31 09:15:00+05:30  latest=2026-10-08 15:15:00+05:30
+  span = 1073 calendar days
+INFY: 5037 hourly bars, earliest=2023-10-31 09:15:00+05:30  latest=2026-10-08 15:15:00+05:30
+  span = 1073 calendar days
+WIPRO: 5041 hourly bars, earliest=2023-10-31 09:15:00+05:30  latest=2026-10-08 14:15:00+05:30
+  span = 1073 calendar days
+
+======================================================================
+D2. interval='1h' beyond 730d (period='3y') - does it clip or error?
+======================================================================
+TCS: EMPTY for 1h/3y
+
+======================================================================
+E. Bar timestamp labeling - sample session for TCS
+======================================================================
+Session 2026-10-08: 6 bars
+  2026-10-08 09:15:00+05:30  O=2101.80 H=2141.30 L=2100.50 C=2128.40 V=144242
+  2026-10-08 10:15:00+05:30  O=2128.40 H=2130.50 L=2110.70 C=2114.00 V=525863
+  2026-10-08 11:15:00+05:30  O=2113.80 H=2114.30 L=2102.60 C=2105.40 V=277709
+  2026-10-08 12:15:00+05:30  O=2106.10 H=2108.80 L=2098.90 C=2103.70 V=237126
+  2026-10-08 13:15:00+05:30  O=2103.70 H=2110.00 L=2092.70 C=2095.90 V=382367
+  2026-10-08 14:15:00+05:30  O=2095.70 H=2096.40 L=2060.00 C=2076.00 V=1371167
+
+NSE regular session is 09:15-15:30 IST (6h15m = 375 min).
+If bar timestamps are START-labeled, first bar ~09:15, last bar ~14:xx or 15:xx with a short final bar covering the remainder.
+If END-labeled, first bar would be ~10:15, last bar ~15:30.
+
+======================================================================
+E2. CAVEATS on the above (added by inspection, not auto-generated)
+======================================================================
+- TCS's 2026-10-08 session shows only 6 bars (09:15..14:15 starts), missing
+  a 7th bar. A full 375-minute session at 60-min bars with a START-labeled
+  final short bar should be 09:15,10:15,11:15,12:15,13:15,14:15,15:15 (the
+  last one 15 min, covering 15:15-15:30) = 7 bars. RELIANCE/HDFCBANK/INFY/
+  WIPRO's reported *latest* timestamp is 15:15 (so they likely do have that
+  7th bar), TCS's is 14:15. Script ran during a live session (9 Oct), so
+  this is plausibly just "today's partial session" bleeding into what looked
+  like "yesterday's" date boundary at fetch time, not a labeling bug - but
+  it was NOT re-verified against a clean completed historical session. Must
+  re-check against an old, fully-settled session before relying on "7 bars,
+  last one short" as the final-bar rule.
+- interval='1h', period='730d' returned 1073 *calendar* days of actual
+  span (2023-10-31 to 2026-10-08), not 730. period='3y' then returned
+  EMPTY for the same ticker with an explicit "range must be within the
+  last 730 days" error. So the "730 days" cutoff is measured from *today*,
+  not from the requested period length - period='730d' and period='3y' are
+  both being clamped to [today-730d, today], and '730d' only "won" here
+  because its naive start (today-730d) overlapped the allowed window while
+  '3y''s naive start (today-3y) didn't. Conclusion: ~1070-1075 calendar
+  days (~2.9 years) of real 1h depth is available per equity right now,
+  consistently across all 5 names - comfortably enough for an 8-print
+  cohort at quarterly cadence (8 quarters = ~2 years) for these large-cap
+  names. Smaller/less liquid F&O names were not tested and may differ.
+- get_earnings_dates() returns America/New_York-tz timestamps, not IST -
+  confirms events_db.py's existing get_eps_history() already has to handle
+  this (it does, via .date() before comparison), and any cross-reference
+  against NSE's IST filing timestamp needs an explicit tz conversion, not
+  a naive date compare on the raw index value.
+
+======================================================================
+SUMMARY MATRIX
+======================================================================
+symbol    past_prints   hourly_bars   hourly_span_days  
+TCS       25            5031          1073              
+RELIANCE  24            5041          1073              
+HDFCBANK  24            5039          1073              
+INFY      24            5037          1073              
+WIPRO     24            5041          1073              
+
+======================================================================
+NOT YET ANSWERED (spec 2b, 2c, 2f, 2g)
+======================================================================
+- 2b/2c: NSE corporate-announcements archive (exact filing timestamps,
+  distinguishing board-meeting notices from actual results submissions)
+  needs the raw NSE API (https://www.nseindia.com/api/corporate-announcements),
+  not covered by nselib's event_calendar_for_equity (which only returns
+  the planned board-meeting date, not the post-meeting filing instant).
+  This is the harder half of gate zero: confirmed nselib reaches NSE from
+  GitHub Actions (test_nse_access.yml, 9 Oct 2026), but the raw
+  corporate-announcements archive endpoint is a different URL/auth surface
+  and has NOT been separately tested from a runner yet.
+- 2f: no session-calendar utility exists in this repo by design (see
+  prices.py, analytics/tiers.py, data_layer/intraday_store.py - all
+  deliberately derive session presence from actual price-data gaps
+  rather than a weekday+holiday-list calendar). The expected-move spec
+  explicitly requires a verified session calendar, which is new scope
+  against that existing convention and needs its own decision.
+- 2g: whether raw-NSE-archive access from GitHub Actions 403s or not is
+  unverified - distinct from the nselib check already passed.
