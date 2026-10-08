@@ -1,0 +1,58 @@
+name: Daily events/estimates jobs
+
+# Runs the Events-feature jobs in sequence, once a day: fetch_events.py (NSE
+# board meetings/corporate actions), then snapshot_estimates.py (T-1 analyst
+# estimate freeze), then fill_actuals.py (actual EPS/revenue once a result is
+# out). Order matters: snapshot_estimates.py needs that day's fresh event
+# dates to know what's due tomorrow. See fetch_events.txt section 6 and
+# jobs/snapshot_estimates.py's docstring.
+#
+# NSE blocks most datacenter IPs (see test_nse_access.yml). If fetch_events.py
+# 403s here, that step is allowed to fail without stopping the rest of the
+# pipeline - snapshot_estimates.py and fill_actuals.py only call yfinance,
+# not NSE directly, so they aren't affected by that specific block. A failed
+# fetch_events.py step still shows red in the Actions log even though the job
+# overall succeeds - check there occasionally, nothing else surfaces it.
+
+on:
+  schedule:
+    - cron: '30 13 * * 1-5'  # 13:30 UTC = 7:00pm IST, weekdays
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-jobs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch events (NSE board meetings / corporate actions)
+        run: python scripts/fetch_events.py
+        continue-on-error: true
+
+      - name: Snapshot T-1 analyst estimates
+        run: python jobs/snapshot_estimates.py
+
+      - name: Fill actuals for reported results
+        run: python jobs/fill_actuals.py
+
+      - name: Commit events.db if changed
+        run: |
+          if ! git diff --quiet events.db; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add events.db
+            git commit -m "Daily events/estimates update"
+            git push
+          else
+            echo "No changes to events.db"
+          fi
