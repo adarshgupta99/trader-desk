@@ -16,7 +16,7 @@ name: Daily events/estimates jobs
 
 on:
   schedule:
-    - cron: '30 13 * * 1-5'  # 13:30 UTC = 7:00pm IST, weekdays
+    - cron: '30 1 * * 1-5'  # 01:30 UTC = 7:00am IST, weekdays
   workflow_dispatch:
 
 permissions:
