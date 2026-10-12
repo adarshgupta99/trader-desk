@@ -85,6 +85,164 @@ E2. CAVEATS on the above (added by inspection, not auto-generated)
   a naive date compare on the raw index value.
 
 ======================================================================
+B/C/F/G. NSE archive, session calendar - RESOLVED 9 Oct 2026
+======================================================================
+Gate zero, part 2 (scripts/discover_nse_archive.py), run both locally and
+from a GitHub Actions runner (workflow_dispatch on test_nse_access.yml):
+status=200, real data, both places. nselib ships a ready-made
+cookie-bootstrap helper (nselib.libutil.nse_urlfetch) that already does
+the origin-page-then-target-URL dance NSE requires - no new session code
+needed.
+
+Endpoint: https://www.nseindia.com/api/corporate-announcements
+  ?index=equities&symbol=<SYM>&from_date=DD-MM-YYYY&to_date=DD-MM-YYYY
+
+Canonical regression case CONFIRMED EXACTLY: TCS, financial period ended
+30 Sep 2024, filed 10-Oct-2024 16:06:39 IST, desc="Financial Result
+Updates", attchmntText="...has submitted to the Exchange, the financial
+results for the period ended September 30, 2024." Matches the spec's
+stated timestamp to the second.
+
+Key finding - desc is NOT a reliable discriminator for "this row is a
+quarterly results submission": checked TCS and RELIANCE over 01-Jan-2024
+to 09-Oct-2026 (527 TCS rows across 29 distinct desc values). TCS puts
+its quarterly results under desc="Financial Result Updates" consistently
+(5 of 5 checked quarters). RELIANCE mixes "Financial Result Updates" and
+"Outcome of Board Meeting" for the SAME kind of filing across quarters,
+and even produces duplicate rows for one quarter under both categories
+with different timestamps (19-Jan-2024: 18:13:53 under "Financial Result
+Updates" and 18:21:13 under "Outcome of Board Meeting", both reporting
+the same period-ended date) - a real instance of the "duplicate/revised
+filing" case the spec warns about. "Outcome of Board Meeting" alone also
+catches non-results outcomes (Investment Committee meetings, statutory
+auditor appointments) - initial lookup on this desc value alone returned
+16 TCS rows for ~10-11 actual quarters, i.e. false positives.
+
+What DOES work reliably across both names and all checked quarters: text
+pattern match on attchmntText for "financial results for the [period|
+quarter...] ended <date>" (case-insensitive, allowing "quarter and half
+year ended", "quarter ended", "period ended" variants seen in the data).
+This also hands over the financial period directly from the filing text,
+avoiding the spec's "do not infer period from calendar date" trap. Use
+the EARLIEST row matching this pattern per distinct period-ended date as
+the submission timestamp; keep any later same-period matches as
+revision/duplicate provenance, not separate prints.
+
+F. Session calendar: RESOLVED, no new dependency needed. nselib already
+depends on pandas_market_calendars (confirmed via `pip show nselib`), and
+it already imports `mcal.get_calendar("NSE")` internally (nselib/libutil.py).
+Verified locally: cal.schedule('2026-10-01', '2026-10-15') correctly
+excludes 2 Oct 2026 (Gandhi Jayanti) - a real NSE holiday, not just a
+weekend gap - confirming this is an actual verified exchange calendar,
+not a weekday-only approximation. This satisfies spec 4f without adding
+a new dependency or building a calendar from price-data gaps.
+
+PATTERN REFINED after checking all 5 names (01-Jan-2024 to 09-Oct-2026):
+the loose "financial results for the...ended" pattern has a real false
+positive - HDFCBANK, 15-Oct-2024, desc="Analysts/Institutional Investor
+Meet/Con. Call Updates": "HDFC Bank Limited has informed the Exchange
+about Earnings call for the unaudited financial results for the quarter
+and half year ended September 30, 2024" - an EARNINGS CALL NOTICE, not
+the results submission, same quarter, different document. Tightened
+pattern to anchor on the submission verb: "submitted to the Exchange,
+the (consolidated and standalone )?(unaudited )?financial results...
+ended" (case-insensitive). Re-run results:
+  TCS:      11 matches (11 quarters in the window, all accounted for)
+  HDFCBANK: 10 matches (false positive now excluded)
+  INFY:     10 matches
+  WIPRO:    10 matches
+  RELIANCE:  7 matches - SHORT. ~11 quarters expected in this window, only
+             7 use "submitted to the Exchange, the ... financial results".
+             RELIANCE's remaining quarters use different phrasing not yet
+             pattern-matched, e.g. "Unaudited Financial Results
+             (Consolidated and Standalone) for the quarter ended June 30,
+             2025" (no "submitted to the Exchange" prefix at all) and "In
+             continuation of our letter dated April 17, 2026, we wish to
+             inform you that the Board of Directors...". RELIANCE is
+             measurably less consistent in filing-text phrasing than the
+             4 IT/banking names checked. A single regex will not cover
+             100% of names; the adapter needs either a broader fallback
+             pattern (risk: more false positives like the earnings-call
+             case) or a per-gap manual reconciliation flag, not a silent
+             assumption that one pattern generalizes across all F&O names.
+
+RELIANCE FALLBACK ROUND (capped at one round, per instruction) - 9 Oct 2026:
+Fetched the full attchmntText for RELIANCE's unmatched quarters directly
+(not inferred) before writing any pattern:
+- 18-Jul-2025, desc="Outcome of Board Meeting": "Unaudited Financial
+  Results (Consolidated and Standalone) for the quarter ended June 30,
+  2025" - states the result directly, no "submitted to the Exchange" or
+  "approved" prefix at all.
+- 17-Jul-2026, desc="Outcome of Board Meeting": "Please find attached
+  Consolidated and Standalone unaudited financial results for the
+  quarter ended ..." - a third distinct verb pattern.
+- 25-Apr-2025 / 24-Apr-2026, desc="Outcome of Board Meeting": "In
+  continuation of our letter dated April 18, 2025 [or April 17, 2026],
+  we wish to inform you that the Board of Directors ... approved the
+  Audited Financial Statements (Consolidated and Standalone) for the
+  financial year ended March 31, ... and the Audited Financial Results
+  (Consolidated and Standalone) for the quarter and year ended March 31,
+  ..." - the annual-results case: "approved the ... Financial Results
+  ... for the quarter and year ended", with no "submitted to the
+  Exchange" anywhere in the text.
+
+Built ONE broadened pattern (alternation, still anchored on an act verb
+or a text that starts directly with the results statement - never a bare
+"financial results...ended" keyword match, to avoid reintroducing the
+HDFCBANK earnings-call false positive):
+  submitted to the exchange,? the (consolidated and standalone )?
+    (unaudited )?financial results.*ended
+  | approved the.*financial results.*(quarter and )?year ended
+  | please find attached.*financial results.*ended
+  | ^\s*unaudited financial results \(consolidated and standalone\)
+    for the quarter ended
+
+Re-ran all 5 names, 01-Jan-2024 to 09-Oct-2026:
+  TCS:      11 matches (unchanged)
+  HDFCBANK: 10 matches (unchanged - earnings-call false positive still
+            correctly excluded, confirmed re-tested)
+  INFY:     10 matches (unchanged)
+  WIPRO:    10 matches (unchanged)
+  RELIANCE: 14 ROWS matching, but only 11 DISTINCT filing events/periods:
+            14-Oct-2024, 16-Jan-2025, 16-Jan-2026, 17-Jul-2026,
+            17-Oct-2025, 18-Jul-2025, 19-Jan-2024, 19-Jul-2024,
+            22-Apr-2024, 24-Apr-2026, 25-Apr-2025 = 11 distinct dates,
+            matching TCS/INFY/WIPRO's count for the same window. The 3
+            extra rows are same-day, same-period duplicates: 24-Apr-2026
+            produced both an "Outcome of Board Meeting" row and a
+            separate "Dividend" announcement row that also contains the
+            full results text; 25-Apr-2025 produced two "Outcome of
+            Board Meeting" rows (one at 20:05:15 duplicated verbatim)
+            plus one "Dividend" row. All same real pattern the spec
+            warns about (section 3, duplicate/revision filings) - not a
+            new case.
+
+DECISION: RELIANCE needed one broadened, RELIANCE-specific pattern round
+(not a general broadening) to reach full coverage - same 11/11 quarters
+as the other 4 names in this window, zero gaps. No archive_coverage_gap
+flag is needed for RELIANCE as of this discovery pass. The one-round cap
+was not exceeded; no further broadening attempted or needed.
+
+DEDUPLICATION RULE (confirmed necessary, applies to all names going
+forward): group matched rows by the period-ended date stated IN THE
+FILING TEXT (not by announcement date), and take the EARLIEST an_dt
+among same-period matches as the submission timestamp. Later same-period
+rows (revisions, Dividend-announcement duplicates, re-filed corrections)
+are retained as provenance only, never counted as a second print for
+that quarter.
+
+ZERO-MATCH POLICY (for any future name/quarter where no pattern matches
+at all, per spec section 7's reason-code vocabulary): flag that quarter
+as archive_coverage_gap and keep the row with no estimate/no print data
+rather than silently dropping it or guessing at a filing date. This has
+not been triggered for any of the 5 discovery names in this window - it
+is a policy decision for the job code, not yet an observed case.
+
+STILL OPEN before schema/job code:
+- Re-verify the 1h bar final-bar/session-length question (E2 above) against
+  a clean historical session, not one captured mid-live-session.
+
+======================================================================
 SUMMARY MATRIX
 ======================================================================
 symbol    past_prints   hourly_bars   hourly_span_days  

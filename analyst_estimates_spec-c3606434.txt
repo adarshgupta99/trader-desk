@@ -1,0 +1,236 @@
+ANALYST ESTIMATES IN THE EVENTS TAB - SPEC FOR CLAUDE CODE
+Repo: trader-desk (Streamlit app). Extends events.db from fno_corporate_actions_spec.txt.
+Read CLAUDE.md first. Do the steps in order. Stop after each step and show output.
+
+======================================================================
+1. GOAL
+======================================================================
+For every upcoming F&O earnings event in the Events tab, also show the
+analyst consensus estimate (EPS, revenue, number of analysts). After the
+result is out, show the actual and the surprise %.
+
+Later (NOT in this spec): the dashboard compares live estimate vs actual
+and gives a signal. This spec only builds the clean data store plus a
+simple UI. No signal logic.
+
+======================================================================
+2. KEY DESIGN RULE (do not break this)
+======================================================================
+Snapshot the estimate on T-1 (the day before the earnings date) and FREEZE it.
+
+- Analysts revise estimates after the print. If we fetch late, we compare
+  actuals against a contaminated number.
+- Every snapshot is stored as a new immutable row. Never UPDATE or DELETE
+  a snapshot row. Never overwrite one.
+- If a snapshot for (symbol, event_date, snapshot_date) already exists,
+  the job skips it.
+- Only the post-release columns (eps_actual, revenue_actual, surprise_pct)
+  may be filled in later, and only once, on the T-1 snapshot row. Enforce
+  this in code (and ideally a SQLite trigger blocking UPDATE of the
+  estimate columns).
+
+======================================================================
+3. STEP 0 - DISCOVERY RUN (before any schema is final)
+======================================================================
+Write scripts/discover_estimates.py. For these 5 symbols print everything
+yfinance returns:
+  RELIANCE.NS, HDFCBANK.NS, TCS.NS, INDUSINDBK.NS, one mid-cap F&O name
+  (e.g. PIIND.NS or any small name from fno_sectors.json)
+
+For each, print:
+  t = yfinance.Ticker(sym)
+  t.get_earnings_estimate()     (or t.earnings_estimate on older versions)
+  t.get_revenue_estimate()      (or t.revenue_estimate)
+  t.get_earnings_dates()        (to see actual vs estimate history)
+  t.quarterly_income_stmt       (for actuals)
+
+Record, for each symbol:
+  - which periods are present (0q = current quarter, +1q, 0y, +1y)
+  - columns: avg, low, high, numberOfAnalysts, yearAgoEps, growth
+  - whether anything is empty / None / raises an error
+  - the currency of revenue (should be INR)
+Save the output to docs/estimates_discovery.txt and show it to the user.
+Known from earlier checks: coverage on Yahoo is thin for Indian names
+(Reliance had only 2 analysts on the quarterly tab). Expect blanks on
+mid-caps. If yfinance version differs, use whichever method name works and
+note it.
+
+STOP HERE. Show the output. Adjust the schema below if reality differs
+(e.g. the period label for "current quarter" may need mapping).
+
+======================================================================
+4. SCHEMA (add to events.db)
+======================================================================
+Table: earnings_estimates
+
+  id               INTEGER PRIMARY KEY
+  symbol           TEXT NOT NULL        -- NSE symbol, no .NS suffix
+  event_date       TEXT NOT NULL        -- earnings date from events table, YYYY-MM-DD
+  snapshot_date    TEXT NOT NULL        -- date the snapshot was taken, YYYY-MM-DD (IST)
+  eps_estimate     REAL                 -- NULL if Yahoo has none
+  revenue_estimate REAL                 -- NULL if none, INR
+  n_analysts_eps   INTEGER              -- NULL if none
+  n_analysts_rev   INTEGER
+  eps_low          REAL
+  eps_high         REAL
+  period_label     TEXT                 -- Yahoo period used, e.g. "0q"
+  source           TEXT NOT NULL        -- "yfinance"
+  fetched_at       TEXT NOT NULL        -- full ISO timestamp, IST
+  -- post-release, filled once:
+  eps_actual       REAL
+  revenue_actual   REAL
+  surprise_pct     REAL
+  actual_source    TEXT                 -- "nselib" or "yfinance"
+  actual_filled_at TEXT
+  UNIQUE(symbol, event_date, snapshot_date)
+
+A row with all estimate columns NULL is VALID. It means "we tried, Yahoo
+had nothing". Store it anyway so the UI can say "no estimate".
+
+======================================================================
+5. SNAPSHOT JOB
+======================================================================
+File: jobs/snapshot_estimates.py
+
+Runs once a day on the user's Mac (cron or launchd), around 6pm IST.
+Reason: NSE blocks datacenter IPs and Yahoo rate-limits some of them. The
+established architecture is: scheduled job writes files, the app only
+reads them. Do NOT call yfinance from the Streamlit app.
+
+Logic:
+  1. Read upcoming earnings events from events.db for the NEXT 1-2 days
+     (event_date = tomorrow, plus any day-after events as a safety net
+     when the job missed a day).
+     Filter: event_type='board_meeting' AND purpose LIKE '%result%'
+     (case-insensitive) on the RAW purpose text - do NOT filter on the
+     events table's subtype column. subtype is picked by first-match-wins
+     over keywords (dividend before result, on purpose - see
+     scripts/fetch_events.py), so a combo agenda like "Financial
+     Results/Dividend" gets subtype='dividend' even though results are
+     genuinely on the agenda. NSE board-meeting agendas mix results with
+     other business constantly (confirmed from a real agenda list: several
+     "Financial Results/Dividend" and "Financial Results/Fund Raising"
+     rows alongside plain "Financial Results" ones) - filtering on subtype
+     would silently drop a real chunk of earnings events.
+  2. For each (symbol, event_date): if no snapshot row exists for it,
+     fetch estimate from yfinance and INSERT a row.
+  3. If the event is today or already past and no snapshot exists, do NOT
+     snapshot. The estimate is no longer clean. Log "missed T-1".
+     (Optional: insert a row flagged late=1 and show it greyed in UI. Ask
+     the user before building this.)
+  4. Sleep 1-2 seconds between symbols. On a 429, stop, log it, retry next
+     day. Do not hammer.
+  5. Log every run to logs/snapshot_estimates.log: counts of inserted,
+     skipped, no-estimate, errors.
+
+Also a manual flag: python jobs/snapshot_estimates.py --date 2026-10-10
+to snapshot a given event date by hand.
+
+Safety net: because the job runs once daily, an earnings date that is
+moved up by the company can be missed. Log it, do not guess.
+
+======================================================================
+6. ACTUALS + SURPRISE JOB
+======================================================================
+File: jobs/fill_actuals.py (can run in the same daily cron, after the
+snapshot job).
+
+STEP 0 (actuals) - DISCOVERY RUN, before this job is written.
+nselib's financial_results_for_equity exists in the installed version
+(confirmed), but its actual output shape doesn't - the events discovery
+already found nselib's real columns differ from guesses in a few places
+(see scripts/fetch_events.py's header comment), and the same risk applies
+here. Extend scripts/discover_estimates.py (or add a second script) to
+call financial_results_for_equity for one symbol with a recently-announced
+result (e.g. a large-cap that reported last quarter) and print the raw
+output: column names, whether EPS is a direct field or needs deriving,
+units (lakhs/crores/plain INR), and standalone vs consolidated rows if
+both are present. Save to docs/estimates_discovery.txt alongside the
+yfinance output. STOP HERE. Show the output before writing the parsing
+logic below.
+
+  1. Find snapshot rows where event_date <= today and eps_actual IS NULL.
+  2. Get the actual from nselib financial_results_for_equity (preferred,
+     it is the filing itself). Fall back to yfinance get_earnings_dates
+     (reportedEPS) or quarterly_income_stmt if nselib has nothing.
+  3. Compute:
+       surprise_pct = (eps_actual - eps_estimate) / abs(eps_estimate) * 100
+     Only when eps_estimate is not NULL and not 0. Otherwise leave NULL.
+  4. Update ONLY actual columns. Never touch the estimate columns.
+  5. Watch the units. NSE results may be in lakhs or crores, Yahoo in
+     plain INR. Print one example per source and normalise to INR before
+     comparing. EPS is per share so should match, revenue will not.
+  6. Standalone vs consolidated: pick consolidated if both exist and
+     document it. Estimates are normally consolidated.
+  7. Results often come in after market hours. If the actual is not
+     found, retry on the next daily run for up to 7 days, then give up
+     and log.
+
+======================================================================
+7. UI (Events tab, v1)
+======================================================================
+For each earnings row add columns:
+  Est. EPS | Est. Rev (Rs cr) | Analysts | Actual EPS | Surprise %
+
+Rules:
+  - Row with no snapshot or NULL estimate: show "no estimate" in grey.
+    NEVER drop the row.
+  - Before the release: actual and surprise show "-".
+  - Surprise %: green if positive, red if negative, plain if 0. Follow the
+    existing design doc (Swiss Editorial, restyle only, no layout rewrite).
+  - Show a small footnote: "Estimate frozen on <snapshot_date>. Source:
+    Yahoo Finance consensus."
+  - Revenue in INR crore, EPS in INR, 2 decimals.
+  - App reads events.db read-only, with st.cache_data and a short TTL.
+
+No signal, no buy/sell colouring beyond surprise sign.
+
+======================================================================
+8. FILES TO ADD
+======================================================================
+  scripts/discover_estimates.py
+  jobs/snapshot_estimates.py
+  jobs/fill_actuals.py
+  db/schema_estimates.sql (the table + immutability trigger)
+  tests/test_estimates.py
+  docs/estimates_discovery.txt  (output of step 0)
+Update CLAUDE.md with a short section on this feature and the T-1 rule.
+
+======================================================================
+9. ACCEPTANCE CHECKS
+======================================================================
+Write these as tests in tests/test_estimates.py. All must pass.
+
+  A. Immutability: insert a snapshot, then try to insert the same
+     (symbol, event_date, snapshot_date) with a different eps_estimate.
+     The original value must still be there. Also try an UPDATE of
+     eps_estimate: it must fail or be blocked.
+  B. T-1 timing: for an event dated D, the job run on D-1 inserts a row,
+     the job run on D or later does not.
+  C. No-estimate row: insert a row with all-NULL estimates. The Events
+     tab data function must still return that earnings row with the text
+     "no estimate".
+  D. Surprise math sign check:
+       estimate 10, actual 12   -> +20.0
+       estimate 10, actual 8    -> -20.0
+       estimate -5, actual -4   -> +20.0  (uses abs of estimate)
+       estimate 0 or NULL       -> NULL, no crash
+  E. Actuals fill only touches actual columns: estimate columns equal
+     their pre-fill values.
+  F. Idempotence: running the snapshot job twice on the same day creates
+     no duplicate rows.
+  G. Rate limit: simulate a 429 from yfinance; the job exits cleanly,
+     logs it, and inserts nothing partial.
+  H. Manual check by the user: open the Events tab, find one big name
+     (e.g. RELIANCE or TCS) with a frozen estimate, and one mid-cap
+     showing "no estimate". Both rows visible.
+
+======================================================================
+10. OUT OF SCOPE (later)
+======================================================================
+  - Live estimate vs actual signal
+  - Guidance, whisper numbers, price reaction
+  - Paid estimate source (Trendlyne, about Rs 299/month, is the upgrade
+    path if blanks are too frequent)
+  - Estimate revision tracking (you could add extra snapshots at T-7,
+    T-3 later as separate immutable rows; the UNIQUE key already allows it)

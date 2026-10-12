@@ -226,3 +226,15 @@ scratch/
 # against TRADER_DESK_DATA_DIR ever pointing inside it by mistake.
 trader_desk_data/
 intraday.db
+
+# macOS
+.DS_Store
+
+# Local scratch / throwaway scripts
+test_key.py
+
+# Live quote cache (live_data_cache.py) - regenerated from yfinance
+live_data_cache.db
+
+# Local events.db snapshots taken before a job run
+backups/

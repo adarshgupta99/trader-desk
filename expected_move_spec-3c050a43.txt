@@ -1,0 +1,449 @@
+TRADER DESK - EXPECTED MOVE V1
+Implementation handoff for Claude Code | 9 October 2026
+
+This is a NEW feature addition, not a replacement for the existing analyst
+estimates, events, or correlation specs. Inspect the current local repo and
+CLAUDE.md before editing. Keep existing work and schema changes intact.
+
+1. OUTCOME AND SCOPE
+
+Add historical earnings-reaction statistics to upcoming earnings in the Events
+tab. For each stock, use the last 8 distinct quarterly results prints available
+before the upcoming event. Show:
+  Expected move: average of the absolute per-print reaction moves.
+  Worst case (historical): largest absolute per-print reaction move.
+
+Both are percentages, one number for movement either way. These are realized
+historical statistics, not an option price, a forecast interval, or a bound on
+future losses. The maximum observed in 8 prints is not the maximum possible.
+
+Preserve the existing Events universe, currently scoped to F&O stocks. Jobs
+fetch and write; Streamlit reads SQLite only. No Yahoo/NSE calls from a tab,
+expander, button, import, or cached Streamlit function. Use the existing daily
+refresh pipeline and deployment/storage conventions.
+
+V1 excludes option-implied comparisons, direction-split statistics, minute-level
+historical reference prices, new notification channels, and strategy advice.
+Do not change analyst EPS/revenue estimate machinery as part of this feature.
+
+2. DISCOVERY FIRST - REQUIRED BEFORE IMPLEMENTATION
+
+Read local CLAUDE.md, existing Events renderer, SQLite migrations, jobs,
+provider adapters, symbol mappings, scheduler/workflows, and tests. Inspect the
+actual tables and column types with SQLite metadata. Do not guess names, paths,
+provider columns, JSON keys, date formats, or pandas index timezone behavior.
+The module/table names later in this spec are suggested NEW components only.
+Reuse or adapt established components rather than create a second Events DB.
+
+Produce docs/expected_move_discovery.txt, with commands, installed yfinance
+version, request parameters, actual schemas, and compact captured examples.
+Use these 5 sample names: TCS, RELIANCE, HDFCBANK, INFY, WIPRO. Resolve their
+Yahoo symbols through the repo's mapping rather than assume a suffix works.
+For each name:
+
+  a. Inspect get_earnings_dates with enough rows to compare at least 8 historical
+     prints where available. Record actual column names, index type/timezone,
+     earliest/latest dates, and which rows are past versus future. This is a
+     coverage cross-check, not the source of exact NSE filing time.
+  b. Inspect NSE corporate-announcements archive results over bounded date
+     ranges spanning roughly 2-3 years. Capture real result-submission rows,
+     actual timestamp fields, attachment references, and financial period.
+     Verify how dates/timestamps differ from Yahoo for the same quarters.
+     Record NSE request/response shape and any empty/truncated responses.
+  c. Distinguish board-meeting notices, actual quarterly results submissions,
+     annual-only filings, revised results, and duplicate attachment uploads.
+     Explain how the adapter identifies one release per financial quarter.
+     A board-meeting date is not an actual results release timestamp.
+  d. Probe interval='1h' (or '60m' only if that alias is verified) at the chosen
+     historical releases. Record successful earliest/latest bars per symbol,
+     any retention error, and availability of the reference and both reaction
+     sessions. Do not assume a fixed hourly-history depth. Current yfinance source
+     uses a 730-day default for hourly max requests, but a prior project probe
+     on the index returned a longer span. Actual per-equity coverage must be
+     measured; neither the default nor the index probe guarantees its depth. Eight quarters are a count target, not guaranteed depth.
+     Do not design the historical calculation around 15-minute bars.
+  e. Verify whether bar timestamps label start or end, NSE session alignment,
+     the final shortened hourly bar, OHLC adjustment behavior, daily-close vs
+     last-hour-close consistency, and holidays/special sessions. Show sample
+     bars around filings. Demonstrate the selection rule in section 5.
+  f. Validate a reliable exchange-session calendar already present in the repo
+     or add a verified source/cache. Weekdays alone are insufficient. A single
+     stock's missing bars cannot establish that the whole exchange was closed.
+  g. Determine whether the daily unattended runtime can access NSE. A browser
+     success is not proof GitHub Actions can fetch the archive. On 403, 429,
+     CAPTCHA, or empty/unverifiable archive coverage, stop aggressive retries;
+     report the limitation. Do not build an evasion mechanism or silently use
+     Yahoo dates as exact release timestamps. An explicit imported NSE cache
+     may support the initial backfill, with its freshness/coverage recorded.
+
+Canonical regression case from the prior NSE archive check:
+  TCS, financial period ended 30 September 2024.
+  Filing timestamp: 10-Oct-2024 16:06:39 IST.
+  It is post-close. Reference is that day's completed close if it traded;
+  reaction is the next exchange session. Verify that next session with the
+  calendar, not calendar-date + 1. The timestamp is exchange submission time,
+  not proof no company disclosure occurred earlier elsewhere.
+
+Discovery must include a matrix per sample symbol: distinct prints found,
+matched Yahoo dates, exact timestamps available, price coverage, usable prints,
+excluded prints and reasons. Stop and report a blocker for an unresolved schema
+or timestamp meaning. Ordinary partial history is a supported state, not a
+reason to invent data or abandon the whole feature.
+
+3. EARNINGS HISTORY AND EVENT IDENTITY
+
+Use the existing events DB where actual result filings and timestamps exist;
+backfill missing history from NSE corporate announcements. Upcoming earnings
+may be board meetings for results, so retain their planned dates as planned.
+Do not turn a board-meeting filing timestamp into the future earnings release
+instant. Existing orientation: earnings candidates have been represented as
+board_meeting with results-related purpose text, not event_type='earnings'.
+Verify current code and schema; subtype may lose information, so reuse the
+established results-purpose filter rather than assume a new event type.
+
+Persist actual filing timestamps in events.db as the previously requested
+additive timestamp change. Store original raw timestamp, normalized UTC instant,
+IST display conversion, timestamp source/field, source announcement identifier
+if available, source/attachment URL, and retrieval time. Never manufacture a
+00:00 timestamp from a date-only row. Use timezone-aware datetimes throughout.
+
+Maintain a link between a planned event and its actual result announcement
+when evidence supports it. Use symbol plus reported financial period as print
+identity, retaining quarter/year-end results that contain the fourth-quarter
+print. Do not count the annual filing and quarterly result as two releases.
+Use the earliest validated actual financial-results submission for the period;
+exclude meeting-intimation/press-invitation rows. Keep revisions/duplicates as
+provenance rather than extra prints. Do not infer financial period solely from
+calendar date if it is absent or ambiguous. Flag that record for reconciliation.
+Conflicting timestamp fields must be logged and resolved, not arbitrarily picked.
+
+For an upcoming event, select the latest 8 distinct actual prints with filing
+instants before that event and observed by the job cutoff. Only completed
+reaction windows contribute. Keep pending recent prints visible with status.
+The cohort is the latest
+8 identified prints, not the latest 8 convenient valid observations: missing
+prices in one of the 8 do not silently cause replacement by an older ninth print.
+With fewer than 8 known prints, use what exists. Report discovery coverage gaps
+separately from known-print price exclusions. Never include the upcoming print
+itself or future data in its statistic. Snapshot the contributing print IDs and
+cutoff so the display is auditable.
+
+4. REFERENCE AND REACTION SESSION RULES
+
+Use the stock's regular NSE cash-equity session. Normal session is 09:15 to
+15:30 IST. Intraday means 09:15:00 <= filing time < 15:30:00 on an actual trading
+session, including all of 15:29. Exactly 15:30:00 is post-close. If the verified
+calendar has special hours, use its actual bounds and flag the special session;
+do not apply normal-session hours blindly.
+
+INTRADAY:
+  Reference R is an hourly-bar proxy for the price at filing, per section 5.
+  Window A: filing instant through that session's close, hourly approximation.
+  Window B: the FULL next exchange session.
+  Both moves use the SAME reference R. Do not reset R to filing-day close for B.
+
+POST-CLOSE:
+  R is the most recent completed regular-session close at/before filing.
+  If the filing day traded and has completed, this is the filing-day close.
+  It is NOT the prior day's close merely because the phrase is "previous close".
+  Window A: not applicable (NULL, UI dash).
+  Window B: the full next exchange session after filing.
+
+PRE-OPEN OR NON-TRADING-DAY FILING (explicit v1 extension):
+  R is the latest completed session close before filing.
+  Window A: not applicable.
+  Window B: the first exchange session opening after filing, including the
+  same date for a pre-open filing. Resolve weekends/holidays with the calendar.
+  Store mode='pre_open' or 'non_session', not a fake intraday timestamp.
+
+Use daily close data for completed-session reference prices, on the same price
+basis as hourly bars. A missing close for the required exchange session is a
+missing reference, not permission to walk back until a convenient older close.
+Do not skip a halted reaction session to a later trading day for that stock.
+That changes the defined window. Session assignment follows the exchange.
+
+5. HOURLY APPROXIMATION - MAKE IT DETERMINISTIC AND HONEST
+
+The desired definition is anchored to exact NSE filing time, but hourly OHLC
+cannot recover the price at a second or isolate extrema within a filing hour.
+Use one explicit v1 proxy consistently, storing the method/version:
+
+  - After verifying bar labeling, normalize to bar START timestamps and actual
+    bar end timestamps (clipped to session close for the shortened final bar).
+  - For intraday R, choose the valid same-session hourly bar whose START is
+    nearest to filing. Use that bar's OPEN as R, not its future closing price.
+    On an equal-distance tie, choose the earlier start. Record signed offset
+    minutes and the chosen bar timestamp. This is a proxy, not an exact quote.
+  - If the expected nearest slot is missing/invalid, use the next valid bar
+    starting after filing in the SAME session. Record 'reference_next_bar'
+    and the time offset. If there is none, R is unavailable; do not take next
+    morning's open as an unflagged intraday reference.
+  - Window A includes valid hourly bars that overlap [filing, session_close).
+    Include the filing-containing bar's full high/low if available. This can
+    include a pre-filing extreme; record 'boundary_hour_contamination' whenever
+    a retained bar starts before filing. There is no honest way to clip its
+    OHLC high/low to the post-filing fraction of the hour.
+  - Window B includes the complete next session's valid hourly high/low bars.
+    No bars from later sessions or outside regular hours.
+
+Nearest-start OPEN and overlapping-hour extrema are deliberate coarse proxies.
+They may overstate a same-session move or miss the true filing-time reference.
+Keep flags in storage and expose them in the history table/tooltips. If discovery
+shows different provider labeling, normalize it before this selection rather
+than guessing. Do not label any price as a minute/second-precise reference.
+
+Explicitly request and record price-adjustment options; do not rely on library
+defaults. Use one consistent split-adjusted basis for hourly and daily prices,
+without adding dividend total-return effects to a stock-price reaction. Verify
+provider split handling rather than assume auto_adjust=False means unadjusted
+for every corporate action. Cache split/action metadata. If a split/bonus basis
+change crosses the reference/reaction interval and cannot be reconciled, exclude
+that print with 'corporate_action_basis_unresolved'. Do not mix adjusted daily
+close with differently adjusted intraday OHLC. Label reference prices as provider
+price-basis values, not historical raw exchange quotes unless that is verified.
+
+6. CALCULATION CONTRACT
+
+For one window W with reference R > 0 and usable finite positive OHLC:
+  H = maximum high across the eligible bars.
+  L = minimum low across the eligible bars.
+  move(W) = 100 * max(abs(H / R - 1), abs(L / R - 1)).
+
+Intraday print: print_move = max(move(A), move(B)).
+Post-close/pre-open/non-session print: print_move = move(B).
+Keep the two window values in history; do not average A and B or count them as
+separate quarterly observations. One quarter contributes one print_move.
+
+Only a print with all required windows complete and usable contributes to the
+headline. For intraday, missing A or B means partial, excluded from headlines;
+still show any available value in history. For other modes, A=NULL is expected
+and does not invalidate the print. Windows still underway are pending, not 0.
+
+For m usable prints among the selected cohort, 1 <= m <= 8:
+  expected_move_pct = sum(print_move_i) / m.
+  worst_case_pct = max(print_move_i).
+No weights, annualization, winsorization, volatility scaling, or sqrt(2) factor.
+Calculate with full precision; round display percentages to 2 decimals only.
+If m=0, both headline values are NULL and UI says 'Unavailable', never 0.00%.
+A real zero move from valid traded bars is allowed. If m=1, mean equals maximum
+and show '1 usable print - limited history'.
+
+Synthetic examples for unit tests, not claimed market observations:
+  R=100; A H=104 L=99 => A=4%; B H=102 L=93 => B=7%; print=7%.
+  Post-close R=200; B H=210 L=192 => print=5%; A=NULL.
+  Valid print moves [7,5,4,6] => expected=5.5%, historical worst case=7%.
+
+7. DATA QUALITY AND MISSING-SESSION POLICY
+
+Retain all selected prints including exclusions, with clear reason codes:
+  missing_filing_time, ambiguous_period, archive_coverage_gap,
+  missing_reference, reference_next_bar, boundary_hour_contamination,
+  price_depth_limit, missing_reaction_bars, incomplete_session,
+  no_trade_or_halt, pending_window, corporate_action_basis_unresolved,
+  source_fetch_failed, source_conflict.
+Separate warnings on usable proxies from exclusions: boundary-hour and valid
+next-bar proxy may contribute with their flags; no reference cannot.
+
+Validate finite positive prices, High >= Low, plausible OHLC ordering, sorted
+unique bar starts, timezone conversion, and session alignment. Do not fill price
+holes with forward-filled OHLC. For zero-volume/stale-looking bars, verify the
+provider's volume semantics. An entirely untraded window is not a zero reaction.
+Require session coverage against expected slots derived from verified alignment
+and session hours; explain any missing slot before treating the extrema as full
+window values. A known trading halt with incomplete windows is excluded and
+visible. An isolated missing bar is not the same as a verified halt.
+
+N<8 copy must show usable count and selected/found count, for example:
+  'Based on 6 usable prints of 8 selected; 2 excluded.'
+  'Based on 4 usable prints; only 4 verified prints found in available archive.'
+Never imply a complete 2-year sample when archive or provider depth is shorter.
+Do not suppress an unusually large valid move; investigate price-basis errors,
+then keep the observation if verified. Maintain source links for inspection.
+
+8. STORAGE - ADDITIVE SQLITE MIGRATIONS
+
+Use existing events.db and repo migration patterns. Back up before migrating.
+Do not drop existing tables or overwrite earlier estimates-spec changes. Store
+actual timestamps with result-announcement records; preserve date-only upcoming
+meeting rows independently. Add foreign-key links where established patterns
+allow. Inspect actual existing column names before proposing ALTER TABLE.
+
+Suggested NEW logical tables (adapt names to the repo):
+
+  earnings_move_prices:
+    symbol, interval, bar_start_utc, bar_end_utc, OHLC, volume,
+    adjustment_basis, source, fetched_at, provider_version.
+    Unique key includes symbol, interval, timestamp, basis. Daily reference
+    closes may use an existing verified daily-price cache instead.
+
+  earnings_move_prints:
+    print_id / event link, symbol, financial_period, filing_ts_utc,
+    release_mode, reference_price, reference_bar_ts, reference_offset_minutes,
+    reference_method, reaction_session_A/B dates, high/low_A/B,
+    move_A_pct, move_B_pct, print_move_pct, status, flags/reasons,
+    required/received slot counts, price_basis, calculation_version,
+    source provenance, inputs_cutoff, computed_at.
+    Unique per print and calculation version; preserve audit history or
+    input hashes when recomputing, following existing repo conventions.
+
+  earnings_move_summaries:
+    upcoming_event_id, symbol, lookback_target=8, selected_print_ids,
+    found_count, selected_count, usable_count, excluded_count,
+    expected_move_pct, worst_case_pct, calculation_version,
+    inputs_cutoff, last_success_at, last_attempt_at, refresh_status.
+    Unique per upcoming event/version. Retain contributing cohort identity.
+
+Add indexes for symbol+filing time, symbol+bar time, event lookup, and status.
+Use NULL for unavailable numeric values, not string placeholders. Store raw
+source evidence needed to reproduce mappings, without committing credentials.
+Use transactions for atomic summary/print updates; the app must never read half
+of a recalculation. Preserve last successful results on fetch failure, marked
+stale with current failure state rather than silently replacing them with zeros.
+
+9. JOBS AND DAILY REFRESH
+
+Suggested new command names, subject to existing repo layout:
+  jobs/discover_expected_move.py
+  jobs/backfill_earnings_filings.py
+  jobs/refresh_expected_moves.py
+  a small pure calculation module under the existing data/feature package.
+
+Separate fetch adapters, calendar/session resolution, pure arithmetic, storage,
+and UI. Calculation tests must run offline on fixtures.
+
+Initial run: discover, migrate, backfill distinct result filings, cache needed
+price windows and preceding closes, compute prints, then upcoming summaries.
+Request only needed ranges or verified supported bulk ranges; bounded chunks
+can handle response limits but cannot bypass Yahoo historical retention.
+Persist hourly history while available; future retention loss must not delete
+already cached valid bars. Record how any imported history was obtained.
+
+Daily run: reuse the existing scheduled Events refresh, then ingest new actual
+results and timestamp revisions, refresh required hourly/daily prices, compute
+newly completed windows, retry eligible missing-data cases, update upcoming
+cohorts and summaries. Use a dependency order, not uncontrolled parallel writes.
+After-close refresh may still precede a late filing or final provider bars;
+leave that print pending and finalize on a later daily run. Do not require the
+app to fetch immediately to fill it. Daily freshness is the v1 promise.
+
+Support symbol-filtered runs and a bounded backfill mode. Be idempotent: reruns
+must not duplicate prints, bars, or summaries. Cache and rate-limit requests;
+use a small bounded retry policy. Log schema changes, empty responses, and
+provider failure clearly. Keep last_success separate from last_attempt.
+
+Verify persistence on the actual deployment. Jobs and app must see the same
+published SQLite artifact through the established repo/sync mechanism; writing
+a runner-local DB alone does not update Streamlit. Do not introduce concurrent
+SQLite writers or commit secrets. Preserve the existing app's personal-access
+and data-audience decisions rather than expanding public access.
+
+10. EVENTS TAB UI
+
+For each upcoming results event, join the cached summary by event identity:
+  Expected move: X.XX%
+  Worst case (historical): Y.YY%
+  Based on m usable prints [of k selected, where relevant].
+
+Use neutral styling consistent with Trader Desk's existing design. These are
+absolute moves, so no green/red directional treatment or up/down arrows. Do
+not replace other event details. Show refreshed timestamp and stale/partial
+state near the values. Responsive layout must fit the user's phone.
+
+Expandable history, newest first, includes:
+  Results period/date; NSE filing timestamp with seconds and IST;
+  reference price (INR, explicit basis), reference mode/bar time;
+  same-session move %, next-session move %, combined print move %;
+  reaction session dates, usability/status and quality flags.
+Required date, filing time, reference, and both window columns must remain easy
+to inspect. Extra audit columns can sit behind a second details view. A dash
+for same-session means not applicable; distinguish it from 'Missing'/'Pending'.
+Provide a real source link only where persisted from the provider.
+
+Always-visible note:
+  'Historical earnings reactions, using hourly prices. Filing-time references
+   are approximate; the filing-hour high/low may include pre-filing trades.
+   Worst case is the largest observed move, not a limit on future moves.'
+
+Method tooltip/details:
+  'For intraday filings, each print uses the larger of the filing-session and
+   next-session extreme moves, both versus the same hourly reference proxy.
+   For after-close filings, the next session is measured versus the filing
+   day's close. Headline expected move is the average across usable prints.'
+
+Specific row warnings should show next-bar offset, boundary-hour contamination,
+limited archive/depth, and missing/halted windows without forcing the user to
+infer them from NULLs. With m=0, show why unavailable and retained history.
+Do not present a symmetric +/- range as a probability guarantee; percentage
+values are absolute magnitude statistics.
+
+11. TESTS AND ACCEPTANCE CRITERIA
+
+Offline unit/fixture tests:
+  - Formula uses farther high/low; absolute down moves work; no sign split.
+  - Intraday print=max(A,B); summaries count prints, not windows.
+  - 09:15 inclusive; 15:29:59 intraday; 15:30 exact post-close.
+  - Post-close reference uses that day's completed close, not prior day.
+  - Intraday B uses filing proxy R, not a new close reference.
+  - Pre-open, weekend, exchange holiday, and verified special-session cases.
+  - Nearest-start ties; missing-nearest next-bar fallback with flag;
+    no same-session fallback available => missing reference, not next-day open.
+  - Filing-containing bar retained and contamination flag shown.
+  - UTC/IST round trips preserve seconds and local session date.
+  - Duplicate/revised filings and annual+quarterly files count one print.
+  - No date-only time invention; planned meeting != actual release.
+  - Latest 8 cohort, not older substitutions for invalid recent prints;
+    fewer than 8, one print, zero usable prints, partial and pending windows.
+  - Missing slots, no-trade/halted session, invalid OHLC, corporate-action basis.
+  - Transaction failure leaves prior good snapshot; rerun is idempotent.
+  - App imports/render paths make zero provider network calls.
+
+Integration check: all 5 discovery names show reconciled evidence, available
+counts, and exclusions. For TCS 10-Oct-2024 16:06:39, assert post-close mode and
+correct reference/session assignment. Do not hard-code a market move without
+stored verified price inputs. Cross-check at least one intraday result and one
+post-close result manually against cached raw OHLC and the formula. If no
+intraday sample exists in these 5, find a verified additional results filing;
+do not fabricate an intraday integration example.
+
+Visual check: inspect actual Events tab pixels at desktop and phone widths.
+Check number labels, count copy, timestamp timezone, expander completeness,
+warning visibility, missing versus not-applicable states, and stale cache.
+Capture the checked UI. Do not declare UI done from tests/DOM alone.
+
+12. IMPLEMENTATION ORDER AND HANDOFF BACK
+
+Order: repo/schema inspection -> discovery report -> additive migration and
+adapters -> initial backfill/cache -> pure calculator and tests -> refresh job
+and deployment persistence -> read-only UI -> integration and visual checks.
+
+Report back with:
+  Files changed, migrations, commands to run, fixture/test results,
+  discovery matrix for 5 names, actual historical depth, cohort exclusions,
+  screenshots checked, scheduling/persistence verification, and any blocker.
+Update CLAUDE.md with the feature and actual operating commands. Do not claim
+any fetch succeeded without evidence or any API field exists before discovery.
+Keep all sections of this handoff when relaying it; this is a complete feature
+addition. Later edits should be deltas against the actual implemented copy.
+
+13. SOURCE AND VERIFICATION NOTES
+
+Prior project evidence supplied for this feature: NSE archive timestamp for TCS
+above; existing jobs-write/app-reads architecture and Events timestamp addition.
+This spec itself does not claim to have rerun the five-symbol discovery or
+inspected the current local code. Those are the first implementation tasks.
+
+NSE announcements page (archive discovery starting point):
+https://www.nseindia.com/companies-listing/corporate-filings-announcements?symbol=TCS&tabIndex=equity
+
+Exact canonical archive request from the earlier project check; verify current
+behavior and field meaning in discovery rather than assume all responses match:
+https://www.nseindia.com/api/corporate-announcements?index=equities&symbol=TCS&from_date=10-10-2024&to_date=10-10-2024
+
+Current yfinance API reference and source inspected while preparing this spec:
+https://ranaroussi.github.io/yfinance/reference/yfinance.price_history.html
+https://github.com/ranaroussi/yfinance/blob/main/yfinance/scrapers/history.py
+The API reference lists supported intervals and adjustment parameters; current
+source distinguishes hourly retention/defaults from shorter intraday intervals.
+Provider behavior/version can change. Measure coverage; do not promise 3 years.
+
+END OF SPEC

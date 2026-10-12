@@ -1,0 +1,261 @@
+SPEC: F&O CORPORATE ACTIONS + EARNINGS DATES DATABASE
+Repo: github.com/adarshgupta99/trader-desk (PUBLIC). Python / Streamlit on Streamlit Community Cloud.
+Audience: Claude Code. The user is a coding beginner. Explain each command you ask him to run, in plain words.
+
+======================================================================
+1. GOAL
+======================================================================
+Track SCHEDULED corporate actions (dividends, splits, bonus, rights, etc.) and
+earnings / board-meeting dates for NSE F&O-underlying stocks ONLY.
+Store them in a persistent SQLite file (events.db). The Streamlit app reads it.
+Scope is F&O stocks only. No other stocks.
+
+======================================================================
+2. DATA SOURCE
+======================================================================
+Package: nselib (pip install nselib). Add to requirements.txt. No API key, no auth.
+Three calls, one call each. NO per-symbol loop.
+
+  from nselib import capital_market
+  capital_market.fno_equity_list()
+  capital_market.corporate_actions_for_equity(from_date, to_date, fno_only=True)
+  capital_market.event_calendar_for_equity(from_date, to_date, fno_only=True)
+
+- Dates are strings in dd-mm-YYYY format (example: "05-10-2026").
+- Forward window: today to today + 60 days.
+- fno_equity_list() wraps NSE /api/underlying-information (symbol, name, lot size).
+- corporate_actions_for_equity wraps NSE corporates-corporateactions (fo_sec=true).
+- event_calendar_for_equity wraps NSE event-calendar (fo_sec=true): board meetings
+  (results, dividend consideration, fundraise, etc.).
+
+IMPORTANT - WHAT IS UNVERIFIED:
+- Column names and field contents are UNVERIFIED. They come from reading nselib 2.5.1
+  source code only. NSE returns 403 to datacenter IPs, so they were never seen live.
+- The F&O stock count is unverified (roughly 180-210 historically). Print len().
+- Do NOT assume column names. Discover them first (Step 1).
+
+======================================================================
+3. STEP 1 - DISCOVERY RUN (DO THIS FIRST, BEFORE WRITING THE REAL SCRIPT)
+======================================================================
+Create scripts/discover_nse.py. It must:
+  1. Call the three functions above (window: today to today+60 days).
+  2. For each result print: len(df), list(df.columns), df.head(10).to_string(),
+     and df.dtypes.
+  3. Catch exceptions per call and print the full error (a 403 is expected from
+     cloud IPs; it should work from the user's home connection).
+  4. Save each df to scratch/ as CSV for inspection. Add scratch/ to .gitignore.
+     Do NOT commit these dumps.
+
+Run it on the user's Mac: python scripts/discover_nse.py
+If you (Claude Code) run in an environment that gets 403, STOP and ask the user to
+run it locally and paste the output. Do not guess columns.
+
+Then ADAPT: write the normalization (Step 3) to match the REAL columns.
+Report to the user, in a short list: the real columns, the F&O count, and the
+mapping you chose.
+
+======================================================================
+4. COLUMN MAPPING STRATEGY (FALLBACK / ROBUSTNESS)
+======================================================================
+- Normalize column names before use: strip, lowercase, remove spaces/underscores.
+  Example: "Ex-Date" and "exDate" and "EX DATE" should all be findable.
+- Write a helper pick(df, candidates) returning the first existing column from a
+  list of candidate names (case-insensitive, space-insensitive). Candidates are
+  seeded from what discovery shows, plus likely variants:
+    symbol: symbol, sym
+    purpose: purpose, subject, bm_desc, description, bmdesc
+    event date: exdate, bm_date, date, meetingdate, eventdate
+    record date: recdate, recorddate, bcstartdate
+- If a required column (symbol, event date, purpose) cannot be found, FAIL LOUDLY
+  with a message listing the columns that were found. Do not insert garbage.
+- ALWAYS store the full original row as JSON in raw_json (json.dumps of the row
+  dict, default=str). This allows re-parsing later without refetching.
+- Parse dates defensively (try dd-MMM-YYYY, dd-mm-YYYY, YYYY-MM-DD). Store as
+  ISO YYYY-MM-DD text. If a date cannot be parsed, skip that row, count it, and
+  print the count. Do not crash on one bad row.
+
+======================================================================
+5. ARCHITECTURE
+======================================================================
+Files:
+  scripts/fetch_events.py      the fetch + upsert job (new)
+  scripts/discover_nse.py      discovery helper (new, Step 1)
+  events_db.py                 small read helper used by the app (new, at repo
+                               root next to data_loader.py; match existing style)
+  events.db                    SQLite file (committed to repo by the job)
+
+events.db is SEPARATE from market_cache.db. Cache wipes must never destroy it.
+Do not touch market_cache.db or data_loader.py behaviour.
+
+--- Schema (create with CREATE TABLE IF NOT EXISTS) ---
+instruments(
+  symbol      TEXT PRIMARY KEY,
+  name        TEXT,
+  lot_size    INTEGER,
+  updated_at  TEXT          -- ISO timestamp UTC
+)
+
+events(
+  symbol      TEXT NOT NULL,
+  event_type  TEXT NOT NULL,   -- 'corp_action' or 'board_meeting'
+  subtype     TEXT,            -- parsed from purpose, see below
+  event_date  TEXT NOT NULL,   -- ISO date (ex-date for corp actions, meeting date for board meetings)
+  record_date TEXT,            -- ISO date or NULL
+  purpose     TEXT NOT NULL,   -- VERBATIM text from NSE, never edited
+  source      TEXT,            -- e.g. 'nselib.corporate_actions' / 'nselib.event_calendar'
+  fetched_at  TEXT,            -- ISO timestamp UTC of the fetch that last touched this row
+  raw_json    TEXT,
+  PRIMARY KEY (symbol, event_type, event_date, purpose)
+)
+
+Also create a small table:
+meta(key TEXT PRIMARY KEY, value TEXT)
+  Used for: 'last_success_at' (ISO UTC), 'last_error' (text or empty),
+  'fno_count'.
+
+--- Upsert ---
+Use: INSERT INTO events (...) VALUES (...)
+     ON CONFLICT(symbol, event_type, event_date, purpose) DO UPDATE SET
+       subtype=excluded.subtype, record_date=excluded.record_date,
+       source=excluded.source, fetched_at=excluded.fetched_at,
+       raw_json=excluded.raw_json;
+Same pattern for instruments (ON CONFLICT(symbol)).
+Dates get revised by companies: a revised date arrives as a new row. Do NOT
+delete old rows automatically in v1. Keep it simple.
+
+--- Filtering ---
+Insert event rows ONLY for symbols present in instruments (the fresh
+fno_equity_list result). Count and print how many rows were dropped.
+
+--- subtype parsing (dumb keyword matching, case-insensitive, on purpose text) ---
+  contains "dividend"            -> 'dividend'
+  contains "split" / "sub-division"/"subdivision" -> 'split'
+  contains "bonus"               -> 'bonus'
+  contains "rights"              -> 'rights'
+  contains "result"              -> 'results'
+  contains "buyback"/"buy back"  -> 'buyback'
+  contains "fund raising"/"fundraising"/"qip"/"preferential" -> 'fundraise'
+  contains "agm"/"annual general"-> 'agm'
+  otherwise                      -> 'other'
+Check "result" last among matches where a purpose lists multiple things; if a
+purpose contains several keywords, pick the first match in the order above. Put the
+list in one constant at the top of the file so the user can edit it.
+
+--- fetch_events.py flow ---
+  1. Compute today and today+60 days in dd-mm-YYYY (IST).
+  2. fno_equity_list() -> upsert instruments (refresh only if the table is empty or
+     older than 7 days; otherwise just load symbols from the table). Still fetch
+     it if the table is empty.
+  3. corporate_actions_for_equity(from, to, fno_only=True) -> normalize -> upsert.
+  4. event_calendar_for_equity(from, to, fno_only=True) -> normalize -> upsert.
+  5. On full success: set meta.last_success_at = now UTC, last_error = ''.
+  6. Print a summary: instruments count, rows inserted/updated per source, rows
+     dropped (non-F&O), rows skipped (bad dates).
+Exit codes: 0 on success; non-zero on ANY failure (so GitHub Actions goes red
+and the user notices). On failure, write meta.last_error but do NOT overwrite
+last_success_at, and do NOT delete existing rows.
+
+--- Politeness / retries ---
+  - Only these 3 calls per run. No loops over symbols.
+  - Retry each call up to 3 times with backoff (5s, 15s, 45s). Then fail.
+  - Sleep 2 seconds between the calls.
+
+======================================================================
+6. SCHEDULING
+======================================================================
+Refresh daily at about 7pm IST (announcement-driven data; more often is pointless
+and rude to NSE). Optional second run in the morning (about 8am IST).
+
+Option A - GitHub Actions. Create .github/workflows/fetch_events.yml:
+  - on: schedule cron '30 13 * * 1-5' (UTC = 7:00pm IST, weekdays) plus
+    workflow_dispatch (manual button).
+  - permissions: contents: write
+  - steps: checkout, setup-python, pip install -r requirements.txt,
+    python scripts/fetch_events.py, then commit and push events.db ONLY IF it
+    changed (git diff --quiet events.db || commit+push). Use the default
+    GITHUB_TOKEN. No custom secrets.
+  - Optional morning run: second cron '30 2 * * 1-5' (8:00am IST).
+  CAVEAT (state this to the user plainly): GitHub Actions runners are datacenter
+  IPs and NSE blocks datacenter IPs. This workflow may fail with 403. That is
+  expected to be possible, not a bug in the code. Test with workflow_dispatch once.
+
+Option B - FALLBACK if Actions gets 403: a cron/launchd job on the user's Mac that
+  runs scripts/run_and_push.sh:
+    cd to the repo, activate the venv, python scripts/fetch_events.py,
+    then if events.db changed: git add events.db, git commit -m "update events",
+    git push.
+  Provide a launchd plist (or crontab line) for 7pm IST daily, and explain how to
+  install it step by step. Mac must be awake/online at that time; say so.
+
+Do Option A first, test it. If it 403s, tell the user and build Option B.
+Do not build both without checking.
+
+The job commits events.db to the repo, so Streamlit Cloud picks up the new file on
+redeploy/pull. Commit only when content changed (avoid noise commits). Keep
+events.db small (a few MB at most); it only holds ~60 days forward.
+
+======================================================================
+7. APP SIDE (Streamlit)
+======================================================================
+events_db.py:
+  - Open events.db READ-ONLY: sqlite3.connect("file:events.db?mode=ro", uri=True).
+  - get_upcoming_events(symbols=None) -> pandas DataFrame of events with
+    event_date >= today (IST), ordered by event_date ascending. If symbols is
+    given, filter to those.
+  - get_last_success() -> meta.last_success_at (or None) and meta.last_error.
+  - If events.db is missing, return empty results, no crash.
+  - Wrap loaders in @st.cache_data(ttl=3600).
+
+New "Upcoming events" section (add to the existing app; follow existing layout and
+style, do not redesign other pages):
+  - Table: date, symbol, type/subtype, purpose, record date.
+  - Filter: by watchlist symbols (use the existing watchlist in the app) with a
+    toggle "Show all F&O" vs "My watchlist only". Also filter by subtype.
+  - Show "Last updated: <last_success_at in IST>" at the top.
+  - If last_success_at is older than 3 days or missing, show st.warning with the
+    stale-data message and the last_error if any. The app must keep working on the
+    stale data.
+  - Show this coverage note in the UI (short caption):
+      "Results dates appear only about 1-3 weeks ahead, after the company files
+       with the exchange. Dates can be revised. This list updates daily and is
+       not a complete calendar."
+
+======================================================================
+8. REPO HYGIENE (PUBLIC REPO)
+======================================================================
+  - No secrets needed: nselib has no auth. Do not add any keys.
+  - .env stays gitignored. Do not read or print it.
+  - Add to .gitignore: scratch/, any *.csv dumps from discovery.
+  - Do NOT commit raw NSE bulk dumps. Only events.db (small, curated) is committed.
+  - Add nselib to requirements.txt (pin the version after discovery works).
+  - Do not hard-code file paths to the user's Mac.
+
+======================================================================
+9. ACCEPTANCE CHECKS (report each as PASS/FAIL with evidence)
+======================================================================
+  1. scripts/discover_nse.py ran on the user's Mac; real columns and F&O count
+     reported back.
+  2. python scripts/fetch_events.py runs from the Mac with exit code 0 and prints
+     the summary.
+  3. SQL check: SELECT COUNT(*) FROM events WHERE symbol NOT IN
+     (SELECT symbol FROM instruments); returns 0.
+  4. Running fetch_events.py twice does not create duplicate rows (upsert works).
+  5. The app shows an "Upcoming events" section, sorted by date, filterable by
+     watchlist, with a Last-updated timestamp and the coverage caption.
+  6. Simulated failure: make the fetch raise (e.g. temporarily bad network or a
+     forced exception). The script exits non-zero, existing rows remain,
+     last_success_at is unchanged, and the app still loads old data and shows the
+     stale-data warning when older than 3 days.
+  7. GitHub Actions workflow tested via workflow_dispatch; result reported
+     honestly (success or 403). If 403, propose Option B.
+  8. market_cache.db and existing app features untouched.
+
+======================================================================
+10. WORKING RULES
+======================================================================
+  - Do Step 1 (discovery) first and report before building the rest.
+  - If anything in this spec conflicts with what the real data shows, follow the
+    real data and tell the user what changed and why.
+  - Keep code simple and commented; the user is a beginner.
+  - Make small commits with clear messages. Don't push to main without telling the
+    user what changed.

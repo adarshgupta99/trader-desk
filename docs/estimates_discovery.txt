@@ -1,0 +1,820 @@
+yfinance version: 1.7.0
+
+
+######################################################################
+RELIANCE.NS
+######################################################################
+
+======================================================================
+RELIANCE.NS get_earnings_estimate()
+======================================================================
+shape = (4, 7)
+columns = ['avg', 'low', 'high', 'yearAgoEps', 'numberOfAnalysts', 'growth', 'currency']
+index = ['0q', '+1q', '0y', '+1y']
+
+dtypes:
+avg                 float64
+low                 float64
+high                float64
+yearAgoEps          float64
+numberOfAnalysts      int64
+growth              float64
+currency                str
+dtype: object
+
+full content:
+             avg       low   high  yearAgoEps  numberOfAnalysts  growth currency
+period                                                                          
+0q      16.92500  13.60000  18.95    13.42000                 6  0.2612      INR
++1q     17.49000  13.90000  21.08    13.78000                 2  0.2692      INR
+0y      63.78182  53.53695  76.09    59.69000                26  0.0686      INR
++1y     71.06820  54.90877  93.92    63.78182                26  0.1142      INR
+
+======================================================================
+RELIANCE.NS get_revenue_estimate()
+======================================================================
+shape = (4, 7)
+columns = ['avg', 'low', 'high', 'numberOfAnalysts', 'yearAgoRevenue', 'growth', 'currency']
+index = ['0q', '+1q', '0y', '+1y']
+
+dtypes:
+avg                   int64
+low                   int64
+high                  int64
+numberOfAnalysts      int64
+yearAgoRevenue        int64
+growth              float64
+currency                str
+dtype: object
+
+full content:
+                   avg             low            high  numberOfAnalysts  yearAgoRevenue  growth currency
+period                                                                                                   
+0q       3157414444440   2495700000000   3561700000000                 9   2546230000000  0.2400      INR
++1q      3041012666670   2721800000000   3333238000000                 3   2649050000000  0.1480      INR
+0y      11835899262950  10557110145620  13526901000000                24   5056490000000  1.3407      INR
++1y     12423383824820  10984000000000  13999546000000                24   6251075333330  0.9874      INR
+
+======================================================================
+RELIANCE.NS get_earnings_dates()
+======================================================================
+shape = (25, 3)
+columns = ['EPS Estimate', 'Reported EPS', 'Surprise(%)']
+index = [Timestamp('2026-10-16 06:00:00-0400', tz='America/New_York'), Timestamp('2026-07-17 09:00:00-0400', tz='America/New_York'), Timestamp('2026-04-24 09:00:00-0400', tz='America/New_York'), Timestamp('2026-01-16 08:00:00-0500', tz='America/New_York'), Timestamp('2025-10-17 09:00:00-0400', tz='America/New_York'), Timestamp('2025-07-18 10:00:00-0400', tz='America/New_York'), Timestamp('2025-04-25 10:00:00-0400', tz='America/New_York'), Timestamp('2025-01-16 08:00:00-0500', tz='America/New_York'), Timestamp('2024-10-14 09:00:00-0400', tz='America/New_York'), Timestamp('2024-07-19 09:00:00-0400', tz='America/New_York'), Timestamp('2024-04-22 09:00:00-0400', tz='America/New_York'), Timestamp('2024-01-19 07:00:00-0500', tz='America/New_York'), Timestamp('2023-10-27 09:00:00-0400', tz='America/New_York'), Timestamp('2023-07-21 10:00:00-0400', tz='America/New_York'), Timestamp('2023-04-21 09:00:00-0400', tz='America/New_York'), Timestamp('2023-01-20 08:00:00-0500', tz='America/New_York'), Timestamp('2022-10-21 10:00:00-0400', tz='America/New_York'), Timestamp('2022-07-22 10:00:00-0400', tz='America/New_York'), Timestamp('2022-05-06 10:00:00-0400', tz='America/New_York'), Timestamp('2022-01-21 09:00:00-0500', tz='America/New_York'), Timestamp('2021-10-22 10:00:00-0400', tz='America/New_York'), Timestamp('2021-07-23 10:00:00-0400', tz='America/New_York'), Timestamp('2021-04-30 10:00:00-0400', tz='America/New_York'), Timestamp('2021-01-22 09:00:00-0500', tz='America/New_York'), Timestamp('2020-10-30 10:00:00-0400', tz='America/New_York')]
+
+dtypes:
+EPS Estimate    float64
+Reported EPS    float64
+Surprise(%)     float64
+dtype: object
+
+full content:
+                           EPS Estimate  Reported EPS  Surprise(%)
+Earnings Date                                                     
+2026-10-16 06:00:00-04:00         16.81           NaN          NaN
+2026-07-17 09:00:00-04:00         14.97         15.48         3.38
+2026-04-24 09:00:00-04:00         15.39         12.54       -18.52
+2026-01-16 08:00:00-05:00         14.89         13.78        -7.44
+2025-10-17 09:00:00-04:00         14.35         13.42        -6.45
+2025-07-18 10:00:00-04:00         15.45         19.95        29.12
+2025-04-25 10:00:00-04:00          6.40          8.29        29.53
+2025-01-16 08:00:00-05:00         13.39         13.70         2.34
+2024-10-14 09:00:00-04:00          5.85          5.70        -2.56
+2024-07-19 09:00:00-04:00         12.81         11.19       -12.69
+2024-04-22 09:00:00-04:00         14.93         14.01        -6.21
+2024-01-19 07:00:00-05:00         12.88         12.76        -0.96
+2023-10-27 09:00:00-04:00         13.41         12.86        -4.15
+2023-07-21 10:00:00-04:00         12.65         11.83        -6.46
+2023-04-21 09:00:00-04:00         13.38         14.26         6.57
+2023-01-20 08:00:00-05:00         12.71         11.67        -8.18
+2022-10-21 10:00:00-04:00         12.83         10.09       -21.36
+2022-07-22 10:00:00-04:00         19.64         13.27       -32.43
+2022-05-06 10:00:00-04:00          7.85          8.20         4.46
+2022-01-21 09:00:00-05:00          8.60          7.61       -11.51
+2021-10-22 10:00:00-04:00          7.38          6.95        -5.83
+2021-07-23 10:00:00-04:00          5.25          6.53        24.29
+2021-04-30 10:00:00-04:00          8.60          5.80       -32.62
+2021-01-22 09:00:00-05:00          9.28         10.06         8.38
+2020-10-30 10:00:00-04:00          4.35          5.02        15.40
+
+======================================================================
+RELIANCE.NS quarterly_income_stmt
+======================================================================
+shape = (37, 5)
+columns = [Timestamp('2026-06-30 00:00:00'), Timestamp('2026-03-31 00:00:00'), Timestamp('2025-12-31 00:00:00'), Timestamp('2025-06-30 00:00:00'), Timestamp('2025-03-31 00:00:00')]
+index = ['Tax Effect Of Unusual Items', 'Tax Rate For Calcs', 'Normalized EBITDA', 'Total Unusual Items', 'Total Unusual Items Excluding Goodwill', 'Net Income From Continuing Operation Net Minority Interest', 'Reconciled Cost Of Revenue', 'EBITDA', 'EBIT', 'Net Interest Income', 'Interest Expense', 'Normalized Income', 'Net Income From Continuing And Discontinued Operation', 'Total Expenses', 'Diluted Average Shares', 'Basic Average Shares', 'Diluted EPS', 'Basic EPS', 'Diluted NI Availto Com Stockholders', 'Net Income Common Stockholders', 'Otherunder Preferred Stock Dividend', 'Net Income', 'Minority Interests', 'Net Income Including Noncontrolling Interests', 'Net Income Continuous Operations', 'Tax Provision', 'Pretax Income', 'Other Non Operating Income Expenses', 'Net Non Operating Interest Income Expense', 'Interest Expense Non Operating', 'Operating Income', 'Operating Expense', 'Other Operating Expenses', 'Gross Profit', 'Cost Of Revenue', 'Total Revenue', 'Operating Revenue']
+
+dtypes:
+2026-06-30    float64
+2026-03-31    float64
+2025-12-31    float64
+2025-06-30    float64
+2025-03-31    float64
+dtype: object
+
+full content:
+                                                              2026-06-30    2026-03-31    2025-12-31    2025-06-30    2025-03-31
+Tax Effect Of Unusual Items                                 0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+Tax Rate For Calcs                                          2.490700e-01  2.419190e-01  2.535610e-01  1.740430e-01  2.291520e-01
+Normalized EBITDA                                           3.896700e+11  3.378000e+11  3.631000e+11  4.418200e+11  3.525800e+11
+Total Unusual Items                                                  NaN           NaN           NaN  8.924000e+10           NaN
+Total Unusual Items Excluding Goodwill                               NaN           NaN           NaN  8.924000e+10           NaN
+Net Income From Continuing Operation Net Minority Interest  2.094600e+11  1.697100e+11  1.864500e+11  2.699400e+11  1.940700e+11
+Reconciled Cost Of Revenue                                  2.264640e+12  2.158500e+12  1.862500e+12  1.664920e+12  1.838490e+12
+EBITDA                                                      3.896700e+11  3.378000e+11  3.631000e+11  4.418200e+11  3.525800e+11
+EBIT                                                        3.896700e+11  3.378000e+11  3.631000e+11  4.418200e+11  3.525800e+11
+Net Interest Income                                        -8.337000e+10 -6.585000e+10 -6.613000e+10 -7.036000e+10 -6.155000e+10
+Interest Expense                                            8.337000e+10  6.585000e+10  6.613000e+10  7.036000e+10  6.155000e+10
+Normalized Income                                           2.094600e+11  1.697100e+11  1.864500e+11  2.699400e+11  1.940700e+11
+Net Income From Continuing And Discontinued Operation       2.094600e+11  1.697100e+11  1.864500e+11  2.699400e+11  1.940700e+11
+Total Expenses                                              2.770510e+12  2.647260e+12  2.335090e+12  2.145690e+12  2.310350e+12
+Diluted Average Shares                                      1.353101e+10  1.353349e+10  1.353048e+10  1.353083e+10  1.353347e+10
+Basic Average Shares                                        1.353101e+10  1.353349e+10  1.353048e+10  1.353083e+10  1.353347e+10
+Diluted EPS                                                 1.548000e+01  1.254000e+01  1.378000e+01  1.995000e+01  1.434000e+01
+Basic EPS                                                   1.548000e+01  1.254000e+01  1.378000e+01  1.995000e+01  1.434000e+01
+Diluted NI Availto Com Stockholders                         2.094600e+11  1.697100e+11  1.864500e+11  2.699400e+11  1.940700e+11
+Net Income Common Stockholders                              2.094600e+11  1.697100e+11  1.864500e+11  2.699400e+11  1.940700e+11
+Otherunder Preferred Stock Dividend                         0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+Net Income                                                  2.094600e+11  1.697100e+11  1.864500e+11  2.699400e+11  1.940700e+11
+Minority Interests                                         -2.250000e+10 -3.618000e+10 -3.645000e+10 -3.789000e+10 -3.204000e+10
+Net Income Including Noncontrolling Interests               2.319600e+11  2.058900e+11  2.229000e+11  3.078300e+11  2.261100e+11
+Net Income Continuous Operations                            2.319600e+11  2.058900e+11  2.229000e+11  3.078300e+11  2.261100e+11
+Tax Provision                                               7.629000e+10  6.579000e+10  7.530000e+10  6.465000e+10  6.669000e+10
+Pretax Income                                               3.063000e+11  2.719500e+11  2.969700e+11  3.714600e+11  2.910300e+11
+Other Non Operating Income Expenses                         6.550000e+10  4.447000e+10  4.914000e+10  1.511900e+11  4.905000e+10
+Net Non Operating Interest Income Expense                  -8.337000e+10 -6.585000e+10 -6.613000e+10 -7.036000e+10 -6.155000e+10
+Interest Expense Non Operating                              8.337000e+10  6.585000e+10  6.613000e+10  7.036000e+10  6.155000e+10
+Operating Income                                            3.241700e+11  2.933300e+11  3.139600e+11  2.906300e+11  3.035300e+11
+Operating Expense                                           5.058700e+11  4.887600e+11  4.725900e+11  4.807700e+11  4.718600e+11
+Other Operating Expenses                                    4.287000e+11  4.119300e+11  3.934700e+11  4.084500e+11  3.950200e+11
+Gross Profit                                                8.300400e+11  7.820900e+11  7.865500e+11  7.714000e+11  7.753900e+11
+Cost Of Revenue                                             2.264640e+12  2.158500e+12  1.862500e+12  1.664920e+12  1.838490e+12
+Total Revenue                                               3.094680e+12  2.940590e+12  2.649050e+12  2.436320e+12  2.613880e+12
+Operating Revenue                                           3.094680e+12  2.940590e+12  2.649050e+12  2.436320e+12  2.613880e+12
+
+
+######################################################################
+HDFCBANK.NS
+######################################################################
+
+======================================================================
+HDFCBANK.NS get_earnings_estimate()
+======================================================================
+shape = (4, 7)
+columns = ['avg', 'low', 'high', 'yearAgoEps', 'numberOfAnalysts', 'growth', 'currency']
+index = ['0q', '+1q', '0y', '+1y']
+
+dtypes:
+avg                 float64
+low                 float64
+high                float64
+yearAgoEps          float64
+numberOfAnalysts    float64
+growth              float64
+currency                str
+dtype: object
+
+full content:
+             avg       low  high  yearAgoEps  numberOfAnalysts  growth currency
+period                                                                         
+0q      12.54500  12.02000  13.0    12.09000               4.0  0.0376      INR
++1q          NaN       NaN   NaN         NaN               NaN     NaN      INR
+0y      53.26575  53.26575  56.0    49.28000              35.0  0.0809      INR
++1y     62.63304  62.60000  67.5    53.26575              36.0  0.1759      INR
+
+======================================================================
+HDFCBANK.NS get_revenue_estimate()
+======================================================================
+shape = (4, 7)
+columns = ['avg', 'low', 'high', 'numberOfAnalysts', 'yearAgoRevenue', 'growth', 'currency']
+index = ['0q', '+1q', '0y', '+1y']
+
+dtypes:
+avg                   int64
+low                   int64
+high                  int64
+numberOfAnalysts      int64
+yearAgoRevenue        int64
+growth              float64
+currency                str
+dtype: object
+
+full content:
+                  avg            low           high  numberOfAnalysts  yearAgoRevenue  growth currency
+period                                                                                                
+0q       477375732750   468414000000   493536000000                 8    459015200000  0.0400      INR
++1q      491950911500   490400000000   493501823000                 2    458688400000  0.0725      INR
+0y      2005621753830  1992191400950  2099597000000                35   3099715800000 -0.3530      INR
++1y     3001849116020  2299638232040  3704060000000                37   1992191400950  0.5068      INR
+
+======================================================================
+HDFCBANK.NS get_earnings_dates()
+======================================================================
+shape = (25, 3)
+columns = ['EPS Estimate', 'Reported EPS', 'Surprise(%)']
+index = [Timestamp('2026-10-17 06:00:00-0400', tz='America/New_York'), Timestamp('2026-07-18 04:00:00-0400', tz='America/New_York'), Timestamp('2026-04-18 05:00:00-0400', tz='America/New_York'), Timestamp('2026-01-17 09:00:00-0500', tz='America/New_York'), Timestamp('2025-10-18 04:00:00-0400', tz='America/New_York'), Timestamp('2025-07-19 06:00:00-0400', tz='America/New_York'), Timestamp('2025-04-19 05:00:00-0400', tz='America/New_York'), Timestamp('2025-01-22 03:00:00-0500', tz='America/New_York'), Timestamp('2024-10-19 04:00:00-0400', tz='America/New_York'), Timestamp('2024-07-20 04:00:00-0400', tz='America/New_York'), Timestamp('2024-04-20 05:00:00-0400', tz='America/New_York'), Timestamp('2024-01-16 05:00:00-0500', tz='America/New_York'), Timestamp('2023-10-16 06:00:00-0400', tz='America/New_York'), Timestamp('2023-07-17 03:00:00-0400', tz='America/New_York'), Timestamp('2023-04-15 04:00:00-0400', tz='America/New_York'), Timestamp('2023-01-14 02:00:00-0500', tz='America/New_York'), Timestamp('2022-10-15 04:00:00-0400', tz='America/New_York'), Timestamp('2022-07-16 04:00:00-0400', tz='America/New_York'), Timestamp('2022-04-16 04:00:00-0400', tz='America/New_York'), Timestamp('2022-01-15 03:00:00-0500', tz='America/New_York'), Timestamp('2021-10-16 05:00:00-0400', tz='America/New_York'), Timestamp('2021-07-17 03:00:00-0400', tz='America/New_York'), Timestamp('2021-04-17 05:00:00-0400', tz='America/New_York'), Timestamp('2021-01-16 06:00:00-0500', tz='America/New_York'), Timestamp('2020-10-17 07:00:00-0400', tz='America/New_York')]
+
+dtypes:
+EPS Estimate    float64
+Reported EPS    float64
+Surprise(%)     float64
+dtype: object
+
+full content:
+                           EPS Estimate  Reported EPS  Surprise(%)
+Earnings Date                                                     
+2026-10-17 06:00:00-04:00         12.55           NaN          NaN
+2026-07-18 04:00:00-04:00         12.52         12.35        -1.32
+2026-04-18 05:00:00-04:00         12.42         12.45         0.24
+2026-01-17 09:00:00-05:00         10.49         12.08        15.21
+2025-10-18 04:00:00-04:00         11.29         12.09         7.09
+2025-07-19 06:00:00-04:00         11.33         11.79         4.04
+2025-04-19 05:00:00-04:00         11.28         11.47         1.62
+2025-01-22 03:00:00-05:00         10.99         10.90        -0.81
+2024-10-19 04:00:00-04:00         10.65         10.99         3.21
+2024-07-20 04:00:00-04:00         10.57         10.60         0.20
+2024-04-20 05:00:00-04:00         12.30         10.84       -11.91
+2024-01-16 05:00:00-05:00         10.28         10.75         4.52
+2023-10-16 06:00:00-04:00          9.65         10.51         8.93
+2023-07-17 03:00:00-04:00         11.12         10.64        -4.35
+2023-04-15 04:00:00-04:00         10.95         10.75        -1.90
+2023-01-14 02:00:00-05:00         10.69         10.95         2.34
+2022-10-15 04:00:00-04:00          9.68          9.50        -1.88
+2022-07-16 04:00:00-04:00          8.19          8.25         0.68
+2022-04-16 04:00:00-04:00          9.22          9.00        -2.41
+2022-01-15 03:00:00-05:00          8.99          9.25         2.89
+2021-10-16 05:00:00-04:00          7.91          7.95         0.51
+2021-07-17 03:00:00-04:00          7.29          6.95        -4.70
+2021-04-17 05:00:00-04:00          7.40          7.35        -0.64
+2021-01-16 06:00:00-05:00          8.83          7.90       -10.51
+2020-10-17 07:00:00-04:00          8.03          6.80       -15.29
+
+======================================================================
+HDFCBANK.NS quarterly_income_stmt
+======================================================================
+shape = (31, 2)
+columns = [Timestamp('2025-06-30 00:00:00'), Timestamp('2025-03-31 00:00:00')]
+index = ['Tax Effect Of Unusual Items', 'Tax Rate For Calcs', 'Total Unusual Items', 'Total Unusual Items Excluding Goodwill', 'Net Income From Continuing Operation Net Minority Interest', 'Net Interest Income', 'Interest Expense', 'Interest Income', 'Normalized Income', 'Net Income From Continuing And Discontinued Operation', 'Diluted Average Shares', 'Basic Average Shares', 'Diluted EPS', 'Basic EPS', 'Diluted NI Availto Com Stockholders', 'Net Income Common Stockholders', 'Net Income', 'Minority Interests', 'Net Income Including Noncontrolling Interests', 'Net Income Extraordinary', 'Net Income Continuous Operations', 'Tax Provision', 'Pretax Income', 'Special Income Charges', 'Selling General And Administration', 'General And Administrative Expense', 'Insurance And Claims', 'Salaries And Wages', 'Total Revenue', 'Operating Revenue', 'Other Non Interest Expense']
+
+dtypes:
+2025-06-30    float64
+2025-03-31    float64
+dtype: object
+
+full content:
+                                                              2025-06-30    2025-03-31
+Tax Effect Of Unusual Items                                 0.000000e+00  0.000000e+00
+Tax Rate For Calcs                                          1.803080e-01  6.382700e-02
+Total Unusual Items                                         0.000000e+00           NaN
+Total Unusual Items Excluding Goodwill                      0.000000e+00           NaN
+Net Income From Continuing Operation Net Minority Interest  1.625791e+11  1.539346e+11
+Net Interest Income                                         3.966336e+11  2.776846e+11
+Interest Expense                                            4.770851e+11  4.543971e+11
+Interest Income                                             8.737187e+11  7.320817e+11
+Normalized Income                                           1.625791e+11  1.539346e+11
+Net Income From Continuing And Discontinued Operation       1.625791e+11  1.539346e+11
+Diluted Average Shares                                      1.539575e+10  1.536287e+10
+Basic Average Shares                                        7.657989e+09           NaN
+Diluted EPS                                                 1.056000e+01           NaN
+Basic EPS                                                   1.061500e+01           NaN
+Diluted NI Availto Com Stockholders                         1.625791e+11  1.539346e+11
+Net Income Common Stockholders                              1.625791e+11  1.539346e+11
+Net Income                                                  1.625791e+11  1.539346e+11
+Minority Interests                                         -8.325200e+09  8.959300e+09
+Net Income Including Noncontrolling Interests               1.709043e+11  1.449753e+11
+Net Income Extraordinary                                    0.000000e+00           NaN
+Net Income Continuous Operations                            1.709043e+11  1.449753e+11
+Tax Provision                                               3.759400e+10  9.884300e+09
+Pretax Income                                               2.084983e+11  1.548596e+11
+Special Income Charges                                      0.000000e+00           NaN
+Selling General And Administration                          3.697038e+11  8.716158e+11
+General And Administrative Expense                          3.697038e+11  8.716158e+11
+Insurance And Claims                                        2.807292e+11 -1.860754e+11
+Salaries And Wages                                          8.897460e+10  4.599100e+10
+Total Revenue                                               8.534646e+11  9.530589e+11
+Operating Revenue                                           8.534646e+11  9.530589e+11
+Other Non Interest Expense                                  2.121262e+11           NaN
+
+
+######################################################################
+TCS.NS
+######################################################################
+
+======================================================================
+TCS.NS get_earnings_estimate()
+======================================================================
+shape = (4, 7)
+columns = ['avg', 'low', 'high', 'yearAgoEps', 'numberOfAnalysts', 'growth', 'currency']
+index = ['0q', '+1q', '0y', '+1y']
+
+dtypes:
+avg                 float64
+low                 float64
+high                float64
+yearAgoEps          float64
+numberOfAnalysts      int64
+growth              float64
+currency                str
+dtype: object
+
+full content:
+              avg        low   high  yearAgoEps  numberOfAnalysts  growth currency
+period                                                                            
+0q       37.93958   35.92000   39.7    35.73810                20  0.0616      INR
++1q      38.75020   37.80123   39.7    36.58560                 6  0.0592      INR
+0y      154.37543  146.00000  159.2   145.45670                34  0.0613      INR
++1y     161.95914  150.10000  171.2   154.37543                38  0.0491      INR
+
+======================================================================
+TCS.NS get_revenue_estimate()
+======================================================================
+shape = (4, 7)
+columns = ['avg', 'low', 'high', 'numberOfAnalysts', 'yearAgoRevenue', 'growth', 'currency']
+index = ['0q', '+1q', '0y', '+1y']
+
+dtypes:
+avg                   int64
+low                   int64
+high                  int64
+numberOfAnalysts      int64
+yearAgoRevenue        int64
+growth              float64
+currency                str
+dtype: object
+
+full content:
+                  avg            low           high  numberOfAnalysts  yearAgoRevenue  growth currency
+period                                                                                                
+0q       731189346700   721000000000   734281000000                29    657990000000  0.1112      INR
++1q      730947630360   720476000000   740325051000                 6    670870000000  0.0896      INR
+0y      2914070609920  2670000000000  3005976613000                38   2670210000000  0.0913      INR
++1y     3042673343280  2923000000000  3262241000000                39   2914070609920  0.0441      INR
+
+======================================================================
+TCS.NS get_earnings_dates()
+======================================================================
+shape = (25, 3)
+columns = ['EPS Estimate', 'Reported EPS', 'Surprise(%)']
+index = [Timestamp('2026-10-08 06:00:00-0400', tz='America/New_York'), Timestamp('2026-07-08 20:00:00-0400', tz='America/New_York'), Timestamp('2026-04-09 06:00:00-0400', tz='America/New_York'), Timestamp('2026-01-12 05:00:00-0500', tz='America/New_York'), Timestamp('2025-10-09 06:00:00-0400', tz='America/New_York'), Timestamp('2025-07-10 06:00:00-0400', tz='America/New_York'), Timestamp('2025-04-10 06:00:00-0400', tz='America/New_York'), Timestamp('2025-01-09 05:00:00-0500', tz='America/New_York'), Timestamp('2024-10-10 06:00:00-0400', tz='America/New_York'), Timestamp('2024-07-11 06:00:00-0400', tz='America/New_York'), Timestamp('2024-04-12 06:00:00-0400', tz='America/New_York'), Timestamp('2024-01-11 05:00:00-0500', tz='America/New_York'), Timestamp('2023-10-11 07:00:00-0400', tz='America/New_York'), Timestamp('2023-07-12 06:00:00-0400', tz='America/New_York'), Timestamp('2023-04-12 07:00:00-0400', tz='America/New_York'), Timestamp('2023-01-09 06:00:00-0500', tz='America/New_York'), Timestamp('2022-10-10 07:00:00-0400', tz='America/New_York'), Timestamp('2022-07-08 07:00:00-0400', tz='America/New_York'), Timestamp('2022-04-11 08:00:00-0400', tz='America/New_York'), Timestamp('2022-01-12 07:00:00-0500', tz='America/New_York'), Timestamp('2021-10-08 09:00:00-0400', tz='America/New_York'), Timestamp('2021-07-08 09:00:00-0400', tz='America/New_York'), Timestamp('2021-04-12 15:00:00-0400', tz='America/New_York'), Timestamp('2021-01-08 08:00:00-0500', tz='America/New_York'), Timestamp('2020-10-07 09:00:00-0400', tz='America/New_York')]
+
+dtypes:
+EPS Estimate    float64
+Reported EPS    float64
+Surprise(%)     float64
+dtype: object
+
+full content:
+                           EPS Estimate  Reported EPS  Surprise(%)
+Earnings Date                                                     
+2026-10-08 06:00:00-04:00         37.94           NaN          NaN
+2026-07-08 20:00:00-04:00         37.33         38.28         2.54
+2026-04-09 06:00:00-04:00         38.11         37.92        -0.50
+2026-01-12 05:00:00-05:00         36.19         36.59         1.10
+2025-10-09 06:00:00-04:00         34.71         35.74         2.95
+2025-07-10 06:00:00-04:00         33.75         35.27         4.49
+2025-04-10 06:00:00-04:00         35.09         33.79        -3.72
+2025-01-09 05:00:00-05:00         34.22         34.21        -0.03
+2024-10-10 06:00:00-04:00         34.80         32.92        -5.39
+2024-07-11 06:00:00-04:00         33.09         33.28         0.56
+2024-04-12 06:00:00-04:00         33.45         34.37         2.75
+2024-01-11 05:00:00-05:00         31.70         32.25         1.75
+2023-10-11 07:00:00-04:00         30.96         31.00         0.14
+2023-07-12 06:00:00-04:00         29.81         30.26         1.51
+2023-04-12 07:00:00-04:00         31.62         31.14        -1.50
+2023-01-09 06:00:00-05:00         30.35         29.64        -2.33
+2022-10-10 07:00:00-04:00         28.20         28.51         1.09
+2022-07-08 07:00:00-04:00         27.01         25.90        -4.09
+2022-04-11 08:00:00-04:00         27.06         26.85        -0.78
+2022-01-12 07:00:00-05:00         26.87         26.41        -1.72
+2021-10-08 09:00:00-04:00         26.18         26.02        -0.60
+2021-07-08 09:00:00-04:00         25.21         24.35        -3.42
+2021-04-12 15:00:00-04:00         25.09         24.97        -0.47
+2021-01-08 08:00:00-05:00         22.65         23.19         2.39
+2020-10-07 09:00:00-04:00         21.08         19.93        -5.48
+
+======================================================================
+TCS.NS quarterly_income_stmt
+======================================================================
+shape = (48, 5)
+columns = [Timestamp('2026-06-30 00:00:00'), Timestamp('2026-03-31 00:00:00'), Timestamp('2025-12-31 00:00:00'), Timestamp('2025-06-30 00:00:00'), Timestamp('2025-03-31 00:00:00')]
+index = ['Tax Effect Of Unusual Items', 'Tax Rate For Calcs', 'Normalized EBITDA', 'Total Unusual Items', 'Total Unusual Items Excluding Goodwill', 'Net Income From Continuing Operation Net Minority Interest', 'Reconciled Depreciation', 'Reconciled Cost Of Revenue', 'EBITDA', 'EBIT', 'Net Interest Income', 'Interest Expense', 'Interest Income', 'Normalized Income', 'Net Income From Continuing And Discontinued Operation', 'Total Expenses', 'Diluted Average Shares', 'Basic Average Shares', 'Diluted EPS', 'Basic EPS', 'Diluted NI Availto Com Stockholders', 'Net Income Common Stockholders', 'Otherunder Preferred Stock Dividend', 'Net Income', 'Minority Interests', 'Net Income Including Noncontrolling Interests', 'Net Income Continuous Operations', 'Tax Provision', 'Pretax Income', 'Other Non Operating Income Expenses', 'Special Income Charges', 'Other Special Charges', 'Write Off', 'Restructuring And Mergern Acquisition', 'Net Non Operating Interest Income Expense', 'Interest Expense Non Operating', 'Interest Income Non Operating', 'Operating Income', 'Operating Expense', 'Other Operating Expenses', 'Depreciation And Amortization In Income Statement', 'Depreciation Income Statement', 'Selling General And Administration', 'General And Administrative Expense', 'Gross Profit', 'Cost Of Revenue', 'Total Revenue', 'Operating Revenue']
+
+dtypes:
+2026-06-30    float64
+2026-03-31    float64
+2025-12-31    float64
+2025-06-30    float64
+2025-03-31    float64
+dtype: object
+
+full content:
+                                                              2026-06-30    2026-03-31    2025-12-31    2025-06-30    2025-03-31
+Tax Effect Of Unusual Items                                -1.684146e+09  0.000000e+00 -7.547032e+09  0.000000e+00  0.000000e+00
+Tax Rate For Calcs                                          2.521180e-01  2.493190e-01  2.385280e-01  2.450090e-01  2.505180e-01
+Normalized EBITDA                                           2.012400e+11  2.003300e+11  1.916000e+11  1.853500e+11  1.800800e+11
+Total Unusual Items                                        -6.680000e+09  0.000000e+00 -3.164000e+10  0.000000e+00  0.000000e+00
+Total Unusual Items Excluding Goodwill                     -6.680000e+09  0.000000e+00 -3.164000e+10  0.000000e+00  0.000000e+00
+Net Income From Continuing Operation Net Minority Interest  1.334900e+11  1.371800e+11  1.065700e+11  1.276000e+11  1.222400e+11
+Reconciled Depreciation                                     1.239000e+10  1.406000e+10  1.380000e+10  1.361000e+10  1.379000e+10
+Reconciled Cost Of Revenue                                  4.349100e+11  4.158700e+11  3.662800e+11  3.844100e+11  3.951000e+11
+EBITDA                                                      1.945600e+11  2.003300e+11  1.599600e+11  1.853500e+11  1.800800e+11
+EBIT                                                        1.821700e+11  1.862700e+11  1.461600e+11  1.717400e+11  1.662900e+11
+Net Interest Income                                        -2.730000e+09 -2.650000e+09  2.700000e+09 -1.950000e+09 -2.270000e+09
+Interest Expense                                            2.730000e+09  2.650000e+09  5.380000e+09  1.950000e+09  2.270000e+09
+Interest Income                                                      NaN           NaN  8.080000e+09  1.419000e+10           NaN
+Normalized Income                                           1.384859e+11  1.371800e+11  1.306630e+11  1.276000e+11  1.222400e+11
+Net Income From Continuing And Discontinued Operation       1.334900e+11  1.371800e+11  1.065700e+11  1.276000e+11  1.222400e+11
+Total Expenses                                              5.495800e+11  5.282800e+11  5.016100e+11  4.792300e+11  4.887800e+11
+Diluted Average Shares                                      3.617615e+09  3.615709e+09  3.618088e+09  3.617806e+09  3.617638e+09
+Basic Average Shares                                        3.617615e+09  3.615709e+09  3.618088e+09  3.617806e+09  3.617638e+09
+Diluted EPS                                                 3.690000e+01  3.794000e+01  2.945000e+01  3.527000e+01  3.379000e+01
+Basic EPS                                                   3.690000e+01  3.794000e+01  2.945000e+01  3.527000e+01  3.379000e+01
+Diluted NI Availto Com Stockholders                         1.334900e+11  1.371800e+11  1.065700e+11  1.276000e+11  1.222400e+11
+Net Income Common Stockholders                              1.334900e+11  1.371800e+11  1.065700e+11  1.276000e+11  1.222400e+11
+Otherunder Preferred Stock Dividend                         0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+Net Income                                                  1.334900e+11  1.371800e+11  1.065700e+11  1.276000e+11  1.222400e+11
+Minority Interests                                         -7.100000e+08 -6.600000e+08 -6.300000e+08 -5.900000e+08 -6.900000e+08
+Net Income Including Noncontrolling Interests               1.342000e+11  1.378400e+11  1.072000e+11  1.281900e+11  1.229300e+11
+Net Income Continuous Operations                            1.342000e+11  1.378400e+11  1.072000e+11  1.281900e+11  1.229300e+11
+Tax Provision                                               4.524000e+10  4.578000e+10  3.358000e+10  4.160000e+10  4.109000e+10
+Pretax Income                                               1.794400e+11  1.836200e+11  1.407800e+11  1.697900e+11  1.640200e+11
+Other Non Operating Income Expenses                         1.568000e+10  7.570000e+09  4.200000e+08  1.660000e+10  1.028000e+10
+Special Income Charges                                     -6.680000e+09  0.000000e+00 -3.413000e+10  0.000000e+00  0.000000e+00
+Other Special Charges                                       6.680000e+09           NaN  3.123000e+10 -1.200000e+08           NaN
+Write Off                                                            NaN           NaN  3.700000e+08  2.500000e+08           NaN
+Restructuring And Mergern Acquisition                       0.000000e+00  0.000000e+00  2.530000e+09  0.000000e+00  0.000000e+00
+Net Non Operating Interest Income Expense                  -2.730000e+09 -2.650000e+09  2.700000e+09 -1.950000e+09 -2.270000e+09
+Interest Expense Non Operating                              2.730000e+09  2.650000e+09  5.380000e+09  1.950000e+09  2.270000e+09
+Interest Income Non Operating                                        NaN           NaN  8.080000e+09  1.419000e+10           NaN
+Operating Income                                            1.731700e+11  1.787000e+11  1.692600e+11  1.551400e+11  1.560100e+11
+Operating Expense                                           1.146700e+11  1.124100e+11  1.353300e+11  9.482000e+10  9.368000e+10
+Other Operating Expenses                                    1.022800e+11  9.835000e+10  4.523000e+10  8.121000e+10  7.989000e+10
+Depreciation And Amortization In Income Statement           1.239000e+10  1.406000e+10  1.380000e+10  1.361000e+10  1.379000e+10
+Depreciation Income Statement                               1.239000e+10  1.406000e+10  1.380000e+10  1.361000e+10  1.379000e+10
+Selling General And Administration                                   NaN           NaN  4.466000e+10  3.859000e+10           NaN
+General And Administrative Expense                                   NaN           NaN  4.466000e+10  3.859000e+10           NaN
+Gross Profit                                                2.878400e+11  2.911100e+11  3.045900e+11  2.499600e+11  2.496900e+11
+Cost Of Revenue                                             4.349100e+11  4.158700e+11  3.662800e+11  3.844100e+11  3.951000e+11
+Total Revenue                                               7.227500e+11  7.069800e+11  6.708700e+11  6.343700e+11  6.447900e+11
+Operating Revenue                                           7.227500e+11  7.069800e+11  6.708700e+11  6.343700e+11  6.447900e+11
+
+
+######################################################################
+INDUSINDBK.NS
+######################################################################
+
+======================================================================
+INDUSINDBK.NS get_earnings_estimate()
+======================================================================
+shape = (4, 7)
+columns = ['avg', 'low', 'high', 'yearAgoEps', 'numberOfAnalysts', 'growth', 'currency']
+index = ['0q', '+1q', '0y', '+1y']
+
+dtypes:
+avg                 float64
+low                 float64
+high                float64
+yearAgoEps          float64
+numberOfAnalysts      int64
+growth              float64
+currency                str
+dtype: object
+
+full content:
+             avg    low   high  yearAgoEps  numberOfAnalysts  growth currency
+period                                                                       
+0q      10.95250   8.56  12.80    -5.71000                 4  2.9181      INR
++1q     12.85000  10.67  15.03     2.00000                 2  5.4250      INR
+0y      55.78836  46.46  62.60    11.98000                23  3.6568      INR
++1y     78.65224  65.80  92.80    55.78836                24  0.4098      INR
+
+======================================================================
+INDUSINDBK.NS get_revenue_estimate()
+======================================================================
+shape = (4, 7)
+columns = ['avg', 'low', 'high', 'numberOfAnalysts', 'yearAgoRevenue', 'growth', 'currency']
+index = ['0q', '+1q', '0y', '+1y']
+
+dtypes:
+avg                   int64
+low                   int64
+high                  int64
+numberOfAnalysts      int64
+yearAgoRevenue        int64
+growth              float64
+currency                str
+dtype: object
+
+full content:
+                 avg           low          high  numberOfAnalysts  yearAgoRevenue  growth currency
+period                                                                                             
+0q       63735592250   62600000000   65393000000                 4     60573300000  0.0522      INR
++1q      66572048670   64200000000   68862146000                 3     62681600000  0.0621      INR
+0y      269475682400  259919000000  279730000000                26    252113800000  0.0689      INR
++1y     312649433780  296443000000  332198000000                25    269475682400  0.1602      INR
+
+======================================================================
+INDUSINDBK.NS get_earnings_dates()
+======================================================================
+shape = (25, 3)
+columns = ['EPS Estimate', 'Reported EPS', 'Surprise(%)']
+index = [Timestamp('2026-10-23 06:00:00-0400', tz='America/New_York'), Timestamp('2026-07-22 06:00:00-0400', tz='America/New_York'), Timestamp('2026-04-24 07:00:00-0400', tz='America/New_York'), Timestamp('2026-01-23 05:00:00-0500', tz='America/New_York'), Timestamp('2025-10-18 05:00:00-0400', tz='America/New_York'), Timestamp('2025-07-28 07:00:00-0400', tz='America/New_York'), Timestamp('2025-05-21 09:00:00-0400', tz='America/New_York'), Timestamp('2025-01-31 05:00:00-0500', tz='America/New_York'), Timestamp('2024-10-24 06:00:00-0400', tz='America/New_York'), Timestamp('2024-07-26 06:00:00-0400', tz='America/New_York'), Timestamp('2024-04-25 06:00:00-0400', tz='America/New_York'), Timestamp('2024-01-18 05:00:00-0500', tz='America/New_York'), Timestamp('2023-10-18 06:00:00-0400', tz='America/New_York'), Timestamp('2023-07-18 06:00:00-0400', tz='America/New_York'), Timestamp('2023-04-24 04:00:00-0400', tz='America/New_York'), Timestamp('2023-01-18 05:00:00-0500', tz='America/New_York'), Timestamp('2022-10-19 07:00:00-0400', tz='America/New_York'), Timestamp('2022-07-20 06:00:00-0400', tz='America/New_York'), Timestamp('2022-04-29 08:00:00-0400', tz='America/New_York'), Timestamp('2022-01-29 04:00:00-0500', tz='America/New_York'), Timestamp('2021-10-27 07:00:00-0400', tz='America/New_York'), Timestamp('2021-07-27 07:00:00-0400', tz='America/New_York'), Timestamp('2021-04-30 09:00:00-0400', tz='America/New_York'), Timestamp('2021-01-29 05:00:00-0500', tz='America/New_York'), Timestamp('2020-10-30 07:00:00-0400', tz='America/New_York')]
+
+dtypes:
+EPS Estimate    float64
+Reported EPS    float64
+Surprise(%)     float64
+dtype: object
+
+full content:
+                           EPS Estimate  Reported EPS  Surprise(%)
+Earnings Date                                                     
+2026-10-23 06:00:00-04:00         10.95           NaN          NaN
+2026-07-22 06:00:00-04:00          8.88         12.86        44.79
+2026-04-24 07:00:00-04:00          3.20          7.62       138.13
+2026-01-23 05:00:00-05:00         -0.05          1.59      3280.00
+2025-10-18 05:00:00-04:00          6.10         -5.61      -191.97
+2025-07-28 07:00:00-04:00          7.65          7.75         1.31
+2025-05-21 09:00:00-04:00         -2.20        -29.90     -1259.09
+2025-01-31 05:00:00-05:00         20.40         18.00       -11.76
+2024-10-24 06:00:00-04:00         28.48         17.00       -40.30
+2024-07-26 06:00:00-04:00         30.51         27.61        -9.52
+2024-04-25 06:00:00-04:00         30.30         30.11        -0.62
+2024-01-18 05:00:00-05:00         29.60         29.50        -0.32
+2023-10-18 06:00:00-04:00         28.35         28.04        -1.09
+2023-07-18 06:00:00-04:00         27.41         27.33        -0.27
+2023-04-24 04:00:00-04:00         24.96         26.27         5.23
+2023-01-18 05:00:00-05:00         24.38         25.23         3.47
+2022-10-19 07:00:00-04:00         22.03         23.02         4.49
+2022-07-20 06:00:00-04:00         16.26         20.67        27.11
+2022-04-29 08:00:00-04:00         18.13         17.55        -3.22
+2022-01-29 04:00:00-05:00         17.78         14.97       -15.80
+2021-10-27 07:00:00-04:00         14.53         14.36        -1.16
+2021-07-27 07:00:00-04:00         11.69         12.58         7.59
+2021-04-30 09:00:00-04:00         12.22         11.43        -6.46
+2021-01-29 05:00:00-05:00          9.26         11.25        21.49
+2020-10-30 07:00:00-04:00          5.74          9.07        58.01
+
+======================================================================
+INDUSINDBK.NS quarterly_income_stmt
+======================================================================
+shape = (27, 5)
+columns = [Timestamp('2026-06-30 00:00:00'), Timestamp('2026-03-31 00:00:00'), Timestamp('2025-12-31 00:00:00'), Timestamp('2025-06-30 00:00:00'), Timestamp('2025-03-31 00:00:00')]
+index = ['Tax Effect Of Unusual Items', 'Tax Rate For Calcs', 'Total Unusual Items', 'Total Unusual Items Excluding Goodwill', 'Net Income From Continuing Operation Net Minority Interest', 'Net Interest Income', 'Interest Expense', 'Interest Income', 'Normalized Income', 'Net Income From Continuing And Discontinued Operation', 'Diluted Average Shares', 'Basic Average Shares', 'Diluted EPS', 'Basic EPS', 'Diluted NI Availto Com Stockholders', 'Net Income Common Stockholders', 'Net Income', 'Net Income Including Noncontrolling Interests', 'Net Income Extraordinary', 'Net Income Continuous Operations', 'Tax Provision', 'Pretax Income', 'Special Income Charges', 'Operating Expense', 'Other Operating Expenses', 'Total Revenue', 'Operating Revenue']
+
+dtypes:
+2026-06-30    float64
+2026-03-31    float64
+2025-12-31    float64
+2025-06-30    float64
+2025-03-31    float64
+dtype: object
+
+full content:
+                                                              2026-06-30    2026-03-31    2025-12-31    2025-06-30    2025-03-31
+Tax Effect Of Unusual Items                                 0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+Tax Rate For Calcs                                          2.534860e-01  2.693170e-01  2.640780e-01  2.517930e-01  2.270330e-01
+Total Unusual Items                                         0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+Total Unusual Items Excluding Goodwill                      0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+Net Income From Continuing Operation Net Minority Interest  1.037050e+10  5.941700e+09  1.279800e+09  6.040700e+09 -2.328870e+10
+Net Interest Income                                         4.684720e+10  4.371480e+10  4.561650e+10  4.639820e+10  3.048330e+10
+Interest Expense                                            6.625220e+10  6.633940e+10  6.811230e+10  7.624060e+10  7.585510e+10
+Interest Income                                             1.130994e+11  1.100542e+11  1.137288e+11  1.226388e+11  1.063384e+11
+Normalized Income                                           1.037050e+10  5.941700e+09  1.279800e+09  6.040700e+09 -2.328870e+10
+Net Income From Continuing And Discontinued Operation       1.037050e+10  5.941700e+09  1.279800e+09  6.040700e+09 -2.328870e+10
+Diluted Average Shares                                      7.791510e+08  7.797507e+08  8.049057e+08  7.794452e+08  7.788863e+08
+Basic Average Shares                                        7.791510e+08  7.787287e+08  7.803659e+08  7.794452e+08  7.788863e+08
+Diluted EPS                                                 1.331000e+01  7.620000e+00  1.590000e+00  7.750000e+00 -2.990000e+01
+Basic EPS                                                   1.331000e+01  7.630000e+00  1.640000e+00  7.750000e+00 -2.990000e+01
+Diluted NI Availto Com Stockholders                         1.037050e+10  5.941700e+09  1.279800e+09  6.040700e+09 -2.328870e+10
+Net Income Common Stockholders                              1.037050e+10  5.941700e+09  1.279800e+09  6.040700e+09 -2.328870e+10
+Net Income                                                  1.037050e+10  5.941700e+09  1.279800e+09  6.040700e+09 -2.328870e+10
+Net Income Including Noncontrolling Interests               1.037050e+10  5.941700e+09  1.279800e+09  6.040700e+09 -2.328870e+10
+Net Income Extraordinary                                    0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+Net Income Continuous Operations                            1.037050e+10  5.941700e+09  1.279800e+09  6.040700e+09 -2.328870e+10
+Tax Provision                                               3.521300e+09  2.189900e+09  4.591000e+08  2.032800e+09 -6.840400e+09
+Pretax Income                                               1.389150e+10  8.131300e+09  1.738500e+09  8.073300e+09 -3.012960e+10
+Special Income Charges                                      0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+Operating Expense                                           3.697800e+10  3.789880e+10  3.999230e+10  4.229420e+10  4.248040e+10
+Other Operating Expenses                                    1.906070e+10  2.072930e+10  2.094340e+10  2.424150e+10  2.496350e+10
+Total Revenue                                               6.471250e+10  6.085140e+10  6.268850e+10  6.796740e+10  3.757160e+10
+Operating Revenue                                           6.471250e+10  6.085140e+10  6.268850e+10  6.796740e+10  3.757160e+10
+
+
+######################################################################
+PIIND.NS
+######################################################################
+
+======================================================================
+PIIND.NS get_earnings_estimate()
+======================================================================
+shape = (4, 7)
+columns = ['avg', 'low', 'high', 'yearAgoEps', 'numberOfAnalysts', 'growth', 'currency']
+index = ['0q', '+1q', '0y', '+1y']
+
+dtypes:
+avg                 float64
+low                 float64
+high                float64
+yearAgoEps          float64
+numberOfAnalysts    float64
+growth              float64
+currency                str
+dtype: object
+
+full content:
+          avg    low   high  yearAgoEps  numberOfAnalysts  growth currency
+period                                                                    
+0q       18.4   18.4   18.4     26.9800               1.0 -0.3180      INR
++1q       NaN    NaN    NaN         NaN               NaN     NaN      INR
+0y       88.7   88.7   88.7     81.7679              19.0  0.0848      INR
++1y     106.2  106.2  138.8     88.7000              22.0  0.1973      INR
+
+======================================================================
+PIIND.NS get_revenue_estimate()
+======================================================================
+shape = (4, 7)
+columns = ['avg', 'low', 'high', 'numberOfAnalysts', 'yearAgoRevenue', 'growth', 'currency']
+index = ['0q', '+1q', '0y', '+1y']
+
+dtypes:
+avg                   int64
+low                   int64
+high                  int64
+numberOfAnalysts      int64
+yearAgoRevenue        int64
+growth              float64
+currency                str
+dtype: object
+
+full content:
+                avg          low         high  numberOfAnalysts  yearAgoRevenue  growth currency
+period                                                                                          
+0q      18247750000  17383000000  18733000000                 4     18723000000 -0.0254      INR
++1q     16426500000  16095000000  16758000000                 2     13757000000  0.1940      INR
+0y      74660000000  74660000000  74901000000                22     67137000000  0.1121      INR
++1y     85780000000  85780000000  99435000000                24     74660000000  0.1489      INR
+
+======================================================================
+PIIND.NS get_earnings_dates()
+======================================================================
+shape = (25, 3)
+columns = ['EPS Estimate', 'Reported EPS', 'Surprise(%)']
+index = [Timestamp('2026-11-17 05:00:00-0500', tz='America/New_York'), Timestamp('2026-08-11 09:00:00-0400', tz='America/New_York'), Timestamp('2026-05-19 11:00:00-0400', tz='America/New_York'), Timestamp('2026-02-12 08:00:00-0500', tz='America/New_York'), Timestamp('2025-11-11 05:00:00-0500', tz='America/New_York'), Timestamp('2025-08-12 09:00:00-0400', tz='America/New_York'), Timestamp('2025-05-19 10:00:00-0400', tz='America/New_York'), Timestamp('2025-02-06 07:00:00-0500', tz='America/New_York'), Timestamp('2024-11-13 06:00:00-0500', tz='America/New_York'), Timestamp('2024-08-06 09:00:00-0400', tz='America/New_York'), Timestamp('2024-05-21 12:00:00-0400', tz='America/New_York'), Timestamp('2024-02-09 05:00:00-0500', tz='America/New_York'), Timestamp('2023-11-08 10:00:00-0500', tz='America/New_York'), Timestamp('2023-08-09 10:00:00-0400', tz='America/New_York'), Timestamp('2023-05-18 11:00:00-0400', tz='America/New_York'), Timestamp('2023-02-14 08:00:00-0500', tz='America/New_York'), Timestamp('2022-11-08 08:00:00-0500', tz='America/New_York'), Timestamp('2022-08-03 11:00:00-0400', tz='America/New_York'), Timestamp('2022-05-17 10:00:00-0400', tz='America/New_York'), Timestamp('2022-02-03 07:00:00-0500', tz='America/New_York'), Timestamp('2021-11-12 09:00:00-0500', tz='America/New_York'), Timestamp('2021-07-30 12:00:00-0400', tz='America/New_York'), Timestamp('2021-05-18 12:00:00-0400', tz='America/New_York'), Timestamp('2021-02-02 12:00:00-0500', tz='America/New_York'), Timestamp('2020-10-28 09:00:00-0400', tz='America/New_York')]
+
+dtypes:
+EPS Estimate    float64
+Reported EPS    float64
+Surprise(%)     float64
+dtype: object
+
+full content:
+                           EPS Estimate  Reported EPS  Surprise(%)
+Earnings Date                                                     
+2026-11-17 05:00:00-05:00           NaN           NaN          NaN
+2026-08-11 09:00:00-04:00         20.93         16.10       -23.09
+2026-05-19 11:00:00-04:00         20.73         13.29       -35.91
+2026-02-12 08:00:00-05:00         22.48         26.41        17.46
+2025-11-11 05:00:00-05:00         22.86         26.98        18.04
+2025-08-12 09:00:00-04:00         30.30         26.36       -13.00
+2025-05-19 10:00:00-04:00         24.30         21.78       -10.36
+2025-02-06 07:00:00-05:00         26.11         24.55        -5.98
+2024-11-13 06:00:00-05:00         30.94         33.50         8.27
+2024-08-06 09:00:00-04:00         26.13         29.59        13.23
+2024-05-21 12:00:00-04:00         25.94         24.35        -6.13
+2024-02-09 05:00:00-05:00         24.18         29.58        22.33
+2023-11-08 10:00:00-05:00         27.69         31.66        14.35
+2023-08-09 10:00:00-04:00         21.04         25.24        19.99
+2023-05-18 11:00:00-04:00         20.60         18.50       -10.18
+2023-02-14 08:00:00-05:00         20.53         23.20        13.03
+2022-11-08 08:00:00-05:00         17.60         21.57        22.56
+2022-08-03 11:00:00-04:00         14.83         17.29        16.56
+2022-05-17 10:00:00-04:00         13.80         13.49        -2.25
+2022-02-03 07:00:00-05:00         14.90         14.14        -5.10
+2021-11-12 09:00:00-05:00         14.10         15.17         7.59
+2021-07-30 12:00:00-04:00         13.25         12.34        -6.87
+2021-05-18 12:00:00-04:00         11.90         12.08         1.51
+2021-02-02 12:00:00-05:00         11.50         12.88        12.00
+2020-10-28 09:00:00-04:00          9.65         14.04        45.49
+
+======================================================================
+PIIND.NS quarterly_income_stmt
+======================================================================
+shape = (43, 5)
+columns = [Timestamp('2026-06-30 00:00:00'), Timestamp('2026-03-31 00:00:00'), Timestamp('2025-12-31 00:00:00'), Timestamp('2025-09-30 00:00:00'), Timestamp('2025-06-30 00:00:00')]
+index = ['Tax Effect Of Unusual Items', 'Tax Rate For Calcs', 'Normalized EBITDA', 'Total Unusual Items', 'Total Unusual Items Excluding Goodwill', 'Net Income From Continuing Operation Net Minority Interest', 'Reconciled Depreciation', 'Reconciled Cost Of Revenue', 'EBITDA', 'EBIT', 'Net Interest Income', 'Interest Expense', 'Normalized Income', 'Net Income From Continuing And Discontinued Operation', 'Total Expenses', 'Diluted Average Shares', 'Basic Average Shares', 'Diluted EPS', 'Basic EPS', 'Diluted NI Availto Com Stockholders', 'Net Income Common Stockholders', 'Otherunder Preferred Stock Dividend', 'Net Income', 'Net Income Including Noncontrolling Interests', 'Net Income Continuous Operations', 'Tax Provision', 'Pretax Income', 'Other Non Operating Income Expenses', 'Special Income Charges', 'Other Special Charges', 'Write Off', 'Restructuring And Mergern Acquisition', 'Net Non Operating Interest Income Expense', 'Interest Expense Non Operating', 'Operating Income', 'Operating Expense', 'Other Operating Expenses', 'Depreciation And Amortization In Income Statement', 'Depreciation Income Statement', 'Gross Profit', 'Cost Of Revenue', 'Total Revenue', 'Operating Revenue']
+
+dtypes:
+2026-06-30    float64
+2026-03-31    float64
+2025-12-31    float64
+2025-09-30    float64
+2025-06-30    float64
+dtype: object
+
+full content:
+                                                              2026-06-30    2026-03-31    2025-12-31    2025-09-30    2025-06-30
+Tax Effect Of Unusual Items                                -1.253947e+07 -3.437903e+07  1.373535e+08 -1.612031e+07 -1.799172e+07
+Tax Rate For Calcs                                          2.411440e-01  3.337770e-01  1.421880e-01  2.208260e-01  2.116670e-01
+Normalized EBITDA                                           4.386000e+09  4.212000e+09  3.779000e+09  6.332000e+09  6.163000e+09
+Total Unusual Items                                        -5.200000e+07 -1.030000e+08  9.660000e+08 -7.300000e+07 -8.500000e+07
+Total Unusual Items Excluding Goodwill                     -5.200000e+07 -1.030000e+08  9.660000e+08 -7.300000e+07 -8.500000e+07
+Net Income From Continuing Operation Net Minority Interest  2.442000e+09  2.002000e+09  3.113000e+09  4.093000e+09  4.000000e+09
+Reconciled Depreciation                                     1.037000e+09  1.067000e+09  1.054000e+09  9.800000e+08  9.650000e+08
+Reconciled Cost Of Revenue                                  7.365000e+09  6.599000e+09  5.639000e+09  8.004000e+09  8.091000e+09
+EBITDA                                                      4.334000e+09  4.109000e+09  4.745000e+09  6.259000e+09  6.078000e+09
+EBIT                                                        3.297000e+09  3.042000e+09  3.691000e+09  5.279000e+09  5.113000e+09
+Net Interest Income                                        -7.900000e+07 -3.700000e+07 -6.200000e+07 -2.600000e+07 -3.900000e+07
+Interest Expense                                            7.900000e+07  3.700000e+07  6.200000e+07  2.600000e+07  3.900000e+07
+Normalized Income                                           2.481461e+09  2.070621e+09  2.284354e+09  4.149880e+09  4.067008e+09
+Net Income From Continuing And Discontinued Operation       2.442000e+09  2.002000e+09  3.113000e+09  4.093000e+09  4.000000e+09
+Total Expenses                                              1.433400e+10  1.326700e+10  1.170300e+10  1.421700e+10  1.469400e+10
+Diluted Average Shares                                      1.516770e+08  1.516667e+08  1.517057e+08  1.517050e+08  1.517451e+08
+Basic Average Shares                                        1.516770e+08  1.516667e+08  1.517057e+08  1.517050e+08  1.516875e+08
+Diluted EPS                                                 1.610000e+01  1.320000e+01  2.052000e+01  2.698000e+01  2.636000e+01
+Basic EPS                                                   1.610000e+01  1.320000e+01  2.052000e+01  2.698000e+01  2.637000e+01
+Diluted NI Availto Com Stockholders                         2.442000e+09  2.002000e+09  3.113000e+09  4.093000e+09  4.000000e+09
+Net Income Common Stockholders                              2.442000e+09  2.002000e+09  3.113000e+09  4.093000e+09  4.000000e+09
+Otherunder Preferred Stock Dividend                         0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+Net Income                                                  2.442000e+09  2.002000e+09  3.113000e+09  4.093000e+09  4.000000e+09
+Net Income Including Noncontrolling Interests               2.442000e+09  2.002000e+09  3.113000e+09  4.093000e+09  4.000000e+09
+Net Income Continuous Operations                            2.442000e+09  2.002000e+09  3.113000e+09  4.093000e+09  4.000000e+09
+Tax Provision                                               7.760000e+08  1.003000e+09  5.160000e+08  1.160000e+09  1.074000e+09
+Pretax Income                                               3.218000e+09  3.005000e+09  3.629000e+09  5.253000e+09  5.074000e+09
+Other Non Operating Income Expenses                         6.410000e+08  7.560000e+08  6.670000e+08  8.250000e+08  8.590000e+08
+Special Income Charges                                     -5.200000e+07 -1.030000e+08  9.660000e+08 -7.300000e+07 -8.500000e+07
+Other Special Charges                                                NaN  2.000000e+07  2.090000e+08           NaN           NaN
+Write Off                                                   5.200000e+07  8.300000e+07  8.500000e+07  7.300000e+07  8.500000e+07
+Restructuring And Mergern Acquisition                                NaN           NaN -1.260000e+09           NaN           NaN
+Net Non Operating Interest Income Expense                  -7.900000e+07 -3.700000e+07 -6.200000e+07 -2.600000e+07 -3.900000e+07
+Interest Expense Non Operating                              7.900000e+07  3.700000e+07  6.200000e+07  2.600000e+07  3.900000e+07
+Operating Income                                            2.689000e+09  2.385000e+09  2.054000e+09  4.506000e+09  4.311000e+09
+Operating Expense                                           6.969000e+09  6.668000e+09  6.064000e+09  6.213000e+09  6.603000e+09
+Other Operating Expenses                                    3.324000e+09  3.333000e+09  2.729000e+09  3.028000e+09  3.315000e+09
+Depreciation And Amortization In Income Statement           1.037000e+09  1.067000e+09  1.054000e+09  9.800000e+08  9.650000e+08
+Depreciation Income Statement                               1.037000e+09  1.067000e+09  1.054000e+09  9.800000e+08  9.650000e+08
+Gross Profit                                                9.658000e+09  9.053000e+09  8.118000e+09  1.071900e+10  1.091400e+10
+Cost Of Revenue                                             7.365000e+09  6.599000e+09  5.639000e+09  8.004000e+09  8.091000e+09
+Total Revenue                                               1.702300e+10  1.565200e+10  1.375700e+10  1.872300e+10  1.900500e+10
+Operating Revenue                                           1.702300e+10  1.565200e+10  1.375700e+10  1.872300e+10  1.900500e+10
+
+
+######################################################################
+STEP 0 (actuals) - nselib financial_results_for_equity discovery
+Run 2026-10-08, against live NSE endpoints.
+######################################################################
+
+Function signature (from nselib source, capital_market_data.py):
+  financial_results_for_equity(from_date=None, to_date=None, period=None,
+                                fo_sec=False, fin_period='Quarterly')
+
+This is NOT a per-symbol lookup. It queries NSE's
+/api/corporates-financial-results feed for a DATE WINDOW across ALL
+companies, then for every row it fetches that filing's individual XBRL
+document (a separate HTTP request per row) and extracts a fixed list of
+~60 XBRL tag names (see get_func.py's keys_to_extract) via the
+in-bse-fin XBRL taxonomy namespace. Relevant fields for this spec:
+  - BasicEarningsLossPerShareFromContinuingAndDiscontinuedOperations (EPS)
+  - DilutedEarningsLossPerShareFromContinuingAndDiscontinuedOperations
+  - RevenueFromOperations
+  - NatureOfReportStandaloneConsolidated (standalone vs consolidated flag)
+  - DescriptionOfPresentationCurrency, LevelOfRoundingUsedInFinancialStatements
+    (units - confirms the lakhs/crores risk the spec flagged)
+
+PROBLEM FOUND - this is a hard blocker, not a minor shape mismatch:
+
+1. fo_sec=True (meant to filter to F&O securities) returned an EMPTY
+   master list in every window tried: 1M, 6M, explicit 10-20 Jul 2026,
+   explicit Jul 2026, Jan-Sep 2026. This parameter path appears broken
+   or means something other than "F&O securities" in the live API.
+
+2. fo_sec=False, pulled for a full trailing year (period='1Y'), returned
+   only 87 rows across just 18 distinct symbols, ALL of them distressed/
+   suspended smallcaps - not one mainstream large-cap:
+   AHLWEST, AIFL, ARSHIYA, BALLARPUR, BHARATIDIL, BLUEBLENDS, CMICABLES,
+   EROSMEDIA, GAYAPROJ, IL&FSTRANS, KANANIIND, LYKALABS, RMCL, SECURCRED,
+   UNITEDTEA, VALUEIND, VIDEOIND, VSTTILLERS.
+   Several of these (BALLARPUR, EROSMEDIA, VIDEOIND, ARSHIYA, IL&FSTRANS)
+   are known NCLT/insolvency or long-suspended names. RELIANCE, TCS,
+   HDFCBANK, INFY, WIPRO appeared in ZERO of the windows tried, despite
+   all of them having reported real quarterly results in that span.
+
+CONCLUSION: whatever NSE filing category this endpoint surfaces, it is
+not the standard quarterly-results announcement every listed company
+(including every F&O name) files every quarter. It looks like a narrow
+"financial results" sub-category NSE requires from a specific class of
+companies (possibly ones under extra disclosure requirements due to
+suspension/insolvency), not the general results calendar. Using it as
+the primary actuals source for watchlist F&O names, as section 6 of the
+spec assumed, will not work - it would return nothing for essentially
+every real watchlist symbol.
+
+RECOMMENDATION (not yet actioned - needs Adarsh's decision): flip the
+priority order in section 6 - make yfinance (get_earnings_dates()'s
+reportedEPS column, confirmed populated in the original Step 0 run; or
+quarterly_income_stmt) the PRIMARY actuals source, and drop nselib
+financial_results_for_equity entirely rather than keeping it as a
+"preferred, falls back to yfinance" path - there is nothing to fall
+back FROM if it structurally never returns F&O names. Screener.in
+scraping remains a possible secondary fallback if yfinance's own
+coverage has gaps, same as the estimates side already plans for.

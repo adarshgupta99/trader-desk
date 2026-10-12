@@ -1,0 +1,103 @@
+# Trader Desk: design language
+
+## 1. Swiss Editorial
+Use an off-white canvas, near-black text, readable gray metadata, thin neutral rules, and one red-orange signal accent. Let typography, prices, and a visible grid define the hierarchy. Use square corners and no decorative shadows. Apply these rules to existing Streamlit tabs and components only.
+
+**Scope: restyle only.** Preserve the live app's existing content, controls, and features. Do not copy invented mockup elements: no watchlist sparklines, normalized-return toggle, breadth/advancing-declining/top-mover panels, new volatility indicators, or header extras such as "Personal workspace / INR · NSE / AG". Only the listed QA fixes may add corrective feedback or confirmation controls. Restyle existing labels and metadata; do not add UI or fetch new data to satisfy a design rule.
+
+## 2. Global rules
+
+### Palette
+The color roles are selected; these exact hex values are **proposed implementation tokens**, not verified mockup samples:
+
+| Token | Proposed value | Use |
+| --- | --- | --- |
+| Canvas | `#F7F5F0` | Page and panel backgrounds |
+| Primary | `#171717` | Headings, prices, positive changes |
+| Secondary | `#60605B` | Metadata, labels, neutral chart ticks |
+| Rule | `#D8D5CD` | Thin separators and panel boundaries |
+| Signal | `#C74424` | Negative changes and specified accent lines |
+
+- Remove teal navigation/inputs, yellow series styling, and green positive changes. Use neutral controls; use primary text or a thin signal underline for active navigation.
+- Do not add extra accent colors, gradients, rounded cards, or decorative shadows. Check text contrast against its actual background.
+
+### Type and layout
+- Use one sans-serif family throughout. **Proposed stack:** `Inter, Arial, sans-serif`; do not depend on an unavailable font.
+- **Proposed type scale:** wordmark 36-40px; section headings 28-32px; key values 32-40px; names/controls 14-16px; metadata/chart ticks 12-13px.
+- Use `font-variant-numeric: tabular-nums lining-nums` for values, changes, weights, and tables; configure matching chart typography where supported.
+- Place the full-size wordmark below Streamlit's toolbar, followed by a strong rule and navigation. Never clip the title.
+- Style existing tab headings consistently. Keep existing coverage, period, unit, and timing text compact and secondary; do not invent context lines or imply live data without evidence.
+- Align brand, navigation, headings, controls, cells, and charts to shared edges. Reuse panel components and consistent spacing; avoid tab-specific styling drift.
+- Collapse grids on narrow screens without horizontal overflow. Keep names, units, controls, and chart ticks readable rather than shrinking them to fit.
+
+### Direction and number formatting
+- Say "change", not "gain", "loss", "win", or "good/bad". A rising FX quote or VIX value is not inherently favorable.
+- Show positive changes in near-black and negative changes in signal orange. Always show a sign on change values, including `+0.00`; suppress negative zero after rounding. Do not color the whole panel by direction.
+- Put the change period beside the change (`1D`, `1W`, or the actual selected period). Keep change windows distinct from chart-history windows.
+- Show currency or units with each value or in an unambiguous persistent label. Never infer units from a ticker alone.
+- Preserve four decimal places and trailing zeros for FX quotes. **Proposed default:** two decimals for other prices, index points, and percentage changes unless source precision or the instrument requires otherwise.
+- **Proposed locale rule:** use Indian digit grouping for INR (`₹1,23,456.78`) and international grouping for other currencies (`$123,456.78`). Preserve INR labels on currency values; existing Indian index unit labels must use index points, not rupees.
+- Use one scale formatter per comparable set of charts. Do not mix raw thousands with `k` abbreviations; show full-precision values and exact units on hover. Never fabricate missing values or changes.
+
+## 3. Per-tab rules
+
+### Watchlist
+- Use equal-width columns: four on desktop, fewer on smaller screens. Show a readable company name, secondary ticker, dominant price with currency, then a subordinate signed change and explicit `1D`/`1W` label.
+- Keep entry and preset controls secondary to the heading. Label the watchlist change window separately from chart history.
+- Keep failed instruments visible and removable; preserve tile geometry while loading.
+
+### Chart
+- Keep existing field labels visible and existing empty-state text readable. Do not add examples or new empty-state content.
+- Align existing instrument name, ticker, value, unit, and period-change information above the chart; do not introduce fields absent from the live tab.
+- Make the local history range authoritative, or explicitly label the scope of any global control. Never let two controls imply authority over the same chart.
+- For a single series, use a neutral line or the specified orange accent consistently. For comparisons, use black solid versus gray dashed lines and explicit labels; never use orange as a comparison-series identity. Reserve comparison orange for negative-change badges.
+- Label both axes and units on dual-axis charts. Keep neutral tick text at 12-13px.
+
+### Indices and India
+- Restyle both tabs with the same three-column small-multiples component. Align existing India heading/context with Indices; do not add new content.
+- Use larger values, square ruled boundaries, and matching name/value/chart baselines.
+- Use thin orange lines with very light or no fill. Do not create saturated loss-filled panels.
+- Format constituents/weights as a readable two-column ruled popover table. Right-align tabular weights and label them "approximate". Normalize axis scale formatting across panels.
+
+### FX
+- Use a 2×2 layout for the four pairs, collapsing on narrow screens.
+- Preserve four decimals and trailing zeros. Keep existing pair, quote-convention, and period labels readable; use "quote per 1 base" when revising an existing convention label.
+- Treat direction as change in the quoted rate, not good or bad.
+
+### Commodities
+- Reuse the three-panel component and use restrained or no fills.
+- Verify the data mapping, contract metadata, and units before displaying labels such as `$/barrel` or `$/ounce`. The reviewed screen does not establish them; leave uncertain labels unresolved rather than guessing.
+
+### Volatility
+- Restyle the existing single-instrument layout with a dominant VIX value and larger chart. Keep existing unit/period labels readable; VIX units are index points.
+- Do not invent filler indicators. Apply the same signed-change convention; higher VIX is not a green win.
+
+### Shared charts
+- Match plot heights and padding. Use neutral ticks, faint horizontal gridlines, and minimal vertical gridlines.
+- Include years in multi-year x-axis labels and exact units on hover.
+- Keep panel geometry stable while loading; use in-panel feedback rather than dimming the whole page.
+
+## 4. Known issues to fix
+
+These are supplied design-sweep/QA findings from 3 October 2026, not a fresh code audit. Fix in this severity order and test each result.
+
+| Severity | Issue | Suggested fix |
+| --- | --- | --- |
+| High | A hidden failed ticker still counts toward the 30-ticker cap; Add disables without explanation. | Render a "Couldn't load X" tile with a remove button. Explain the cap whenever Add is disabled, including failed entries. |
+| High | Remove is an 11px `target=_blank` link; it opens a new tab and leaves the original stale. | Replace it with a real `st.button` callback that updates the current view. Increase the hit area. |
+| Medium | Presets silently replace the entire watchlist. | Ask for confirmation before replacing existing entries; allow cancel. |
+| Medium | 3Y takes 20-30 seconds; clicks take 5-15 seconds and dim the whole page. | Apply `@st.cache_data(ttl=300)` to yfinance calls, batch compatible downloads, and use an in-panel `st.spinner`. Verify caching and refresh behavior. |
+| Medium | "Trader Desk" is clipped under the toolbar on desktop and mobile. | Use appropriate `.block-container` top padding (about `3rem` as a starting point) or `st.title`; check both viewports. |
+| Medium | Global `1W-3Y` and Chart `1M-3Y` range controls disagree. | Merge them or clearly scope them; make the Chart tab's authoritative range explicit. |
+| Low | Add input retains stale text after a successful add. | Clear its widget/session-state value after success, without clearing failed input prematurely. |
+| Low | Bad-ticker banner pushes tiles down about 72px. | Reserve feedback space or use `st.toast`; keep failed-entry details accessible. |
+| Low | 3Y repeats "01 Jan" without a year; 1W has four points and a blank gap. | Include years on multi-year ticks; inspect the 1W data/calendar mapping and range padding. Do not invent points for non-trading days. |
+| Low | Custom tickers show raw names such as "AAPL"; page width shifts about 10px when the scrollbar appears. | Resolve friendly names with ticker fallback. Reserve scrollbar space where supported and verify stable alignment. |
+
+**Untested:** verify the Watchlist `1D`/`1W` toggle changes the intended calculation, label, and state. Do not treat its behavior as confirmed.
+
+## 5. Decisions pending
+
+- **Watchlist ownership:** the supplied QA notes say the public app shares watchlist state across visitors. Decide whether this is intentional or whether watchlists should be per-session or per-user. Do not silently change persistence or treat this as a styling fix.
+- **Proposed, not verified:** exact hex tokens, font stack, type-scale values, non-FX decimal defaults, and locale grouping above are implementation proposals. Keep them centralized and consistent; confirm or revise them rather than adding ad hoc alternatives.
+- **Verification required:** commodity contracts/units and source mappings; actual `1D`/`1W` behavior. Do not claim these checks are complete from this document alone.
