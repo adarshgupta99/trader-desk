@@ -120,7 +120,15 @@ def render():
     def _fmt_date(s):
         return datetime.strptime(s, "%Y-%m-%d").strftime("%d %b %Y") if s else "—"
 
+    def _num(v):
+        """A real number, or None. Guards the documented pandas trap: a
+        NULL read out of a mixed-type column arrives as float('nan'),
+        which is NOT None and IS truthy, so `if v is not None` lets it
+        through and it reaches a format string as 'nan'."""
+        return v if isinstance(v, (int, float)) and pd.notna(v) else None
+
     def _fmt_eps(v):
+        v = _num(v)
         return f"{v:.2f}" if v is not None else None
 
     def _fmt_rev_cr(v):
@@ -525,12 +533,31 @@ def render():
             est_rev = _fmt_rev_cr(r.revenue_estimate) or "no estimate"
             actual_rev = _fmt_rev_cr(r.revenue_actual) or "-"
 
+            # EPS estimate comes from OUR frozen T-1 snapshot, never from
+            # Yahoo live. Yahoo's stored "pre-print estimate" was assumed
+            # immutable once a quarter reports; it isn't. DMART's Sep-2026
+            # estimate was 13.93 when we froze it at T-1 and reads 13.42
+            # from Yahoo now, after the print - exactly the post-result
+            # revision the T-1 rule exists to keep out of the comparison.
             eps_row = match_eps_row(eps_map.get(r.symbol), r.event_date)
-            eps_surprise_text, eps_surprise_color = _surprise_text_color(
-                eps_row["eps_surprise_pct"] if eps_row is not None else None
-            )
-            est_eps = (_fmt_eps(eps_row["eps_estimate"]) if eps_row is not None else None) or "no estimate"
-            actual_eps = (_fmt_eps(eps_row["eps_actual"]) if eps_row is not None else None) or "-"
+            est_eps_val = _num(r.eps_estimate)
+            # Actual prefers what we stored (NSE filing XBRL, with yfinance
+            # already tried as fallback inside jobs/fill_actuals.py). Yahoo
+            # live is a last resort for a result that landed since the job
+            # last ran - without this the column sat empty for DMART and
+            # ANANDRATHI even though both actuals were stored.
+            actual_eps_val = _num(r.eps_actual)
+            if actual_eps_val is None and eps_row is not None:
+                actual_eps_val = _num(eps_row["eps_actual"])
+            # Recomputed from the two values actually on screen, so the
+            # surprise can never disagree with the columns beside it.
+            if est_eps_val is not None and actual_eps_val is not None and est_eps_val != 0:
+                eps_surprise_val = (actual_eps_val - est_eps_val) / abs(est_eps_val) * 100
+            else:
+                eps_surprise_val = None
+            eps_surprise_text, eps_surprise_color = _surprise_text_color(eps_surprise_val)
+            est_eps = _fmt_eps(est_eps_val) or "no estimate"
+            actual_eps = _fmt_eps(actual_eps_val) or "-"
             return (
                 f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;"
                 f"border:none;{TABULAR}'>{est_rev}</td>"
@@ -582,9 +609,10 @@ def render():
         )
         st.markdown(
             f"<div style='color:{P.T3};font-size:12px;margin-top:8px;'>"
-            f"Revenue estimate is the frozen T-1 consensus; revenue actual/surprise % "
-            f"come from the filed result. EPS estimate/actual/surprise % come live from "
-            f"Yahoo's own per-quarter history. Source: Yahoo Finance.</div>",
+            f"Estimates are the frozen T-1 consensus (Yahoo Finance), captured the day "
+            f"before the result and never re-fetched. Actuals and surprise % come from "
+            f"the company's own filed result (NSE filing XBRL, consolidated), falling "
+            f"back to Yahoo where a filing hasn't been parsed yet.</div>",
             unsafe_allow_html=True,
         )
     elif subtab == "Corporate actions":

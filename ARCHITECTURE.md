@@ -678,6 +678,28 @@ what yfinance had already stored, while supplying the revenue both were missing 
 filling ANANDRATHI, which yfinance had left completely empty days after the result
 (EPS 5.38, revenue ₹343.99cr). Full suite 74/74.
 
+**The Past earnings tab wasn't showing any of it (fixed same day).** The tab read EPS
+estimate/actual/surprise live from Yahoo via `get_eps_history()`/`match_eps_row()` and
+ignored the stored columns entirely, so the newly-filled NSE actuals were invisible:
+Actual EPS sat empty for DMART (Yahoo has the estimate but no actual) and ANANDRATHI
+(Yahoo has no row for that quarter at all), while both were stored as 11.40 and 5.38.
+
+It also quietly broke the T-1 rule. `get_eps_history`'s docstring assumed Yahoo keeps a
+quarter's pre-print estimate permanently once it reports — it doesn't. DMART's Sep-2026
+estimate was **13.93** when frozen at T-1 and reads **13.42** from Yahoo now, after the
+print. The tab was displaying the revised number, which is exactly the contamination the
+freeze exists to prevent, and measuring surprise % against it.
+
+Now: estimate always from the frozen snapshot (never Yahoo live); actual prefers the
+stored value (NSE, with yfinance already tried inside the job) and falls back to Yahoo
+only for a result that landed since the job last ran; surprise % is recomputed from the
+two values actually on screen so it can never disagree with the columns beside it. A
+`_num()` guard was added because these values arrive through pandas, where a NULL in a
+mixed-type column becomes `float('nan')` — not None and truthy, so the old
+`if v is not None` check would have formatted it as the string "nan" (the same trap
+already documented for the Calendar subtab). Footnote corrected; it had been telling the
+user EPS came from Yahoo.
+
 **Not yet done:** NSE carries ~6 quarters of history per symbol, and actuals have no
 T-1 freeze constraint, so past quarters *could* be backfilled — but only as actual-only
 rows, since estimates can never be backfilled. Left for Adarsh to decide rather than
