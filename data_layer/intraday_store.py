@@ -43,6 +43,25 @@ TS_FORMAT = "%Y-%m-%dT%H:%M:%S"
 RETENTION_SESSIONS = {"15m": 65, "1d": 800}
 
 
+#: A trimmed, read-only copy committed to the repo so the deployed app has
+#: something to read: daily bars only, last 500 sessions (the UI's
+#: MAX_LOOKBACK_DAYS), ~10 MB. Streamlit Community Cloud only ships what
+#: is in git and never runs jobs/, so without this the Correlation tab is
+#: permanently empty there.
+#:
+#: It is NOT a substitute for the real store. It has no 15m tier, so on a
+#: deploy every lookback of 60 days or less still has nothing to read -
+#: see tiers.pick_tier. It is also a point-in-time snapshot and goes stale
+#: unless re-committed.
+#:
+#: Named away from "intraday.db" deliberately: .gitignore excludes that
+#: filename outright, and this file genuinely is a different thing.
+BUNDLED_DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "data", "bars_daily_500d.db",
+)
+
+
 def data_dir():
     """Where bulk bar data lives. Created on demand."""
     path = os.getenv("TRADER_DESK_DATA_DIR") or os.path.join(
@@ -51,8 +70,25 @@ def data_dir():
     return os.path.expanduser(path)
 
 
-def db_path():
+def local_db_path():
+    """The real, writable store - the only thing jobs ever write to."""
     return os.path.join(data_dir(), "intraday.db")
+
+
+def db_path():
+    """The store to READ. The local one wherever it exists, so a machine
+    that runs the fetch jobs behaves exactly as before; otherwise the
+    bundled repo copy, which is what a Streamlit Cloud container sees.
+
+    Falls back to the local path when neither exists, so first-run
+    creation still lands outside the repo rather than writing into it.
+    """
+    local = local_db_path()
+    if os.path.exists(local):
+        return local
+    if os.path.exists(BUNDLED_DB_PATH):
+        return BUNDLED_DB_PATH
+    return local
 
 
 def exists():
@@ -60,17 +96,9 @@ def exists():
     return os.path.exists(db_path())
 
 
-def get_connection(create=True):
-    """Open the store, creating the file and schema if needed.
-
-    Pass create=False to open read-only-ish without making directories;
-    raises FileNotFoundError if there is nothing there yet.
-    """
-    path = db_path()
-    if not create and not os.path.exists(path):
-        raise FileNotFoundError(path)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    conn = sqlite3.connect(path)
+def _init_schema(conn):
+    """Create the tables/index if absent. Only ever run against a
+    writable local store, never the bundled read-only copy."""
     conn.execute("""
         CREATE TABLE IF NOT EXISTS bars (
             symbol TEXT NOT NULL,
@@ -103,6 +131,34 @@ def get_connection(create=True):
     # to put them. See spec section 5.
     conn.commit()
     return conn
+
+
+def get_write_connection():
+    """Open the real local store for writing - the fetch jobs' entry
+    point. Never resolves to the bundled repo copy, so a job run on a
+    machine without a local store creates one outside the repo rather
+    than writing into tracked data."""
+    path = local_db_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    return _init_schema(sqlite3.connect(path))
+
+
+def get_connection(create=True):
+    """Open the store for reading, creating the file and schema if needed.
+
+    Pass create=False to open read-only-ish without making directories;
+    raises FileNotFoundError if there is nothing there yet.
+    """
+    path = db_path()
+    if not create and not os.path.exists(path):
+        raise FileNotFoundError(path)
+    if path == BUNDLED_DB_PATH:
+        # Reading the committed copy: open it strictly read-only so no
+        # caller can dirty a tracked file. It ships with the schema, so
+        # there is nothing to create - and the DDL would fail here anyway.
+        return sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    return _init_schema(sqlite3.connect(path))
 
 
 def write_bars(conn, symbol, interval, df):

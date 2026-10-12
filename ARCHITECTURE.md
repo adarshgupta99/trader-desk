@@ -71,6 +71,7 @@ trader-desk/
 │   ├── intraday_discovery.txt   # Output of discover_intraday.py — the numbers the correlation feature is sized against
 │   ├── estimates_discovery.txt  # Output of discover_estimates.py, plus the nselib-actuals discovery note
 │   └── expected_move_discovery.txt # NSE archive filing-clustering rules the refresh job's identify_filings() encodes
+├── data/bars_daily_500d.db  # Committed daily-bars subset (~10MB) so the DEPLOYED app's Correlation tab has data; read-only fallback when no local store exists
 ├── nse_results.py       # NSE integrated-filing XBRL -> quarterly actuals (EPS/revenue/PAT); handles YTD-context, bank-taxonomy and standalone-vs-consolidated traps
 ├── trading_calendar.py  # NSE trading-day wrapper (is_trading_day, next_trading_day, session_bounds_ist) for the expected-move window logic
 ├── tests/
@@ -1837,6 +1838,36 @@ requires more than one point. All seven cases: zero exceptions. Full
 suite 62/62.
 
 **Confirmed working by Adarsh in a real browser (12 Oct 2026).**
+
+**Deployed-app bar data (12 Oct 2026).** Streamlit Community Cloud ships only what is in
+git and never runs `jobs/`, so the Correlation tab was permanently empty there — the real
+store lives outside the repo at `~/trader_desk_data/intraday.db` (80MB) by design.
+Adarsh chose to commit a trimmed subset rather than ship the whole thing: daily bars only,
+last 500 sessions, all 213 symbols, `corr_cache` emptied — `data/bars_daily_500d.db`,
+10MB on disk / 3.2MB compressed. The full store was rejected at 80MB (GitHub warns past
+50MB, hard-blocks at 100MB) because every refresh would commit a fresh ~18MB blob that git
+keeps forever.
+
+`intraday_store.db_path()` now returns the local store wherever it exists and the bundled
+copy otherwise, so a machine running the fetch jobs behaves exactly as before. Two guards
+keep the tracked file safe: `get_connection()` opens the bundled path strictly read-only
+(`mode=ro`), and the new `get_write_connection()` — which `jobs/fetch_intraday.py` now
+uses — always targets the local path, so a job run on a machine without a local store
+creates one outside the repo instead of writing into tracked data. Schema DDL moved into
+`_init_schema()`, shared by both and never run against the read-only copy.
+
+`DEFAULT_LOOKBACK` moved 20 → 90. The tier rule sends 1–60 days to 15m bars, which the
+bundled store does not contain, so the old default would have landed every visitor on an
+empty matrix. 90 resolves to the daily tier and works in both environments; a local
+machine can still type any lookback down to 1.
+
+**Known limits of this, by construction:** on the deployed app any lookback of 60 days or
+less still has nothing to read, because there are no 15m bars in the bundle. The snapshot
+is also point-in-time — bars run to 2026-10-05 and go stale until re-committed; nothing
+refreshes it automatically, unlike `events.db` which the daily workflow updates. Verified
+by running the app with `TRADER_DESK_DATA_DIR` pointed at a nonexistent directory: resolves
+to the bundled copy, 72,174 daily rows, writes rejected with `OperationalError`, Correlation
+renders at the 90-day default with no empty state and no exception. Suite 74/74.
 
 **Acceptance checks (`tests/test_correlation.py`, run with `.venv/bin/python -m pytest
 tests/test_correlation.py -v`), all 15 passing — unchanged by Sections 6/7, which have

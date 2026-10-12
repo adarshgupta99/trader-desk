@@ -32,7 +32,12 @@ from data_layer import intraday_store
 from theme import TABULAR, palette, sector_colors
 
 FETCH_CMD = ".venv/bin/python -m jobs.fetch_intraday"
-DEFAULT_LOOKBACK = 20
+#: Above tiers.MAX_15M_LOOKBACK_DAYS (60) on purpose, so the default view
+#: resolves to the DAILY tier. The deployed app only has the bundled
+#: daily-bars store (data_layer/intraday_store.BUNDLED_DB_PATH); a default
+#: inside the 15m tier would land every visitor on an empty matrix. Local
+#: machines with the full store can still type any lookback down to 1.
+DEFAULT_LOOKBACK = 90
 DEFAULT_TOP_N = 10
 SECTIONS = ["Sector overview", "Stock matrix", "History", "Pick one stock"]
 STOCK_MATRIX_CAP = 60

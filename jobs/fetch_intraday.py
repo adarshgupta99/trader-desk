@@ -168,7 +168,7 @@ def main(argv=None):
 
     t0 = time.perf_counter()
     log(f"store: {intraday_store.db_path()}")
-    conn = intraday_store.get_connection()
+    conn = intraday_store.get_write_connection()
     try:
         summaries = [fetch_interval(conn, i, symbols, args.full)
                      for i in intervals]
