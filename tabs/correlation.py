@@ -123,32 +123,59 @@ def _apply_pending_stock_matrix_click():
     isolate_points = [p for p in points if p.get("curve_number") == 1]
     cell_points = [p for p in points if p.get("curve_number") == 3]
 
+    is_box = bool(payload.get("selection", {}).get("box"))
+
     if isolate_points:
-        # Toggle membership rather than replace: the heatmap no longer
-        # narrows down to only the isolated rows (see _stock_matrix_section),
-        # so every row's marker stays clickable for the life of the view.
-        # That means a plain click - no shift, no ctrl/cmd needed at all -
-        # can add a second, third, fourth row one at a time, same as
-        # checking boxes in a list. Clicking an already-isolated row's
-        # marker again removes it.
-        current = list(st.session_state.get("sm_isolate", []))
-        for p in isolate_points:
-            symbol = p.get("y")
-            if not symbol:
-                continue
-            if symbol in current:
-                current.remove(symbol)
-            else:
-                current.append(symbol)
-        st.session_state["sm_isolate"] = current
+        if is_box and len(isolate_points) > 1:
+            # A box-drag over the isolate strip (only reachable with
+            # sm_box_mode on - see _stock_matrix_heatmap) collects every row
+            # inside the rectangle into one event, box info included -
+            # unlike a plain click or a shift-click, which never set
+            # payload["selection"]["box"]. Treat that as "isolate exactly
+            # these rows and narrow to them", not a per-row toggle.
+            symbols = sorted({p.get("y") for p in isolate_points if p.get("y")})
+            st.session_state["sm_isolate"] = symbols
+            st.session_state["sm_narrow"] = bool(symbols)
+        else:
+            # Toggle membership rather than replace: the heatmap no longer
+            # narrows down to only the isolated rows (see
+            # _stock_matrix_section), so every row's marker stays clickable
+            # for the life of the view. That means a plain click - no
+            # shift, no ctrl/cmd needed at all - can add a second, third,
+            # fourth row one at a time, same as checking boxes in a list.
+            # Clicking an already-isolated row's marker again removes it.
+            # Shift-click re-sends every currently-selected point, so this
+            # same loop handles that multi-point, non-box case too.
+            current = list(st.session_state.get("sm_isolate", []))
+            for p in isolate_points:
+                symbol = p.get("y")
+                if not symbol:
+                    continue
+                if symbol in current:
+                    current.remove(symbol)
+                else:
+                    current.append(symbol)
+            st.session_state["sm_isolate"] = current
     elif cell_points:
-        p = cell_points[-1]
-        row_symbol, col_symbol = p.get("y"), p.get("x")
-        if row_symbol and col_symbol and row_symbol != col_symbol:
-            st.session_state["corr_section"] = "History"
-            st.session_state["hist_symbol"] = row_symbol
-            st.session_state["hist_mode"] = "Another stock"
-            st.session_state["hist_other"] = col_symbol
+        if is_box and len(cell_points) > 1:
+            # Same bulk action, dragged over the main grid instead of the
+            # isolate strip - every row AND column caught by the rectangle
+            # is a stock in this square matrix, so the union of x's and y's
+            # across the box is the full set to isolate and narrow to.
+            symbols = sorted(
+                {p.get("y") for p in cell_points if p.get("y")}
+                | {p.get("x") for p in cell_points if p.get("x")}
+            )
+            st.session_state["sm_isolate"] = symbols
+            st.session_state["sm_narrow"] = bool(symbols)
+        else:
+            p = cell_points[-1]
+            row_symbol, col_symbol = p.get("y"), p.get("x")
+            if row_symbol and col_symbol and row_symbol != col_symbol:
+                st.session_state["corr_section"] = "History"
+                st.session_state["hist_symbol"] = row_symbol
+                st.session_state["hist_mode"] = "Another stock"
+                st.session_state["hist_other"] = col_symbol
 
 
 def render():
@@ -566,20 +593,49 @@ def _stock_matrix_section(P, result):
     # blocked the other.
     rows = isolate if (isolate and narrow_only) else shown
 
+    # box_mode is an explicit, user-flipped switch between two gestures that
+    # plotly.js cannot both honour under one dragmode (see the comment on
+    # dragmode in _stock_matrix_heatmap): off (default) keeps the chart on
+    # plotly's default dragmode, where a plain click fires a single-point
+    # selection - click-to-isolate and click-a-cell-for-History both need
+    # this. On switches to dragmode="select", where only a drag (not a
+    # zero-movement click) produces a selection - needed for box-drag, but
+    # it silently swallows every plain click while active. There is no
+    # known single dragmode that supports both gestures at once, so this
+    # toggle exists instead of a toolbar button (the modebar stays hidden).
+    box_mode = st.toggle(
+        "Box select (drag to isolate several rows at once)",
+        key="sm_box_mode", value=False,
+    )
+
+    if box_mode:
+        help_text = (
+            f"Box select is on: drag a rectangle over the strip or the grid "
+            f"to isolate and narrow to every stock it covers in one go. "
+            f"Plain clicks and shift-click are off while this is on - "
+            f"switch it off to use them again."
+        )
+    else:
+        help_text = (
+            f"Click a row's square marker to highlight it here (click again "
+            f"to remove, shift-click to pick several); click any cell to "
+            f"open that pair's correlation history. Tick “Show only "
+            f"isolated rows” to narrow the matrix down to your picks - add "
+            f"more from the dropdown above first, since a narrowed row's "
+            f"marker is the only one left to click."
+        )
     st.markdown(
         f"<div style='color:{P.T3};font-size:12px;margin-top:8px;'>"
-        f"Click a row's square marker to highlight it here (click again to "
-        f"remove); click any cell to open that pair's correlation history. "
-        f"Tick “Show only isolated rows” "
-        f"to narrow the matrix down to your picks - add more from the "
-        f"dropdown above first, since a narrowed row's marker is the only "
-        f"one left to click.</div>",
+        f"{help_text}</div>",
         unsafe_allow_html=True,
     )
     st.plotly_chart(
-        _stock_matrix_heatmap(P, result, shown, rows=rows, isolated=set(isolate)),
+        _stock_matrix_heatmap(
+            P, result, shown, rows=rows, isolated=set(isolate), box_mode=box_mode,
+        ),
         width="stretch", key=STOCK_MATRIX_PLOT_KEY,
-        on_select="rerun", selection_mode=("points",),
+        on_select="rerun",
+        selection_mode=("points", "box") if box_mode else ("points",),
         config={"displayModeBar": False},
     )
 
@@ -594,7 +650,7 @@ def _discrete_colorscale(colors):
     return scale
 
 
-def _stock_matrix_heatmap(P, result, cols, rows=None, isolated=None):
+def _stock_matrix_heatmap(P, result, cols, rows=None, isolated=None, box_mode=False):
     """`cols` is the displayed universe (x-axis, and the strip along the
     top). `rows` defaults to the same set (a square matrix). `isolated` is
     the subset of `rows` the user has clicked/picked to highlight - it no
@@ -750,25 +806,25 @@ def _stock_matrix_heatmap(P, result, cols, rows=None, isolated=None):
         paper_bgcolor=P.BG, plot_bgcolor=P.SURFACE,
         font=dict(family="Inter, Arial, sans-serif"),
         clickmode="event+select",
-        # No dragmode="select" here, deliberately (removed 12 Oct 2026).
-        # Forcing it as the default was meant to restore drag-to-box-select
-        # with the modebar hidden, on the assumption that a plain click
-        # still registers as a single-point selection under that dragmode.
-        # It does not, under the Plotly build Streamlit 1.64 ships: with
-        # "select" as the default dragmode, a click with no drag produced
-        # no selection event at all, so BOTH click-to-isolate (curve 1) and
-        # click-a-cell-to-History (curve 3) were silently dead - Adarsh
-        # confirmed neither responded in a real browser. The Chart tab's
-        # Measure tool, which does work, sets no dragmode at all and relies
-        # on Plotly's default click handling; this chart now matches it.
-        # Every axis is fixedrange, so leaving dragmode at its default
-        # costs nothing here. Trade-off: drag-to-box-select for bulk
-        # isolate is unreachable while the modebar stays hidden - the
-        # plain-click path is the one that matters and the one that was
-        # asked for. selection_mode on the st.plotly_chart call is now
-        # ("points",) only and the box branches are gone from
-        # _apply_pending_stock_matrix_click, so restoring that gesture would
-        # mean putting both back, not just re-showing the modebar.
+        # dragmode now follows the box_mode toggle in _stock_matrix_section
+        # instead of being fixed one way (added 12 Oct 2026, superseding
+        # the 12 Oct 2026 "no dragmode" fix below it). That earlier fix was
+        # itself a reaction to `dragmode="select"` being hardcoded on - with
+        # "select" as the default dragmode, under the Plotly build Streamlit
+        # 1.64 ships, a click with no drag produces no selection event at
+        # all, so BOTH click-to-isolate (curve 1) and click-a-cell-to-
+        # History (curve 3) went silently dead; Adarsh confirmed neither
+        # responded in a real browser. There is no known dragmode that
+        # supports a zero-movement click AND a box-drag at once, so instead
+        # of permanently picking one, the chart now switches between them:
+        # "select" only while box_mode is on (selection_mode also switches
+        # to include "box" for that same call, in _stock_matrix_section),
+        # "zoom" - plotly's own default, inert here since every axis is
+        # fixedrange=True - otherwise, which is when plain clicks and
+        # shift-click work. The Chart tab's Measure tool sets no dragmode
+        # at all because it never needs box-drag; this chart only matches
+        # that when box_mode is off.
+        dragmode="select" if box_mode else "zoom",
         # A constant uirevision tells Plotly.js this is "the same chart" across
         # reruns, so it keeps its own client-side selection state instead of
         # resetting it. Without this, on_select="rerun" sends a brand-new

@@ -1687,6 +1687,55 @@ suite 62/62. **Still unconfirmed in a real browser, for the same reason as
 the 8 Oct entry** - needs Adarsh to click a cell, a row marker, and
 shift+click before this is called done.
 
+**Box-drag-select brought back alongside plain click, via an explicit
+toggle (12 Oct 2026).** Adarsh asked for box-drag-to-isolate back on top
+of everything above - click-to-isolate, click-a-cell-to-History, and
+shift-click all still working too. That is not simultaneously possible
+under one `dragmode`: the 8 Oct finding was that under `dragmode="select"`
+a zero-movement click never fires a selection event at all (it registers
+as a deselect), so a dragmode that enables box-select structurally
+disables every plain click at the same time, and there is no third
+dragmode that does both. No way was found around this within plotly.js's
+own selection model.
+
+The resolution is an explicit `st.toggle("Box select (drag to isolate
+several rows at once)", key="sm_box_mode")`, default off, read by both
+`_stock_matrix_section` (which now passes `box_mode` into
+`_stock_matrix_heatmap` and switches `selection_mode` to
+`("points", "box")` only while it's on) and `_stock_matrix_heatmap` itself
+(`dragmode="select"` only while `box_mode` is True, otherwise `"zoom"` -
+plotly's own default, inert since every axis is `fixedrange=True`). The
+help text under the chart switches with it, so the user is told which
+gestures are live. `_apply_pending_stock_matrix_click` restores the
+box-payload branches removed earlier today (multi-point + the payload's
+own `selection.box` key → union of rows/columns in the rectangle →
+`sm_isolate` replaced and `sm_narrow` forced on), now guarded by that same
+`payload.get("selection", {}).get("box")` check so a box-mode-off
+shift-click (also multi-point, but no `box` key) still falls through to
+the existing per-point toggle loop rather than being treated as a
+rectangle.
+
+This is a real trade-off, not a workaround that quietly restores
+everything: box-drag and plain-click are mutually exclusive within a
+single render, by one `st.toggle` flip, not simultaneously live on the
+same click. That is the best available shape given plotly.js's actual
+selection semantics in the Streamlit 1.64 build this app ships.
+
+Verified Python-side under `AppTest`, extending the synthetic-payload
+method above to seed `sm_box_mode` before each run: with the toggle off,
+plain click-isolate, shift-click (two rows), and cell-click-to-History all
+reproduce the earlier results unchanged. With it on, a 3-point box payload
+over the isolate strip (`curve_number 1`, with `selection.box` set)
+isolates and narrows to all three rows; a 2-point box payload over the
+main grid (`curve_number 3`) isolates the union of its rows and columns;
+and a degenerate single-point payload with a `box` key present (e.g. a
+drag that didn't actually move) still falls through to the ordinary
+single-cell → History path, not the bulk-isolate one, since that branch
+requires more than one point. All seven cases: zero exceptions. Full
+suite 62/62.
+
+**Confirmed working by Adarsh in a real browser (12 Oct 2026).**
+
 **Acceptance checks (`tests/test_correlation.py`, run with `.venv/bin/python -m pytest
 tests/test_correlation.py -v`), all 15 passing — unchanged by Sections 6/7, which have
 so far been verified by ad-hoc synthetic/real-data smoke scripts and `AppTest` UI-level
