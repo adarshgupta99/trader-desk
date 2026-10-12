@@ -71,10 +71,12 @@ trader-desk/
 │   ├── intraday_discovery.txt   # Output of discover_intraday.py — the numbers the correlation feature is sized against
 │   ├── estimates_discovery.txt  # Output of discover_estimates.py, plus the nselib-actuals discovery note
 │   └── expected_move_discovery.txt # NSE archive filing-clustering rules the refresh job's identify_filings() encodes
+├── nse_results.py       # NSE integrated-filing XBRL -> quarterly actuals (EPS/revenue/PAT); handles YTD-context, bank-taxonomy and standalone-vs-consolidated traps
 ├── trading_calendar.py  # NSE trading-day wrapper (is_trading_day, next_trading_day, session_bounds_ist) for the expected-move window logic
 ├── tests/
 │   ├── test_correlation.py      # Acceptance checks A-K for the correlation feature
 │   ├── test_estimates.py        # Acceptance checks A-G for the analyst estimates feature (H is manual)
+│   ├── test_nse_results.py      # 12 fixture tests for nse_results.py: YTD-context trap, bank taxonomy, filing selection
 │   ├── test_expected_move.py    # 26 fixture tests for analytics/expected_move.py's pure calc engine
 │   └── test_refresh_expected_moves.py # Regression tests for 2 real bugs caught during the live backfill (abbreviated month parsing, same-day-sibling vs. genuine revision)
 ├── fno_sectors.json    # 213 F&O stocks with sector labels (hand-supplied, 5 Oct 2026)
@@ -602,6 +604,84 @@ source (matched to `event_date` within ±1 day), verified against
 across the watchlist. `nselib` is dropped from this path entirely, not kept as a dead
 fallback. Screener.in stays a manual backup for Adarsh, same as any symbol yfinance never
 fills — not a scraped pipeline.
+
+**Superseded 12 Oct 2026 — actuals now come from NSE's own filing XBRL, with yfinance
+demoted to fallback (`nse_results.py`).** The 8 Oct conclusion above was right about the
+endpoint it tested and wrong as a general claim about NSE. `financial_results_for_equity`
+reads `/api/corporates-financial-results`; re-queried live on 12 Oct for 1–12 Oct 2026
+with no symbol filter it still returns **zero rows**, in a window containing TCS's real
+8 Oct result — so that part of the finding is reconfirmed, not overturned. But a
+different endpoint, `/api/integrated-filing-results`, works and exposes each filing's own
+`xbrl` URL. Adarsh brought this one; it was verified from scratch here before any code
+was written.
+
+Verified live 12 Oct 2026 against the filings themselves: TCS Sep-2026 consolidated
+revenue ₹731.88bn / PAT ₹139.34bn / EPS 38.37; DMART Sep-2026 ₹19,644.01cr / ₹742.98cr /
+11.40; RELIANCE Jun-2026 revenue ₹3,118.5bn. Coverage spot-check across large caps, a
+bank, an NBFC, a midcap and a symbol with `&` in its name: every one returned 12
+financial filings spanning 6 quarters. MCX returns 0 rows — consistent with the
+already-documented MCX gap, so corroboration rather than a new problem.
+
+`nse_results.py` is a standalone module (pure selection/parsing + thin fetch helpers,
+`tests/test_nse_results.py`, 12 fixture cases, no network). Three real traps drove its
+shape, each confirmed against live documents:
+
+- **Year-to-date contexts.** One document carries the quarter *and* the YTD figure under
+  the *same concept name*, separated only by `contextRef` — TCS Sep-2026 has `OneD`
+  (1 Jul–30 Sep, ₹731.88bn) beside `FourD` (1 Apr–30 Sep, ₹1,454.63bn). Reading
+  positionally stores a half-year as a quarter: a 2× error that looks entirely plausible.
+  `quarter_contexts()` accepts a context only when its own declared start/end prove a
+  ~3-month span ending on the target quarter end, and `parse_facts` raises rather than
+  falling back to some other period.
+- **Banking taxonomy.** HDFCBANK has none of `RevenueFromOperations`,
+  `ProfitLossForPeriod`, or the standard EPS concept. It uses `Income`/`InterestEarned`
+  and — the nasty one — `ProfitLossForThePeriod`, one word off the standard concept. A
+  single-concept parser returns NULL for every bank and NBFC in F&O while appearing to
+  work. Hence ordered `CONCEPT_CANDIDATES` per field, with the resolved concept name
+  stored alongside each value so a wrong pick is auditable. Bank EPS lives under
+  `Basic/DilutedEarningsPerShareAfterExtraordinaryItems` (preferred over `Before…`, being
+  the bottom-line figure the analyst estimate is measured against). A bank's `Income` is
+  *not* strictly the same measure as a non-financial's `RevenueFromOperations` — its
+  revenue surprise % is indicative, not cross-sector comparable, which is precisely why
+  the concept name is stored rather than discarded.
+- **Basis.** Every quarter is filed twice, seconds apart, with genuinely different
+  numbers and no consistent direction: DMART Sep-2026 standalone PAT (₹803.60cr)
+  *exceeds* consolidated (₹742.98cr) while its revenue is lower. `ACTUALS_BASIS` is
+  **Consolidated** — what headlines and analyst consensus quote, so surprise % stays
+  comparable to the frozen estimate. Changing it makes new rows incomparable to existing
+  ones; it is not a free toggle. Also, `Integrated Filing- Governance` rows share the
+  feed and can carry a *later* broadcast date than the financials for the same quarter
+  (DMART Jun-2026: governance 29 Jul vs financials 11 Jul), so `select_filing()` filters
+  by type and never takes "the most recent row".
+
+Units are absolute INR (verified across TCS/DMART/RELIANCE; these documents carry no
+`LevelOfRoundingUsedInFinancialStatements` at all). If one ever appears declaring a
+scale, or a non-INR currency shows up, `find_nse_actuals` logs and skips NSE for that row
+rather than mis-scaling by 10⁵.
+
+**yfinance is kept, deliberately.** It is the only cover for a symbol whose concepts
+aren't mapped, and a disagreement between the two sources is how a bad mapping surfaces
+instead of silently storing a wrong number. Fallback is per-field, so a filer whose EPS
+concept is unmapped still gets its revenue from NSE. `fill_row` now takes an explicit
+`source` and every row records it (`nse_xbrl:Consolidated` or `yfinance`, or both joined
+when a row was completed from each).
+
+**A second bug fixed in the same pass.** `due_rows` selected on `eps_actual IS NULL`
+only, so a row that got an EPS but no revenue — the common yfinance outcome; TCS and
+DMART were both sitting at EPS-filled/revenue-NULL — was never revisited and could never
+be completed. It now selects rows missing *either* actual, bounded to the retry window so
+long-abandoned rows aren't re-fetched forever.
+
+First live run (12 Oct 2026) filled all three outstanding rows. The cross-source check
+landed well: NSE independently returned EPS 38.37 for TCS and 11.40 for DMART, matching
+what yfinance had already stored, while supplying the revenue both were missing — and
+filling ANANDRATHI, which yfinance had left completely empty days after the result
+(EPS 5.38, revenue ₹343.99cr). Full suite 74/74.
+
+**Not yet done:** NSE carries ~6 quarters of history per symbol, and actuals have no
+T-1 freeze constraint, so past quarters *could* be backfilled — but only as actual-only
+rows, since estimates can never be backfilled. Left for Adarsh to decide rather than
+silently writing history into the table.
 
 **Read side.** `events_db.get_earnings_estimates(symbols=None)` reads `earnings_estimates`
 the same way `get_upcoming_events()` reads `events` — `mode=ro`, empty frame if the table

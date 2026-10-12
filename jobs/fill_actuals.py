@@ -6,14 +6,32 @@ rows once results are out (see analyst_estimates_spec-c3606434.txt, section
 Run manually: python jobs/fill_actuals.py
 Scheduled in the same daily cron as jobs/snapshot_estimates.py, after it.
 
-SOURCE, AMENDED FROM THE ORIGINAL SPEC: nselib's financial_results_for_equity
-was discovery-tested on 2026-10-08 (see docs/estimates_discovery.txt) and
-found not to work for this purpose - over a full trailing year it returned
-only 18 symbols, all distressed/suspended smallcaps, and zero mainstream
-F&O names (RELIANCE, TCS, HDFCBANK, INFY, WIPRO all absent). It is dropped
-from this path entirely, not kept as a fallback.
+SOURCE, AMENDED AGAIN 2026-10-12 (Adarsh's direction): actuals now come
+from NSE's own filing XBRL first, via nse_results.py, with yfinance kept
+as the fallback rather than the primary.
 
-Primary and only automated source is yfinance:
+What changed and why: the 8 Oct decision to use yfinance only was made
+after `nselib.financial_results_for_equity` was found unusable - it reads
+`/api/corporates-financial-results`, which over a full trailing year
+returned 18 distressed/suspended smallcaps and zero mainstream F&O names.
+That finding still holds (re-verified live 12 Oct: zero rows for a window
+containing TCS's real 8 Oct results). But a DIFFERENT endpoint,
+`/api/integrated-filing-results`, does work and carries the filing's own
+XBRL. See nse_results.py for the live verification and the three traps
+(year-to-date contexts, banking taxonomy, standalone-vs-consolidated).
+
+Why NSE first: it is the primary source - the company's own filing, not a
+third party's transcription - and it covers rows yfinance leaves empty.
+ANANDRATHI's Sep-2026 quarter is the worked example: yfinance had no
+actual for it days after the result, while NSE had revenue 343.99cr /
+PAT 89.26cr / EPS 5.38 the whole time.
+
+Why yfinance is KEPT rather than deleted: it is the only cover for a
+symbol whose XBRL concepts aren't in nse_results.CONCEPT_CANDIDATES, and
+a disagreement between the two is how a bad concept mapping gets noticed
+instead of silently storing a wrong number.
+
+Fallback source, yfinance:
   - EPS actual: Ticker.get_earnings_dates()['Reported EPS'], matched to the
     snapshot's event_date by calendar date (+/- 1 day tolerance - Yahoo's
     recorded earnings date can be a day off from NSE's board-meeting date).
@@ -40,6 +58,9 @@ from datetime import date, datetime, timedelta, timezone
 import pandas as pd
 import yfinance as yf
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+import nse_results  # noqa: E402
+
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "events.db")
 LOG_PATH = os.path.join(os.path.dirname(__file__), "..", "logs", "fill_actuals.log")
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -48,6 +69,15 @@ INTER_CALL_SLEEP = 2
 DATE_MATCH_TOLERANCE_DAYS = 1
 REVENUE_LOOKBACK_DAYS = 75
 GIVE_UP_AFTER_DAYS = 7
+
+#: Standalone and consolidated are both filed for every quarter with
+#: genuinely different numbers (DMART Sep-2026: standalone PAT 803.60cr
+#: EXCEEDS consolidated 742.98cr while its revenue is lower). Consolidated
+#: is stored because that is the basis headlines and analyst consensus
+#: quote, so surprise % stays comparable to the frozen estimate. Changing
+#: this makes new rows incomparable to existing ones - it is not a free
+#: toggle.
+ACTUALS_BASIS = nse_results.BASIS_CONSOLIDATED
 
 
 def log(msg):
@@ -98,17 +128,68 @@ def _clean(val):
     return val
 
 
+def quarter_end_for_event_date(event_date):
+    """The quarter a board meeting on `event_date` is reporting on: the
+    most recent quarter end STRICTLY before it. A company cannot declare
+    results for a quarter on or before the day that quarter ends, so
+    "strictly before" is right - TCS's 8 Oct 2026 meeting reports
+    30 Sep 2026, and a 10 Jan 2026 meeting reports 31 Dec 2025."""
+    for month, day in ((12, 31), (9, 30), (6, 30), (3, 31)):
+        candidate = date(event_date.year, month, day)
+        if candidate < event_date:
+            return candidate
+    return date(event_date.year - 1, 12, 31)
+
+
 def due_rows(conn):
-    today_str = date.today().isoformat()
+    """Rows still missing EITHER actual, within the retry window.
+
+    Was `eps_actual IS NULL` only, which meant a row that got an EPS but
+    no revenue - the common yfinance outcome, e.g. TCS and DMART both
+    sat at eps_actual filled / revenue_actual NULL - was never revisited
+    and could never be completed. The window bound replaces re-fetching
+    long-abandoned rows on every run forever just to log that they were
+    given up on.
+    """
+    today = date.today()
     return conn.execute(
         """
-        SELECT id, symbol, event_date, eps_estimate, revenue_estimate
+        SELECT id, symbol, event_date, eps_estimate, revenue_estimate,
+               eps_actual, revenue_actual
         FROM earnings_estimates
-        WHERE event_date <= ? AND eps_actual IS NULL
+        WHERE event_date <= ? AND event_date >= ?
+          AND (eps_actual IS NULL OR revenue_actual IS NULL)
         ORDER BY event_date, symbol
         """,
-        (today_str,),
+        (today.isoformat(), (today - timedelta(days=GIVE_UP_AFTER_DAYS)).isoformat()),
     ).fetchall()
+
+
+def find_nse_actuals(symbol, event_date_str):
+    """(eps, revenue, detail) from the company's own NSE filing, or
+    (None, None, None) if that quarter isn't filed yet."""
+    quarter_end = quarter_end_for_event_date(date.fromisoformat(event_date_str))
+    facts = call_with_retry(
+        f"nse_results({symbol})",
+        nse_results.get_quarter_actuals, symbol, quarter_end, ACTUALS_BASIS,
+    )
+    if facts is None:
+        return None, None, None
+    detail = (f"quarter_end={quarter_end} basis={ACTUALS_BASIS} "
+              f"eps_concept={facts['eps_basic_concept']} "
+              f"revenue_concept={facts['revenue_concept']} "
+              f"currency={facts['currency']} rounding={facts['rounding']} "
+              f"xbrl={facts['xbrl_url']}")
+    if facts["currency"] not in (None, "INR"):
+        log(f"  {symbol}: UNEXPECTED currency {facts['currency']} - skipping NSE, {detail}")
+        return None, None, None
+    if facts["rounding"] is not None:
+        # Absent in every document checked; if a filer ever declares a
+        # scale, the raw figures may not be absolute rupees and would be
+        # wrong by orders of magnitude. Refuse rather than mis-scale.
+        log(f"  {symbol}: filing declares rounding {facts['rounding']} - skipping NSE, {detail}")
+        return None, None, None
+    return facts["eps_basic"], facts["revenue"], detail
 
 
 def find_eps_actual(ticker, event_date_str):
@@ -155,7 +236,8 @@ def compute_surprise(estimate, actual):
     return (actual - estimate) / abs(estimate) * 100
 
 
-def fill_row(conn, row_id, eps_actual, revenue_actual, surprise_pct, revenue_surprise_pct):
+def fill_row(conn, row_id, eps_actual, revenue_actual, surprise_pct,
+             revenue_surprise_pct, source):
     now = datetime.now(IST).isoformat()
     conn.execute(
         """
@@ -164,7 +246,7 @@ def fill_row(conn, row_id, eps_actual, revenue_actual, surprise_pct, revenue_sur
             revenue_surprise_pct = ?, actual_source = ?, actual_filled_at = ?
         WHERE id = ?
         """,
-        (eps_actual, revenue_actual, surprise_pct, revenue_surprise_pct, "yfinance", now, row_id),
+        (eps_actual, revenue_actual, surprise_pct, revenue_surprise_pct, source, now, row_id),
     )
     conn.commit()
 
@@ -173,12 +255,49 @@ def run(conn):
     today = date.today()
     counts = {"filled": 0, "no_actual_yet": 0, "gave_up": 0, "errors": 0}
 
-    for row_id, symbol, event_date, eps_estimate, revenue_estimate in due_rows(conn):
+    for (row_id, symbol, event_date, eps_estimate, revenue_estimate,
+         existing_eps, existing_revenue) in due_rows(conn):
+        eps_actual, revenue_actual = existing_eps, existing_revenue
+        sources = []
+
+        # NSE first - the company's own filing. Each field falls back to
+        # yfinance independently, so a bank whose EPS concept isn't mapped
+        # still gets its revenue from NSE rather than losing both.
+        try:
+            nse_eps, nse_revenue, detail = find_nse_actuals(symbol, event_date)
+            if nse_eps is not None or nse_revenue is not None:
+                if eps_actual is None and nse_eps is not None:
+                    eps_actual = nse_eps
+                if revenue_actual is None and nse_revenue is not None:
+                    revenue_actual = nse_revenue
+                sources.append(f"nse_xbrl:{ACTUALS_BASIS}")
+                log(f"  {symbol} {event_date}: NSE {detail}")
+        except Exception as e:
+            log(f"  {symbol} {event_date}: NSE lookup failed: {type(e).__name__}: {e}")
+        time.sleep(INTER_CALL_SLEEP)
+
+        if eps_actual is not None and revenue_actual is not None:
+            surprise_pct = compute_surprise(eps_estimate, eps_actual)
+            revenue_surprise_pct = compute_surprise(revenue_estimate, revenue_actual)
+            fill_row(conn, row_id, eps_actual, revenue_actual, surprise_pct,
+                     revenue_surprise_pct, "+".join(sources))
+            log(f"  {symbol} {event_date}: filled eps_actual={eps_actual} "
+                f"revenue_actual={revenue_actual} surprise_pct={surprise_pct} "
+                f"revenue_surprise_pct={revenue_surprise_pct} source={'+'.join(sources)}")
+            counts["filled"] += 1
+            continue
+
         ticker = yf.Ticker(f"{symbol}.NS")
         try:
-            eps_actual = find_eps_actual(ticker, event_date)
-            time.sleep(INTER_CALL_SLEEP)
-            revenue_actual = find_revenue_actual(ticker, event_date) if eps_actual is not None else None
+            if eps_actual is None:
+                eps_actual = find_eps_actual(ticker, event_date)
+                if eps_actual is not None:
+                    sources.append("yfinance")
+                time.sleep(INTER_CALL_SLEEP)
+            if revenue_actual is None and eps_actual is not None:
+                revenue_actual = find_revenue_actual(ticker, event_date)
+                if revenue_actual is not None and "yfinance" not in sources:
+                    sources.append("yfinance")
         except Exception as e:
             if _is_rate_limit(e):
                 log(f"  {symbol} {event_date}: rate limited ({e}) - stopping run, retry next day")
@@ -200,9 +319,11 @@ def run(conn):
 
         surprise_pct = compute_surprise(eps_estimate, eps_actual)
         revenue_surprise_pct = compute_surprise(revenue_estimate, revenue_actual)
-        fill_row(conn, row_id, eps_actual, revenue_actual, surprise_pct, revenue_surprise_pct)
+        fill_row(conn, row_id, eps_actual, revenue_actual, surprise_pct,
+                 revenue_surprise_pct, "+".join(sources))
         log(f"  {symbol} {event_date}: filled eps_actual={eps_actual} revenue_actual={revenue_actual} "
-            f"surprise_pct={surprise_pct} revenue_surprise_pct={revenue_surprise_pct}")
+            f"surprise_pct={surprise_pct} revenue_surprise_pct={revenue_surprise_pct} "
+            f"source={'+'.join(sources)}")
         counts["filled"] += 1
         time.sleep(INTER_CALL_SLEEP)
 

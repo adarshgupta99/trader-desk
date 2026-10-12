@@ -149,7 +149,7 @@ def test_e_actuals_fill_only_touches_actual_columns(db_path):
 
     row_id = conn.execute("SELECT id FROM earnings_estimates WHERE symbol='TCS'").fetchone()[0]
     fa.fill_row(conn, row_id, eps_actual=40.0, revenue_actual=7.2e11, surprise_pct=5.26,
-                revenue_surprise_pct=2.86)
+                revenue_surprise_pct=2.86, source="nse_xbrl:Consolidated")
 
     after = dict(zip(
         before.keys(),
@@ -165,6 +165,11 @@ def test_e_actuals_fill_only_touches_actual_columns(db_path):
         "SELECT eps_actual, revenue_actual, surprise_pct FROM earnings_estimates WHERE symbol='TCS'"
     ).fetchone()
     assert actual_row == (40.0, 7.2e11, 5.26)
+    # Provenance is stored, not assumed: actuals can come from NSE's own
+    # filing XBRL or from yfinance as fallback, and a row must say which.
+    assert conn.execute(
+        "SELECT actual_source FROM earnings_estimates WHERE symbol='TCS'"
+    ).fetchone()[0] == "nse_xbrl:Consolidated"
     conn.close()
 
 

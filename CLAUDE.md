@@ -49,11 +49,38 @@ analyst count), then the actual and surprise % once the result is out.
   actuals against a contaminated number. Only `eps_actual`,
   `revenue_actual`, and `surprise_pct` may ever be filled in later, enforced
   by a SQLite trigger on `earnings_estimates` (see `db/schema_estimates.sql`).
-- Source is yfinance only, for both the estimate and the actual.
-  `nselib.financial_results_for_equity` was tried for actuals and dropped -
-  discovery found it surfaces a narrow NSE filing category, not the normal
-  quarterly-results feed, and returned zero mainstream F&O names across a
-  full year (see `docs/estimates_discovery.txt`).
+- **Estimates** come from yfinance only, and are frozen (see the T-1 rule
+  above).
+- **Actuals come from NSE's own filing XBRL first** (12 October 2026),
+  with yfinance as the fallback - `nse_results.py` reads
+  `/api/integrated-filing-results`, picks the filing for the right quarter
+  and basis, and parses the figures out of the filing's own XBRL. This
+  supersedes the 8 October "yfinance only" decision. The earlier finding
+  still stands and is a different endpoint:
+  `nselib.financial_results_for_equity` reads
+  `/api/corporates-financial-results`, which surfaces a narrow NSE filing
+  category and returned zero mainstream F&O names across a full year
+  (see `docs/estimates_discovery.txt`); re-verified live on 12 October,
+  still zero rows for a window containing TCS's real result. It is not
+  used. Do not confuse the two endpoints.
+- Three things `nse_results.py` exists to get right, each a real trap
+  confirmed against live filings - do not "simplify" past them:
+  **(1)** one document holds the quarter *and* the year-to-date figure
+  under the same concept name, separated only by `contextRef` (TCS
+  Sep-2026: ₹731.88bn vs ₹1,454.63bn), so a context is accepted only when
+  its own declared dates prove a ~3-month span ending on the target
+  quarter end; **(2)** banks use a different taxonomy, subtly - HDFCBANK's
+  profit concept is `ProfitLossForThePeriod`, one word off the standard
+  `ProfitLossForPeriod`, and a single-concept parser returns NULL for
+  every bank and NBFC while appearing to work; **(3)** every quarter is
+  filed twice, standalone and consolidated, with different numbers in an
+  unpredictable direction (DMART Sep-2026 standalone PAT *exceeds*
+  consolidated while its revenue is lower). **Consolidated** is the
+  stored basis, since that is what headlines and analyst consensus quote.
+- yfinance is kept as fallback, not deleted: it is the only cover for a
+  symbol whose XBRL concepts aren't mapped, and a disagreement between
+  the two sources is how a bad mapping gets noticed. Every row records
+  which source filled it (`actual_source`).
 - Scheduled jobs: `jobs/snapshot_estimates.py` (T-1 snapshot) then
   `jobs/fill_actuals.py` (actual + surprise, retries daily for up to 7 days)
   - both read-write `events.db`, same as `scripts/fetch_events.py`. The app
