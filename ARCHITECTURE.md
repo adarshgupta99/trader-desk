@@ -37,7 +37,7 @@ trader-desk/
 ├── prices.py           # Price history and its cache (yfinance + jugaad-data)
 ├── watchlists.py       # Custom lists, and the read-only index views
 ├── symbols.py          # The searchable instrument table
-├── events_db.py        # Read-only access to events.db
+├── events_db.py        # Read-only access to events.db (events + earnings_estimates tables)
 ├── fno.py              # The 213-stock F&O universe and sector lookup (fno_sectors.json)
 │
 ├── analytics/
@@ -45,11 +45,10 @@ trader-desk/
 │   ├── correlation.py   # Bars -> log returns -> pairwise Pearson; the stale-bar policy
 │   ├── sector_matrix.py # 15x15 mean-correlation rollup + drill-down data (spec sections 5/5A/5B)
 │   ├── stock_matrix.py  # Cluster order + preview selection for the stock-level matrix (spec section 6)
-│   └── rolling.py       # Rolling correlation vs NIFTY/another stock/sector basket, top-5 partners (spec section 7)
+│   ├── rolling.py       # Rolling correlation vs NIFTY/another stock/sector basket, top-5 partners (spec section 7)
+│   └── expected_move.py # Pure calc engine for the expected-move feature: release-mode classification, reference-bar/window selection, print/cohort move math (spec: expected_move_spec-3c050a43.txt)
 ├── data_layer/
 │   └── intraday_store.py  # SQLite bar store outside the repo (~/trader_desk_data/intraday.db)
-├── jobs/
-│   └── fetch_intraday.py  # Daily cron: downloads 15m + daily F&O bars into the store
 │
 ├── data/
 │   └── symbols.csv     # Committed instrument table (3,360 rows) — search's source of truth
@@ -57,11 +56,27 @@ trader-desk/
 │   ├── refresh_symbol_names.py  # Maintenance: pull full NSE company names into symbols.csv
 │   ├── fetch_events.py          # Writes events.db from NSE's two event feeds
 │   ├── discover_nse.py          # One-off: dump nselib's real output shape
-│   └── discover_intraday.py     # Step 0 for the correlation feature: measures Yahoo's 15m feed
+│   ├── discover_intraday.py     # Step 0 for the correlation feature: measures Yahoo's 15m feed
+│   ├── discover_estimates.py    # Step 0 for the estimates feature: yfinance estimate shapes
+│   └── discover_expected_move.py # Step 0 for the expected-move feature: NSE archive shape, filing-clustering patterns
+├── jobs/
+│   ├── fetch_intraday.py        # Daily cron: downloads 15m + daily F&O bars into the store
+│   ├── snapshot_estimates.py    # Daily T-1 snapshot of analyst consensus (earnings_estimates)
+│   ├── fill_actuals.py          # Fills actual EPS/revenue + surprise % once results are out
+│   └── refresh_expected_moves.py # Discovers results filings via the NSE archive, fetches price bars, computes and stores expected-move prints/summaries
+├── db/
+│   ├── schema_estimates.sql     # earnings_estimates table + the immutability trigger
+│   └── schema_expected_move.sql # earnings_move_prices/prints/summaries tables + the identity-freeze trigger
 ├── docs/
-│   └── intraday_discovery.txt   # Output of the above — the numbers the feature is sized against
+│   ├── intraday_discovery.txt   # Output of discover_intraday.py — the numbers the correlation feature is sized against
+│   ├── estimates_discovery.txt  # Output of discover_estimates.py, plus the nselib-actuals discovery note
+│   └── expected_move_discovery.txt # NSE archive filing-clustering rules the refresh job's identify_filings() encodes
+├── trading_calendar.py  # NSE trading-day wrapper (is_trading_day, next_trading_day, session_bounds_ist) for the expected-move window logic
 ├── tests/
-│   └── test_correlation.py      # Acceptance checks A-K for the correlation feature
+│   ├── test_correlation.py      # Acceptance checks A-K for the correlation feature
+│   ├── test_estimates.py        # Acceptance checks A-G for the analyst estimates feature (H is manual)
+│   ├── test_expected_move.py    # 26 fixture tests for analytics/expected_move.py's pure calc engine
+│   └── test_refresh_expected_moves.py # Regression tests for 2 real bugs caught during the live backfill (abbreviated month parsing, same-day-sibling vs. genuine revision)
 ├── fno_sectors.json    # 213 F&O stocks with sector labels (hand-supplied, 5 Oct 2026)
 ├── .github/workflows/
 │   └── test_nse_access.yml      # Manual-only: does NSE answer GitHub's runner IPs?
@@ -550,6 +565,413 @@ which is honest about what we actually know. Exact PDF matching is **not** built
 event_type, event_date, purpose), `meta` (`last_success_at`, `last_error`,
 `instruments_updated_at`). The tab shows "Last updated" from `meta` and warns if it is more
 than three days stale.
+
+---
+
+### `jobs/snapshot_estimates.py`, `jobs/fill_actuals.py`, `db/schema_estimates.sql` and the Events tab estimate columns
+
+A side build outside the Week 1-9 plan (spec: `analyst_estimates_spec-c3606434.txt`),
+documented in `CLAUDE.md`. Adds a third table, `earnings_estimates`, to `events.db` —
+same file, same read-only-from-the-app pattern as `events`/`meta` above, but with its
+own writers.
+
+**T-1 immutable snapshot.** `jobs/snapshot_estimates.py` runs once a day and looks for
+`board_meeting` events (results purpose only) dated tomorrow or the day after. For each
+one due, it fetches yfinance's analyst consensus (`get_earnings_estimate()` /
+`get_revenue_estimate()`, `"0q"` row) and inserts a row — once. A SQLite `BEFORE UPDATE`
+trigger (`db/schema_estimates.sql`) blocks any later change to the estimate columns
+(`RAISE(ABORT, ...)`, NULL-safe `IS` comparisons), so the only thing that can ever be
+written to a row again is the actual/surprise columns. The reason: analysts revise
+estimates after the print, so a late or re-taken snapshot would compare the actual
+against a contaminated number. If T-1 is missed, the job logs `missed_t1` and moves on —
+it never backfills a stale estimate as if it were the T-1 one. A symbol with no analyst
+coverage still gets a row (all estimate columns `NULL`), shown in the UI as "no estimate"
+rather than dropped.
+
+**Actuals, source flipped from the original spec.** `jobs/fill_actuals.py` runs after it
+and fills `eps_actual`/`revenue_actual`/`surprise_pct` for any row whose event has passed
+and whose actual is still `NULL`, retrying daily for up to 7 days before logging
+`gave_up`. The spec originally called for `nselib.financial_results_for_equity` as the
+actuals source; Step 0 discovery (`docs/estimates_discovery.txt`) found that function
+queries a date-range feed and parses per-filing XBRL, not a per-symbol lookup, and across
+a full trailing year it surfaced only 18 symbols — all distressed/suspended smallcaps,
+zero mainstream F&O names. Escalated rather than built around; Adarsh confirmed the fix
+8 Oct 2026: yfinance's `get_earnings_dates()['Reported EPS']` becomes the only automated
+source (matched to `event_date` within ±1 day), verified against
+`quarterly_income_stmt`'s independently-computed Diluted EPS for TCS before trusting it
+across the watchlist. `nselib` is dropped from this path entirely, not kept as a dead
+fallback. Screener.in stays a manual backup for Adarsh, same as any symbol yfinance never
+fills — not a scraped pipeline.
+
+**Read side.** `events_db.get_earnings_estimates(symbols=None)` reads `earnings_estimates`
+the same way `get_upcoming_events()` reads `events` — `mode=ro`, empty frame if the table
+or file doesn't exist. One wrinkle: `pandas.read_sql_query` turns a SQL `NULL` numeric
+column into `NaN`, not `None`, which silently breaks an `is None` check in the UI, so the
+function normalizes with `df.astype(object).where(pd.notna(df), None)` before returning.
+
+**UI.** `tabs/events.py`'s Calendar subtab gained five columns (Est. EPS, Est. Rev (Rs
+cr), Analysts, Actual EPS, Surprise %), colour-coded the same `P.UP`/`P.DOWN` way as
+everywhere else in the app, with a footnote explaining the estimates are frozen T-1 and
+never revised. Building this surfaced a second bug: Calendar was built on
+`get_upcoming_events()`'s `event_date >= today` filter, so a result's row — and its
+freshly-filled actual/surprise — vanished from the UI the instant the event date passed,
+before the actual could ever be shown. Fixed with an opt-in `lookback_days` parameter
+(default 0, every existing caller unaffected); only the Calendar fetch passes
+`lookback_days=14`, Corporate Actions is untouched.
+
+**Tests.** `tests/test_estimates.py` covers acceptance checks A-G against a scratch
+SQLite db with yfinance/nselib monkeypatched out — immutability, T-1 timing, a no-estimate
+row surviving the round trip, the surprise-% formula, the actuals fill touching only
+actual columns, idempotent re-runs, and a mid-run rate-limit stopping cleanly without a
+partial write. Check H (one real big-cap row with an estimate, one mid-cap showing "no
+estimate", visible together in a real browser) is manual, not automated.
+
+**Live, unfrozen preview for not-yet-snapshotted events (8 Oct 2026).** Adarsh pushed
+back on T-1-only: events further out than T-1 (e.g. HCLTECH, RBLBANK, both several days
+out) show "no estimate" until the day before, by design — he asked for a non-frozen
+preview in the meantime rather than nothing. `events_db.get_live_estimate_preview(symbol)`
+(`st.cache_data(ttl=21600)`) calls the same `fetch_estimate` the T-1 job uses, but never
+writes to `earnings_estimates` and is superseded the instant the real frozen row exists.
+`tabs/events.py`'s `_estimate_cells` falls back to it only when there's no frozen snapshot
+and `event_date > today`, rendering with a `~` prefix and secondary colour, and a footnote
+explains the marker — never participates in `surprise_pct` math, since it's never stored.
+
+**Live-preview perf cap, same day — then replaced (8 Oct 2026).** With no frozen
+snapshots yet for most upcoming events, the Calendar view called
+`get_live_estimate_preview` — a live, synchronous yfinance fetch — once per row, serially,
+with no limit. Adarsh saw the page stuck on Streamlit's "Running
+get_live_estimate_preview(...)" indicator for an extended period; with ~13 not-yet-
+snapshotted rows visible, that's up to 13 blocking network calls before anything rendered.
+First fix was a flat `MAX_LIVE_PREVIEWS_PER_RENDER = 8` cap, bitten by the
+furthest-out rows first — but a day-0 follow-up fix (widening the live-preview condition
+from `event_date > today` to `>= today`, to also cover TCS/VEDL-style same-day gaps)
+consumed two more of that fixed budget and silently regressed rows that had been working
+(ANGELONE, ICICIGI), caught by Adarsh from a screenshot rather than by any test — a flat
+cap trades away correctness for speed in an unpredictable way.
+
+Replaced with concurrent prefetch: `tabs/events.py`'s `_prefetch_concurrent()` runs
+`get_live_estimate_preview` over every symbol a page's rows actually need (deduplicated,
+`ThreadPoolExecutor(max_workers=5)`) once, before any row is built, into a `preview_map`
+dict that `_estimate_cells` just looks up — no cap, no dropped rows, wall time bounded by
+roughly one call's latency instead of the serial sum. Backed by a new on-disk cache,
+`live_data_cache.py` (`live_data_cache.db`, app-owned — unlike `events.db`, which the app
+only ever reads): `st.cache_data` alone is lost on every Streamlit process restart (a code
+change, a Cloud redeploy), so this adds a second layer that survives it, at Adarsh's own
+suggestion mid-build. Deliberately left untracked (not committed) — unlike `events.db`,
+which already is tracked and is where the data that actually matters (frozen estimates)
+persists across redeploys, this cache only holds disposable previews that are superseded
+the moment a real frozen row lands, so there's little value in version-controlling it.
+
+Same change dropped the Est. EPS column from the Calendar table, at Adarsh's request —
+yfinance has no real net-income/profit consensus API, so an EPS-derived "approx. profit"
+figure was considered and dropped as not worth the complexity; Revenue-only is simpler and
+was the original ask ("I dont need eps, just estimated revenue and profit" → settled on
+just revenue for now). Actual EPS and Surprise % are untouched — those come from the real
+filed result once frozen, not from an estimate preview.
+
+pyflakes clean on `tabs/events.py`/`events_db.py`/`live_data_cache.py`; full `pytest` suite
+(26 cases) unaffected. Not yet reconfirmed by Adarsh in a real browser.
+
+**Revenue surprise % and a Past earnings subtab (8 Oct 2026).** `surprise_pct` was EPS-only
+(`jobs/fill_actuals.py`'s `compute_surprise`, `(actual-estimate)/|estimate|*100`) — revenue
+had an estimate and an actual stored side by side but nothing diffed them. Added
+`revenue_surprise_pct` (same formula, reused `compute_surprise` under its original generic
+name) as a new column on `earnings_estimates`: `jobs/snapshot_estimates.py`'s
+`get_connection()` adds it to the `CREATE TABLE` for a fresh db and `ALTER TABLE` (wrapped
+in a `try/except sqlite3.OperationalError`) for an existing one, since `events.db` is
+already a committed, populated file and `CREATE TABLE IF NOT EXISTS` alone wouldn't reach
+it. `fill_row` and `due_rows` in `jobs/fill_actuals.py` updated to carry it through;
+`events_db.get_earnings_estimates` added it to its column list.
+
+Surfaced on a new Calendar-adjacent subtab, "Past earnings" — Adarsh asked for a place to
+see expected-vs-actual for results that have already come in, separate from the
+Calendar's upcoming-agenda job. Reads `estimates_by_key`'s underlying `estimates_df`
+directly (no `events` table join needed — `earnings_estimates` alone has both the frozen
+estimate and the filled actual), filtered to rows where either actual is non-null, sorted
+`event_date` descending. Shows Est./Actual Rev, Rev surprise %, Est./Actual EPS, EPS
+surprise % — unlike the Calendar table, EPS is kept here since a real reported actual is
+meaningful in a way a live, unfrozen EPS *estimate* preview wasn't judged to be. The
+surprise-color/sign logic (green/terracotta, always-signed) was pulled out of
+`_estimate_cells` into a shared `_surprise_text_color()` helper so both tabs render it
+identically rather than duplicating the branching.
+
+**Clarified, same day:** committing `events.db` to git (see above) does not by itself make
+fetching faster — the app always reads it from local disk at runtime regardless of git
+tracking, and that read was never the slow part. The slow part is live yfinance network
+calls for rows with no frozen snapshot yet, which the concurrent-prefetch + disk-cache
+change already addresses. Git tracking only means a fresh deploy starts from whatever
+frozen estimates were last committed, instead of an empty table.
+
+**Not yet done:** the jobs have only run against scratch/synthetic data, not the real
+`events.db`/live yfinance. No cron/launchd entry exists yet for the daily
+snapshot-then-fill-actuals pair (both scripts' docstrings describe ~6pm IST, after
+`fetch_events.py`), same as the still-missing cron for `jobs/fetch_intraday.py` below.
+
+---
+
+### `analytics/expected_move.py`, `trading_calendar.py`, `db/schema_expected_move.sql`, `jobs/refresh_expected_moves.py`, and the Events tab expected-move columns
+
+A side build outside the Week 1-9 plan (spec: `expected_move_spec-3c050a43.txt`), built
+9 Oct 2026 overnight under Adarsh's standing go-ahead to complete it autonomously while
+he slept. For watchlist/F&O companies with an upcoming results date, shows a cohort-based
+"expected move" and "worst case" percentage, derived from how much the stock actually
+moved around its last several results prints — not a model, not implied options
+volatility, just the empirical spread of real post-print reactions.
+
+**Three new tables in `events.db`** (`db/schema_expected_move.sql`, additive — no existing
+table touched): `earnings_move_prices` (raw cached hourly/daily bars, keyed by symbol+date),
+`earnings_move_prints` (one row per historical filing: reference price, same-session and
+next-session move, classification, status, reason codes), `earnings_move_summaries` (one row
+per upcoming event: the cohort's expected/worst-case % rolled up from its last 8 usable
+prints). A `BEFORE UPDATE` trigger freezes only the filing-*identity* columns on
+`earnings_move_prints` (symbol, financial_period, filing timestamp, calculation_version) —
+unlike the estimates table's trigger, calculation columns stay mutable so a rerun with a
+bug fix or a later-arriving price bar can correct a row in place.
+
+**`analytics/expected_move.py`** is the pure calculation engine — no network, no database,
+fixture-tested (`tests/test_expected_move.py`, 26 cases). It classifies a filing's
+`release_mode` (`intraday` / `post_close` / `pre_open` / `non_session`) from its timestamp
+against the NSE session clock, picks the reference bar and the same-session/next-session
+windows that mode implies, and computes a single print's move % and a cohort's
+expected/worst-case % from a list of prints. `trading_calendar.py` wraps NSE's real
+trading-day calendar (`is_trading_day`, `next_trading_day`, `next_trading_day_on_or_after`,
+`session_bounds_ist`) so the window logic never assumes every weekday is a session.
+
+**`jobs/refresh_expected_moves.py`** is the orchestration job, run by hand (not yet on a
+schedule): for each symbol, it discovers historical results filings from NSE's corporate-
+announcements archive (`identify_filings()`), fetches yfinance hourly (730-day window) and
+daily (3-year) bars, runs each filing through `compute_print()`, and upserts the resulting
+prints and the upcoming event's cohort summary. Idempotent by design — `upsert_print()`/
+`upsert_summary()` check for an existing row by identity key and UPDATE rather than
+duplicate-INSERT, confirmed by rerunning the full 5-symbol backfill twice with unchanged
+row counts.
+
+```
+.venv/bin/python -m jobs.refresh_expected_moves --symbols TCS RELIANCE HDFCBANK INFY WIPRO --backfill
+.venv/bin/python -m jobs.refresh_expected_moves   # default: all symbols with an upcoming results board meeting, 120-day backfill
+```
+
+**Filing clustering, and the bug this caused.** NSE sometimes files two or three separate
+announcements for the same result within minutes of each other (Outcome-of-Board-Meeting,
+then Dividend, etc.) — same calendar day, same underlying event. `identify_filings()`
+treats the earliest same-period match as the print of record and every other same-*day*
+match as a cluster sibling (stored as audit trail in `results_cluster`), never a conflict.
+Only a match on a genuinely different calendar day counts as `source_conflict` — a real
+revision. The first version of this function got that boundary wrong twice (see Errors
+below); both are now regression-tested in `tests/test_refresh_expected_moves.py`.
+
+**Four real bugs found and fixed during the live backfill runs (9 Oct 2026), not
+hypothetical:**
+1. `compute_print()`'s `status` defaulted to `"pending"` and the final classification
+   block never ran for already-completed filings — every historical print showed
+   `status='pending'` with no `print_move_pct` even when the next-session bars were
+   present and the move was fully computable. Fixed by tracking completion via a separate
+   `is_pending` flag, with `status` assigned exactly once at the end.
+2. `extract_period_end()` only parsed full month names (`"%B %d %Y"`); TCS's own Q1
+   filings read "...for the period ended Jun 30, 2026" with an abbreviated month, so every
+   Q1 filing for every symbol was silently dropped. Fixed by trying `"%b %d %Y"` too.
+3. `identify_filings()`'s revision check (`rows[1:]`) flagged same-evening multi-row
+   announcements and exact-duplicate archive rows as `source_conflict` — exactly the
+   pattern `results_cluster` exists to hold instead. Fixed by restricting a genuine
+   revision to a match on a different calendar day (`rv[0].date() != filing_dt.date()`).
+4. `fetch_archive()` built the NSE URL with raw string interpolation
+   (`f"...&symbol={symbol}"`, no encoding). For `M&M`, the literal `&` was parsed as a
+   query-string separator, so NSE received `symbol=M` plus a stray empty param instead of
+   `symbol=M%26M` — zero filings matched, and the Calendar view showed "no data yet" for
+   M&M specifically while 72 other upcoming-results symbols backfilled fine. Found when
+   Adarsh asked why the live Calendar still showed gaps after the first full-universe run;
+   fixed with `urllib.parse.quote(symbol, safe='')`. M&M went from 0 to 10 distinct filings
+   identified on rerun. No other current F&O symbol has a URL-special character, so this
+   was invisible until M&M specifically was backfilled.
+
+None of these four were caught by the offline fixture tests on `analytics/expected_move.py`
+alone, since those only exercise the pure calculation, not the filing-discovery/clustering
+logic — which is why `tests/test_refresh_expected_moves.py` exists as a second, separate
+test file targeting the job itself.
+
+**Live backfill results (5 discovery names, 1100-day lookback, 9 Oct 2026):** TCS (10
+usable, 1 excluded, 1 pending), RELIANCE (11 usable, 1 excluded), HDFCBANK (10 usable, 1
+excluded; summary for 2026-10-17: 8/8 usable, expected move ≈3.97%, worst case ≈7.09%),
+INFY (10 usable, 1 excluded; summary for 2026-10-23: 8/8 usable, expected ≈4.93%, worst
+≈10.44%), WIPRO (10 usable, 1 excluded; summary for 2026-10-15: 8/8 usable, expected
+≈7.00%, worst ≈16.83%). TCS and RELIANCE have no upcoming `board_meeting` event row in
+`events.db` yet (their next result hasn't been scheduled), so no summary row exists for
+either — expected, not a bug. Zero false `source_conflict` reason codes remain after the
+fix above. Hand-verified against the raw formula: TCS's 2024-09-30 print (filed 10-Oct-2024
+16:06:39 IST, `post_close`) stored `reference_price=3927.51`, `high_b=4240.0`,
+`low_b=4112.5`, `print_move_pct≈7.956` — matches `move_pct(3927.51, 4240.0, 4112.5)`
+exactly by hand.
+
+**Second run, full real-world universe (74 symbols, 1100-day lookback, 9 Oct 2026, no
+`--symbols` filter — the job's own `default_symbols()` picked every symbol with an upcoming
+results-related board meeting).** `74 succeeded, 0 failed`. 73 of 74 produced a summary row
+(the 74th, TCS, correctly has none — its board meeting already passed with no new one filed
+yet, per the "expected, not a bug" note above; this is a distinct symbol count from the
+74-processed/73-summarized split). After bug #4's fix above and a one-symbol rerun, all 73
+summary rows have a full 8/8 usable cohort — zero remaining gaps. Sample: ANANDRATHI
+(2026-10-09, expected ≈6.22%, worst ≈13.35%), DMART (2026-10-10, ≈4.59%/≈9.35%), HCLTECH
+(2026-10-12, ≈7.39%/≈14.48%), WIPRO (2026-10-15, ≈6.99%/≈16.83%), M&M (2026-11-05, after the
+fix, ≈4.68%/≈10.62%).
+
+**UI (`tabs/events.py`).** The Calendar subtab got two new columns, "Expected move" and
+"Worst case", next to the existing estimate columns, reading from
+`events_db.get_expected_move_summary()` — "no data yet" if the job hasn't run for that
+symbol/event, "Unavailable" (with a tooltip giving the usable/selected counts) if fewer than
+1 usable print exists. An always-visible note states the honest caveat (this is a cohort of
+past reactions, not a prediction) plus an expander explaining the method. Per symbol, an
+expander shows the full print history — period, filing time (IST), reference price/method,
+same-session move, next-session move, print move, status, and any reason codes translated
+into plain language via `REASON_CODE_LABELS` (e.g. `"pending_window"` → "next session hasn't
+completed yet"), with a link to the NSE filing.
+
+**A separate "Expected moves" subtab (added 9 Oct 2026, Adarsh's own request)** ranks every
+F&O stock by its historical earnings-day reaction, independent of whether its next result is
+scheduled yet — the Calendar subtab only ever shows upcoming-event rows, so a stock between
+results (nothing scheduled) was invisible there even with a full print history. Backed by a
+new `events_db.get_all_expected_moves()`: for every symbol with at least one stored print,
+takes the latest up to 8 (any status, by filing date) and aggregates the usable ones with the
+same mean/max formula (`analytics.expected_move.aggregate_cohort`) the job itself uses — not
+a new summary-table row, since `earnings_move_summaries.event_date` is `NOT NULL` and scoped
+to a specific upcoming event; this reads straight from `earnings_move_prints` instead, so it
+needs no schema change. Columns: Symbol, Expected move, Worst case, Prints used
+(usable/selected), Next results (or "not scheduled"). Sorted by expected move descending by
+default; respects the existing Scope (All F&O / My watchlist) and Search controls already on
+the tab. `events_db.get_expected_move_summary()` and `get_expected_move_history()` (used by
+Calendar) and `get_all_expected_moves()` (used by this subtab) all follow the same read-only/
+`mode=ro`/safe-empty-return convention the estimates functions already use.
+
+**A fifth real bug, caught building this subtab, not hypothetical:** `pd.DataFrame(get_all_expected_moves())`
+puts `None` into a column that also holds floats (`expected_move_pct`, `next_event_date` for
+symbols with no upcoming event) — pandas silently upcasts the whole column to `float64` and
+turns every `None` into `nan`, which is truthy in Python. Both `if r.next_event_date else
+'not scheduled'` and `pct is not None` read straight past that and reached `datetime.strptime(nan, ...)`
+and `f"{nan:.2f}%"` respectively. Caught by `AppTest` (the first one raised; the second didn't
+crash but would have silently printed "nan%" to Adarsh). Fixed with explicit
+`isinstance(..., str)` / `pd.notna()` checks instead of truthiness.
+
+**Full F&O universe backfill (9 Oct 2026).** Before this subtab existed, only the 75 symbols
+with upcoming results had ever been run (see the two backfill runs above). Adarsh chose, when
+asked, to back-fill the remaining 138 symbols in `fno_sectors.json` (the 213-symbol F&O
+universe already used by the correlation tab) so the new subtab's "all F&O stocks" claim is
+actually true rather than true for a third of them. Run: `--symbols <138 names> --backfill`,
+same job, no code changes needed beyond bug #4's URL-encoding fix above (this universe
+includes `GVT&D`, another `&`-symbol that would have silently failed without it).
+
+**Result: 212 of 213 symbols have at least one stored print.** 137 of 138 succeeded outright;
+`SBILIFE` hit a transient `ConnectionResetError` from NSE and succeeded cleanly on a solo
+retry. The one true gap is `MCX`: its archive fetch returns zero rows — not an error, not a
+timeout, just an empty result — across both the full 3-year window and a 120-day sanity check,
+while a known-good symbol (`TCS`) returns hundreds over the same range. That means NSE's
+corporate-announcements archive genuinely has no filings under `symbol=MCX` for this endpoint,
+not a bug in `identify_filings()` or the date range. No further probing was done once that was
+established, to stay inside the polite-fetching rule (no repeated hits chasing a symbol that
+already answered twice). `get_all_expected_moves()` in `events_db.py` now builds its result
+from the full `fno_sectors.json` universe rather than only symbols present in
+`earnings_move_prints` — so MCX still appears in the "Expected moves" table, as a normal row
+with "Unavailable" in both the Expected move and Worst case columns and `0/0` in Prints used,
+the same "kept, never dropped" treatment the estimates tracker gives a missing estimate. It is
+not silently missing from the list of 213.
+
+**Verification status — read this before trusting the UI claims above.** `python -c
+"import tabs.events"` imports cleanly. The full test suite passes: 58/58 (`test_expected_move.py`
+26 cases + `test_refresh_expected_moves.py` 6 cases + the rest of the pre-existing suite).
+Streamlit's `AppTest` harness drove the app to the Events tab, clicked the "Expected moves"
+pill, toggled Scope to "My watchlist", and typed into Search (including searching "MCX"
+specifically, to confirm it renders as an "Unavailable" row rather than vanishing) — zero
+exceptions on any of those paths (after the pandas-NaN fix above). **That is the limit of
+what this environment can verify.** There is no browser/screenshot tool available here, so none of the Calendar
+columns, the "Expected moves" table, the note, the expander, or the per-symbol history table
+have been **visually** confirmed — only that the code runs without raising. Per the standing
+instruction not to claim UI success without being able to actually test it: this UI needs
+Adarsh's own eyes in a real browser before it's considered done, same caveat as several
+Correlation-tab fixes above.
+
+**Not yet done:** no cron/launchd entry for the daily refresh (same gap as
+`jobs/fetch_intraday.py` and the estimates jobs); `yfinance`'s `auto_adjust=True`
+dividend-adjustment behavior (as opposed to split-adjustment, which earlier discovery work
+did confirm) is not independently verified, so `PRICE_BASIS = "yfinance_auto_adjust"` records
+the assumption rather than a proven fact.
+Not committed or pushed — standing rule, building was authorized overnight but committing
+was not.
+
+**A sixth real bug, caught from a live number looking obviously wrong (9 Oct 2026):** the
+new "Expected moves" subtab showed `BAJFINANCE` at 163.48% expected / 438.16% worst case —
+impossible for a single earnings reaction. Root cause: `yfinance`'s `auto_adjust=True`
+retroactively back-adjusts `interval="1d"` history for later stock splits/bonuses, but does
+**not** apply that same retroactive adjustment to `interval="1h"` history. `find_price_bar()`
+mixes both intervals (daily bars for older reference closes, hourly bars for the reaction
+window), so a print straddling a real corporate action computed its move off a reference
+price on the wrong price basis — confirmed live for BAJFINANCE (same-day daily-vs-hourly
+close ratio ≈5.06x) and SIEMENS (≈1.72x). This is a genuine yfinance provider inconsistency,
+not a bug in this repo's own math.
+
+Adarsh's directed fix, not a generic plausibility cap: reuse the NSE corporate-announcements
+archive rows already fetched for results identification (no extra NSE call) to find each
+symbol's own **"Record Date"** filings — dedicated announcements whose `attchmntText` names
+the record date and purpose of a genuine price-basis-altering action (bonus, split,
+subdivision, scheme of arrangement, demerger). Ordinary cash-dividend record dates are left
+alone; yfinance's total-return adjustment already handles those adequately. New code in
+`jobs/refresh_expected_moves.py`: `DISCONTINUITY_KEYWORDS`, `RECORD_DATE_PATTERNS`,
+`_parse_record_date()`, and `find_price_discontinuities(archive_rows)`, called once per
+symbol inside `refresh_symbol()`. Any print whose window straddles a detected discontinuity
+date (`filing_date < discontinuity_date <= today`) and was otherwise `status="usable"` is
+recomputed in place via `compute_print_daily_fallback(filing_dt, daily_bars, today)` —
+calculation columns stay mutable (see the trigger note above), so this is a correction in
+place, not a new row.
+
+**Superseded (9 Oct 2026), Adarsh's directed change:** the first version of this fix
+dropped a straddled print entirely (`status="excluded"`, `print_move_pct=None`). Adarsh
+asked instead to recover the quarter rather than discard it: `compute_print_daily_fallback`
+redoes the whole calculation — reference price and both reaction windows — using only daily
+OHLC bars (`fetch_daily_bars`, renamed from `fetch_daily_closes`, now returning full
+open/high/low/close per date, not just close). Daily bars are back-adjusted for a later split
+on both sides of the discontinuity, so staying on them end-to-end cancels the split out
+exactly; the hourly series is abandoned for that print entirely rather than mixed in. Coarser
+than the normal calculation — a whole day's high/low instead of an hourly window anchored to
+the filing minute — so results are tagged `reference_method="daily_close_fallback"` (shown
+directly in the Events-tab per-symbol history table, no UI wiring needed) and reason code
+`price_basis_daily_fallback`, so nothing claims hourly-level precision it doesn't have. One
+subtlety caught by the fixture tests before any live rerun: `em.select_daily_close_reference`
+treats the filing date itself as an eligible "completed" close (it only compares dates, not
+time-of-day), which is correct for `post_close`/`pre_open`/`non_session` modes but wrong for
+`intraday` — that day's own close is *after* the filing, not before it. Fixed by excluding
+the filing date from the eligible-closes dict before calling it, for `intraday` mode only, so
+the reference is always the prior trading day's close. **Known limit, left open for
+now (9 Oct 2026):** the fallback assumes daily bars stay on one consistent
+scale across a discontinuity, which holds for split/bonus-type actions
+(yfinance's `auto_adjust` genuinely back-adjusts those) but not for VEDL's
+case — a real demerger, which is a permanent price-level drop that yfinance
+does not back-adjust in *either* interval (confirmed live: VEDL's own daily
+bars show close ≈773 on 2026-04-29 dropping to ≈272 on 2026-04-30, unadjusted).
+VEDL's straddled print still shows an implausible 63.65% after the fallback
+as a result — Adarsh's call (9 Oct 2026) was to leave this one symbol as-is
+for now rather than add a detection/exclusion special-case. Four new fixture
+tests in
+`tests/test_refresh_expected_moves.py` cover `post_close` (consistent-scale move %),
+`intraday` (reference excludes filing day; takes the larger of both days' ranges), `pending`
+(reaction day not yet trading), and `excluded` (reaction day genuinely has no bar). Full suite
+62/62 after this change. Unit-verified live (prior to this change):
+`find_price_discontinuities()` returned exactly `[2025-06-16]` for BAJFINANCE, `[2025-04-07]`
+for SIEMENS, and `[2026-05-01]` for VEDL (VEDL's case is a genuine demerger, not a yfinance
+artifact — same detection signal, different underlying cause). Full suite still 58/58 after
+this change.
+
+**Full-universe rerun with the fix (9 Oct 2026), Adarsh's own choice over just the 3 known-bad
+symbols:** `--symbols <all 213 from fno_sectors.json> --backfill`. First pass: 206 succeeded,
+7 failed on transient NSE errors (one read-timeout on HAL, six back-to-back 503s on
+TRENT/TVSMOTOR/UJJIVANSFB/ULTRACEMCO/UNIONBANK/UNITDSPR right at the tail of the run — an NSE-
+side hiccup, not a code fault). A solo retry of those 7 succeeded cleanly (7/7), bringing the
+rerun to 213/213. **42 symbols** turned out to have at least one genuine price-basis
+discontinuity, not just the 3 originally spotted — including RELIANCE, HDFCBANK, ITC,
+KOTAKBANK, DRREDDY, CONCOR, NESTLEIND (two separate events), and WIPRO/TVSMOTOR (only caught
+on the retry pass, confirming the detector runs independently of retry timing). Their
+previously-stored absurd prints no longer feed the mean/max cohort at the wrong scale; after
+the daily-fallback change above, a second rerun scoped to exactly these 42 symbols
+recomputed each straddled print via `compute_print_daily_fallback` instead of leaving it
+`excluded`. `MCX` remains the sole true data gap (see above), unaffected by either fix. Not
+yet re-verified beyond the job's own log output and the unit-level checks above — same
+AppTest-only, no-real-browser caveat applies to confirming the "Expected moves" subtab now
+renders sane numbers for these 42 symbols.
 
 ---
 
@@ -1201,6 +1623,70 @@ with no toolbar needed; a plain click still registers as a single-point
 selection under this dragmode, so nothing else changed. Confirmed working
 by Adarsh in a real browser. pyflakes clean, 15-case `pytest` passes.
 
+**`dragmode="select"` reverted - it broke all three plain-click behaviors
+(8 Oct 2026, same day).** The "confirmed working" claim directly above did
+not hold up: Adarsh reported click-to-isolate, click-a-cell-for-History,
+and shift+click all stopped working. Root cause is a plotly.js behavior
+that the comment justifying `dragmode="select"` had assumed rather than
+verified in a real click-and-release test: under `dragmode="select"` (or
+`"lasso"`), a zero-movement click on a point trace is treated as a
+deselect, not a point selection - the selection tool needs the pointer to
+actually move while down. That silently broke all point-trace clicks on
+both the isolate strip (curve 1) and the invisible cell overlay (curve 3)
+at once, which matches exactly what Adarsh saw. Fixed by removing
+`dragmode="select"` from `_stock_matrix_heatmap` and dropping `"box"` from
+`st.plotly_chart`'s `selection_mode` (now just `"points"`), restoring the
+default (inert, since every axis is `fixedrange=True`) dragmode. The
+box-drag-isolate bonus from the two sections above is gone as a result -
+it was never itself confirmed working by Adarsh, only assumed compatible
+with the three behaviors he had actually confirmed (7 Oct 2026), so
+dropping it to get those three back is a clean trade, not a new loss.
+Also removed the now-unreachable box-drag branches from
+`_apply_pending_stock_matrix_click` and the matching help-text sentence
+under the chart. pyflakes clean, 15-case `pytest` passes.
+**Still unconfirmed in a real browser** - same testing-gap caveat as
+always: no Playwright/Selenium in this environment, so this revert is
+reasoned from known plotly.js semantics, not verified by actually clicking
+in a browser. Needs Adarsh to confirm click-to-isolate, click-a-cell, and
+shift+click all work again before this line is updated to say so.
+
+**The revert above was lost, then re-applied (12 Oct 2026).** Adarsh
+reported that clicking a cell in the Stock matrix did nothing - no History
+section, and the isolate-strip row markers were dead too, while the Chart
+tab's Measure tool (same `on_select="rerun"` + `selection_mode=("points",)`
+pattern, but no `dragmode` set at all) still worked. That is the exact
+signature of the `dragmode="select"` bug documented above, which should
+already have been fixed. `git log --date=short` explains why it came back:
+`b6f2263 (8 Oct 2026) Restore Stock matrix box-select (drag-to-isolate)` is
+the newest commit touching `tabs/correlation.py`, so the committed state is
+the *broken* `dragmode="select"` version. The revert was written the same
+day but never committed - it existed only in the uncommitted working copy,
+and a `git checkout -- tabs/correlation.py` run earlier in the 9 Oct
+session discarded it, silently restoring the broken code. Lesson for this
+file specifically: a fix that lives only in the working tree is one
+`checkout` away from gone, and the commit log read alone will actively
+mislead you about which version is current.
+
+Re-applied the same four-part fix verbatim (no `dragmode` in
+`_stock_matrix_heatmap`, `selection_mode=("points",)`,
+box branches removed from `_apply_pending_stock_matrix_click`, help-text
+box-drag sentence removed). The `dragmode` comment block now also states
+that restoring box-select would mean putting back both the `"box"`
+selection mode and the handler branches, not just re-showing the modebar -
+the earlier wording claimed the handler still accepted box payloads, which
+stopped being true once those branches were deleted.
+
+Verified Python-side by injecting synthetic selection payloads into
+`st.session_state["sm_heatmap_plot"]` under `AppTest`, using symbols taken
+from the live `sm_isolate` multiselect's own options (an out-of-options
+symbol is silently dropped by Streamlit, which produced misleading empty
+results on a first pass): cell click → `History` / row / `Another stock` /
+column; single row-marker click → `['ANANDRATHI']`; two-point shift payload
+→ both rows; diagonal self-pair → no navigation. Zero exceptions, full
+suite 62/62. **Still unconfirmed in a real browser, for the same reason as
+the 8 Oct entry** - needs Adarsh to click a cell, a row marker, and
+shift+click before this is called done.
+
 **Acceptance checks (`tests/test_correlation.py`, run with `.venv/bin/python -m pytest
 tests/test_correlation.py -v`), all 15 passing — unchanged by Sections 6/7, which have
 so far been verified by ad-hoc synthetic/real-data smoke scripts and `AppTest` UI-level
@@ -1303,34 +1789,55 @@ with `yfinance` anyway).
 | `0e5a3fb` | 6 Oct 2026 | Adarsh Gupta | Document the price cache upsert fix and jugaad-data merge in ARCHITECTURE.md |
 | `bf2e49f` | 6 Oct 2026 | Adarsh Gupta | Extend the jugaad-data gap-fill to every NSE equity, not just the 3 indices |
 | `fea18b1` | 6 Oct 2026 | Adarsh Gupta | Document the per-equity jugaad-data gap-fill in ARCHITECTURE.md |
+| `556a28b` | 6 Oct 2026 | Adarsh Gupta | Fix the price cache silently losing good closes, merge in jugaad-data for Nifty/Bank Nifty/Nifty IT |
+| `357a85c` | 6 Oct 2026 | Adarsh Gupta | Build daily candles from hourly bars instead of yfinance's daily feed |
+| `96759d2` | 6 Oct 2026 | Adarsh Gupta | Refresh the price cache every 10 minutes while NSE is open |
+| `1a1a0bd` | 6 Oct 2026 | Adarsh Gupta | Limit the 10-minute refresh to instruments with a live Indian source |
+| `72eb408` | 6 Oct 2026 | Adarsh Gupta | Serve the stale cache when a refetch comes back empty |
+| `82760ec` | 6 Oct 2026 | Adarsh Gupta | Add the Step 0 discovery run for the F&O correlation matrix |
+| `714efbf` | 6 Oct 2026 | Adarsh Gupta | Build the F&O correlation matrix: store, fetch job, compute, tab |
+| `1167612` | 8 Oct 2026 | Adarsh Gupta | Add Stock matrix and History sections to the F&O correlation tab |
+| `085ea41` | 8 Oct 2026 | Adarsh Gupta | Fix Stock matrix heatmap layout bugs: colorbar gap, draggable slack, cell-start gap, row misalignment |
+| `ffd3721` | 8 Oct 2026 | Adarsh Gupta | Zoom History y-axis to the data; fix Stock matrix multi-row isolate |
+| `b6f2263` | 8 Oct 2026 | Adarsh Gupta | Restore Stock matrix box-select (drag-to-isolate) |
+| `8f8661b` | 8 Oct 2026 | Adarsh Gupta | Merge feature/fno-correlation: F&O correlation tab |
 
-**Deployed:** `a97c532` is the newest commit on `origin/main` — merged from
-`refactor/split-into-modules` and pushed. `556a28b`, `0e5a3fb`, `bf2e49f` and `fea18b1`
-are local on `main`, not yet pushed.
+**Deployed:** status not reconfirmed since `a97c532`; verify against `origin/main` before
+relying on this.
 
-**In progress:** `feature/hourly-latest-close` branches off `fea18b1` and carries the shift
-to hourly-resampled daily candles (see `prices.py` above). Not merged, not pushed.
-
-`feature/fno-correlation` branches off the hourly branch and carries the F&O correlation
-matrix, now fully built: `fno.py`, `analytics/tiers.py`, `analytics/correlation.py`,
+**Merged to `main`:** `feature/fno-correlation` (commit `8f8661b`, 8 Oct 2026) — the full
+F&O correlation matrix: `fno.py`, `analytics/tiers.py`, `analytics/correlation.py`,
 `analytics/sector_matrix.py`, `analytics/stock_matrix.py`, `analytics/rolling.py`,
 `data_layer/intraday_store.py`, `jobs/fetch_intraday.py`, `tests/test_correlation.py`
-(15/15 passing) and `tabs/correlation.py` wired into `app.py`'s `NAV`. The local store
-has been populated end to end (213 symbols, both tiers, zero failures). The sector
-matrix + drill-down (spec sections 5/5A/5B) was added 6 Oct 2026 on top of the per-stock
-tab, with a scoped categorical colour-palette exception in `theme.py` (`sector_colors()`)
-agreed with Adarsh for that one feature. The Stock matrix (section 6, cluster-ordered
-heatmap) and History (section 7, rolling correlation) sections were added 6 Oct 2026 on
-top of that, together, with the tab restructured into four `st.pills`-selected sections
-so each is shown one at a time. On 7 Oct 2026: sector-strip hover text, a data-fit
-correlation-value colour scale plus a second scoped colour exception
-(`theme.CORR_POS`/`CORR_NEG`/`CORR_MID`), row isolation via a multiselect, and two click
-interactions directly on the Stock matrix heatmap (click a marker on the dedicated
-click-to-isolate strip to isolate that row, click a cell to jump to History pre-loaded
-with that pair) were all added, with the isolate-click strip rebuilt as a `go.Scatter`
-(heatmap traces don't support Plotly's point-selection) and the sector-colour strip
-restored to the right edge — see the Correlation tab writeup above for each. Not merged,
-not pushed.
+(15/15 passing) and `tabs/correlation.py` wired into `app.py`'s `NAV`. Built across
+6-8 Oct 2026: the sector matrix + drill-down (spec sections 5/5A/5B) with a scoped
+categorical colour-palette exception in `theme.py` (`sector_colors()`); the Stock matrix
+(section 6, cluster-ordered heatmap) and History (section 7, rolling correlation)
+sections, with the tab restructured into four `st.pills`-selected sections; then
+sector-strip hover text, a data-fit correlation-value colour scale with a second scoped
+colour exception (`theme.CORR_POS`/`CORR_NEG`/`CORR_MID`), row isolation via a
+multiselect, and two click interactions on the Stock matrix heatmap (an isolate-click
+strip rebuilt as `go.Scatter`, since heatmap traces don't support Plotly's
+point-selection, plus a cell click that jumps to History pre-loaded with that pair) —
+see the Correlation tab writeup above.
+
+**In progress, uncommitted:** the analyst estimates tracker (spec:
+`analyst_estimates_spec-c3606434.txt`), built 8 Oct 2026 on top of `main` —
+`jobs/snapshot_estimates.py`, `jobs/fill_actuals.py`, `db/schema_estimates.sql`,
+`tests/test_estimates.py` (11/11 passing), `docs/estimates_discovery.txt`, and edits to
+`events_db.py` and `tabs/events.py`; see the module writeup above. Not committed, not
+pushed — the jobs have only run against scratch data, not live yfinance.
+
+**In progress, uncommitted:** the expected-move feature (spec:
+`expected_move_spec-3c050a43.txt`), built 9 Oct 2026 overnight under Adarsh's standing
+go-ahead — `analytics/expected_move.py`, `trading_calendar.py`, `db/schema_expected_move.sql`,
+`jobs/refresh_expected_moves.py`, `scripts/discover_expected_move.py`,
+`docs/expected_move_discovery.txt`, `tests/test_expected_move.py` (26/26),
+`tests/test_refresh_expected_moves.py` (6/6), and edits to `events_db.py` and
+`tabs/events.py`; see the module writeup above. Live-run-verified against the real
+`events.db` for 5 symbols (TCS, RELIANCE, HDFCBANK, INFY, WIPRO), three real bugs found
+and fixed, UI only `AppTest`-verified (no real browser available). Not committed, not
+pushed.
 
 ---
 
@@ -1350,24 +1857,37 @@ not pushed.
   by hand. A `.github/workflows/fetch_events.yml` on a weekday-evening cron, committing the
   database back only when it changed, is designed but **not built** — it needs
   `permissions: contents: write` and Adarsh's go-ahead before it runs on a schedule.
-- **Earnings call sentiment tracker:** the Week 5-6 spec in `CLAUDE.md`. It depends on the
-  Events calendar already built here for results dates.
-- **F&O correlation matrix:** built on `feature/fno-correlation` (spec:
-  `correlation_matrix_spec-43ee700c.txt`), including the sector matrix and drill-down
-  (spec sections 5/5A/5B), the Stock matrix (section 6) and History (section 7)
-  sections; see the full writeup above. Not yet merged to `main`. Still open: a daily
-  cron/launchd entry for `jobs/fetch_intraday.py` is designed (spec section 5) but not
-  installed on Adarsh's Mac — until it is, the store only has whatever the manual run on
-  6 Oct 2026 fetched, and ages out of the 15m tier's 60-day window over time without a
-  human running the job by hand. The rollup-CSV fallback in the original spec was
-  dropped outright, not deferred: the app is localhost-only and the repo private, so
-  there is no deploy without the SQLite store sitting right beside it. Also open: no UI
-  screenshot/browser pass on any of the four Correlation sections beyond `AppTest` — worth
-  a real-browser look (sector colours against the beige theme, the History chip row).
-  Confirmed by Adarsh in a real browser (7 Oct 2026): the Stock matrix click-to-isolate
-  strip registers clicks correctly, and the label/marker overlap that first produced is
-  fixed (see the Correlation tab writeup above). Still unconfirmed in a real browser: a
-  main-grid cell click jumping to History. No Playwright/Selenium/node/npx tooling is
-  available in this environment to check that directly, so it needs Adarsh's own eyes.
-  `analytics/stock_matrix.py`/`analytics/rolling.py` also have no committed pytest
-  functions yet, only ad-hoc smoke scripts and AppTest runs.
+- **Earnings call sentiment tracker:** the Week 5-6 spec in `CLAUDE.md`. Depends on the
+  Events calendar (built) and, now, the analyst estimates tracker below for the T-1
+  pattern it reuses.
+- **Analyst estimates tracker — cron and live run:** `jobs/snapshot_estimates.py` and
+  `jobs/fill_actuals.py` are built and test-covered (see the module writeup above) but
+  have never run against live yfinance/the real `events.db`, and no cron/launchd entry
+  exists yet for the daily pair (both docstrings describe ~6pm IST, after
+  `fetch_events.py`). Acceptance check H (one real estimate row and one "no estimate"
+  row, both visible in the Events tab in a real browser) is Adarsh's own manual check.
+- **Expected-move feature — cron and real-browser UI check:** `jobs/refresh_expected_moves.py`
+  has now been run by hand against the real `events.db` twice: the original 5-symbol
+  discovery backfill, then a full real-world run (74 symbols, every upcoming-results
+  F&O name, `--backfill`) that found and fixed bug #4 above (the M&M `&`-encoding bug)
+  — see the module writeup above for both runs' results. Still no cron/launchd entry.
+  The Calendar-subtab columns, note, expander and per-symbol history table are only
+  verified via `AppTest` (zero exceptions) — no browser/screenshot tool exists in this
+  environment, so Adarsh still needs to look at it in a real browser before it's
+  considered visually confirmed.
+- **F&O correlation matrix:** merged to `main` (`8f8661b`, 8 Oct 2026) — see Git History
+  above. Still open: a daily cron/launchd entry for `jobs/fetch_intraday.py` is designed
+  (spec section 5) but not installed on Adarsh's Mac — until it is, the store only has
+  whatever the manual run on 6 Oct 2026 fetched, and ages out of the 15m tier's 60-day
+  window over time without a human running the job by hand. The rollup-CSV fallback in
+  the original spec was dropped outright, not deferred: the app is localhost-only and the
+  repo private, so there is no deploy without the SQLite store sitting right beside it.
+  Also open: no UI screenshot/browser pass on any of the four Correlation sections beyond
+  `AppTest` — worth a real-browser look (sector colours against the beige theme, the
+  History chip row). Confirmed by Adarsh in a real browser (7 Oct 2026): the Stock matrix
+  click-to-isolate strip registers clicks correctly, and the label/marker overlap that
+  first produced is fixed (see the Correlation tab writeup above). Still unconfirmed in a
+  real browser: a main-grid cell click jumping to History. No Playwright/Selenium/node/npx
+  tooling is available in this environment to check that directly, so it needs Adarsh's
+  own eyes. `analytics/stock_matrix.py`/`analytics/rolling.py` also have no committed
+  pytest functions yet, only ad-hoc smoke scripts and AppTest runs.
