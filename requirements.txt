@@ -6,3 +6,10 @@ python-dotenv
 jugaad-data
 nselib==2.5.1
 scipy
+# Imported directly by app code (analytics/, tabs/correlation.py,
+# trading_calendar.py), not just pulled in by pandas/yfinance/nselib.
+# They resolved transitively before, which worked until an upstream
+# package dropped one - declare them so a deploy can't break silently.
+numpy
+requests
+pandas_market_calendars
