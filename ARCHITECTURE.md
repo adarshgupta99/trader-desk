@@ -1057,6 +1057,31 @@ former `title=` site now carries `data-tip=` with identical text. Suite 99/99 (n
 exercises actual hover rendering - that still needs Adarsh's eyes in a real browser, same gap
 as the rest of this UI).
 
+**Real bug found and fixed same day: the column's visibility gate used the wrong field.**
+Adarsh asked why Asian Paints' HISTORY 6Q cell was empty despite 6 real quarters already
+sitting backfilled in `earnings_history_quarters`. The gate checked `subtype == "results"`,
+but `scripts/fetch_events.py`'s `SUBTYPE_KEYWORDS` list deliberately matches `"dividend"`
+before `"result"` (its own comment documents this, for agenda-label purposes) - so a combined
+"Financial Results/Dividend" board meeting, routine for Indian companies that declare both in
+one sitting, gets `subtype="dividend"`. `subtype` was never the right field to ask "does this
+meeting cover results" - it answers "what should this row's agenda be labelled," a different
+question with intentionally different priorities.
+
+The correct check already existed, twice, just not here: `jobs/snapshot_estimates.py`'s
+`due_events()` and `jobs/refresh_earnings_history.py`'s `due_symbols()` both decide what to
+back fill via `LOWER(purpose) LIKE '%result%'` substring matching on the raw purpose text,
+which is exactly why Asian Paints already had history data - the backfill job was never
+confused by this, only the UI's separate gate was. Fixed `_history_sparkline_cell` to take
+`purpose` instead of `subtype` and use the identical `"result" in purpose.lower()` check, so
+the thing deciding "show the column" finally agrees with the thing that decided "fetch the
+data" in the first place.
+
+Found via query, not guesswork, exactly how many rows this was silently hiding: 15 symbols
+with an upcoming board meeting as of 13 Oct 2026 - including INFY, HINDUNILVR, TECHM,
+DABUR, GODREJCP - all classified `dividend` or `fundraise` despite their purpose text plainly
+containing "Results." All fixed by the one change, verified via `AppTest`: Asian Paints now
+renders real bars (`QE Mar 2025: 8,359 cr` as its oldest quarter). Suite 99/99.
+
 **Read side.** `events_db.get_earnings_estimates(symbols=None)` reads `earnings_estimates`
 the same way `get_upcoming_events()` reads `events` — `mode=ro`, empty frame if the table
 or file doesn't exist. One wrinkle: `pandas.read_sql_query` turns a SQL `NULL` numeric

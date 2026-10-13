@@ -240,12 +240,26 @@ def render():
         d = datetime.strptime(iso_date, "%Y-%m-%d")
         return f"QE {d.strftime('%b %Y')}"
 
-    def _history_sparkline_cell(symbol, subtype):
+    def _history_sparkline_cell(symbol, purpose):
         """One <td> for the HISTORY 6Q column: two stacked sparkline
         lines (REV, PAT), 6 unicode blocks oldest-to-newest plus the
         latest reported value, ~1.6x line spacing via line-height (no
-        blank line). Empty for a non-results board meeting (dividend/
-        other/fundraise) - there is no earnings history to show there.
+        blank line). Empty for a board meeting that isn't about results
+        at all - there is no earnings history to show there.
+
+        Gated on "result" appearing in the raw purpose text, NOT on
+        subtype == "results" - a real bug found 13 Oct 2026 via Adarsh
+        asking why Asian Paints' cell was empty despite having 6 real
+        quarters already backfilled. scripts/fetch_events.py's subtype
+        classifier deliberately matches "dividend" before "result" (see
+        its SUBTYPE_KEYWORDS comment - a combined "Financial Results/
+        Dividend" meeting is intentionally subtyped "dividend" for
+        agenda-label purposes), so subtype cannot answer "does this
+        meeting cover results" - only the purpose-text substring check
+        can, which is exactly what jobs/snapshot_estimates.py's
+        due_events() and jobs/refresh_earnings_history.py's due_symbols()
+        already use to decide what to backfill. Matching that same rule
+        here is what makes the gate agree with what was actually fetched.
 
         Revenue/PAT come straight from get_earnings_history_quarters,
         which already carries the bank-revenue derivation (InterestEarned
@@ -257,7 +271,7 @@ def render():
         Scaling, colour and the gap/negative rules all live in
         analytics.sparkline.build_blocks - this function only turns that
         into HTML."""
-        if subtype != "results":
+        if "result" not in (purpose or "").lower():
             return "<td style='border:none;'></td>"
 
         history = get_earnings_history_quarters(symbol)
@@ -419,7 +433,7 @@ def render():
             f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;border:none;'>"
             f"{_agenda_link(r.symbol, r.purpose, 'board_meeting')}</td>"
             f"{_estimate_cells(r.symbol, r.event_date)}"
-            f"{_history_sparkline_cell(r.symbol, r.subtype)}"
+            f"{_history_sparkline_cell(r.symbol, r.purpose)}"
             f"</tr>"
             for r in type_df.itertuples()
         )
