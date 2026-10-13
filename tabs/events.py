@@ -142,21 +142,29 @@ def render():
         comparison to the estimate - 13 Oct 2026, Adarsh's direction, which
         this Calendar column dropped for consistency).
 
+        No standalone Analysts column any more (13 Oct 2026) - it was
+        showing n_analysts_eps next to the REVENUE figure, a real bug:
+        TCS read "20 analysts" beside a revenue consensus actually built
+        from 30. Each estimate's own analyst count is a hover tooltip on
+        that cell instead - n_analysts_rev on Est. Rev, n_analysts_eps on
+        Est. EPS - so the count can never again be attached to the wrong
+        figure.
+
         preview_map and eps_map are prefetched concurrently for every symbol
         that needs them before any row is built - see render()."""
         nonlocal saw_preview
         est = estimates_by_key.get((symbol, event_date))
         has_frozen = _has_frozen_estimate(symbol, event_date)
 
-        rev_val = n_val = None
+        rev_val = n_rev_val = None
         is_preview = False
         if has_frozen:
-            rev_val, n_val = est.revenue_estimate, est.n_analysts_eps
+            rev_val, n_rev_val = est.revenue_estimate, est.n_analysts_rev
         elif event_date >= today_str:
             preview = preview_map.get(symbol)
             if preview and preview.get("revenue_estimate") is not None:
                 rev_val = preview.get("revenue_estimate")
-                n_val = preview.get("n_analysts_eps")
+                n_rev_val = preview.get("n_analysts_rev")
                 is_preview = True
                 saw_preview = True
 
@@ -167,40 +175,54 @@ def render():
         # reported yet" apart from "Yahoo has a real reported quarter" for
         # the Est. EPS cell's own preview styling below.
         eps_is_preview = eps_row is not None and eps_row["eps_actual"] is None
+        # EPS analyst count: the frozen snapshot's n_analysts_eps once T-1
+        # has run, same live preview otherwise - same has_frozen/preview
+        # split as revenue above, just the EPS-specific field from each.
+        if has_frozen:
+            n_eps_val = est.n_analysts_eps
+        elif event_date >= today_str:
+            preview = preview_map.get(symbol)
+            n_eps_val = preview.get("n_analysts_eps") if preview else None
+        else:
+            n_eps_val = None
+
+        def _analysts_title(n):
+            n = _num(n)
+            if n is None:
+                return ""
+            n = int(n)
+            plural = "s" if n != 1 else ""
+            return f" title='{n} analyst{plural}'"
 
         if rev_val is None:
-            no_est_td = (
+            rev_cell = (
                 f"<td style='padding:6px 16px 6px 0;color:{P.T3};font-size:13px;"
                 f"white-space:nowrap;border:none;'>no estimate</td>"
             )
         else:
             val_color = P.T2 if is_preview else P.T1
             rev_text = f"{'~' if is_preview else ''}{_fmt_rev_cr(rev_val)}"
-            no_est_td = (
+            rev_cell = (
                 f"<td style='padding:6px 16px 6px 0;color:{val_color};font-size:13px;"
-                f"white-space:nowrap;border:none;{TABULAR}'>{rev_text}</td>"
+                f"white-space:nowrap;border:none;cursor:help;{TABULAR}'"
+                f"{_analysts_title(n_rev_val)}>{rev_text}</td>"
             )
-        rev_cell = no_est_td
 
         if eps_est_val is None:
             eps_cell = (
-                f"<td style='padding:6px 16px 6px 0;color:{P.T3};font-size:13px;"
+                f"<td style='padding:6px 0;color:{P.T3};font-size:13px;"
                 f"white-space:nowrap;border:none;'>no estimate</td>"
             )
         else:
             eps_val_color = P.T2 if eps_is_preview else P.T1
             eps_text = f"{'~' if eps_is_preview else ''}{_fmt_eps(eps_est_val)}"
             eps_cell = (
-                f"<td style='padding:6px 16px 6px 0;color:{eps_val_color};font-size:13px;"
-                f"white-space:nowrap;border:none;{TABULAR}'>{eps_text}</td>"
+                f"<td style='padding:6px 0;color:{eps_val_color};font-size:13px;"
+                f"white-space:nowrap;border:none;cursor:help;{TABULAR}'"
+                f"{_analysts_title(n_eps_val)}>{eps_text}</td>"
             )
 
-        analysts_cell = (
-            f"<td style='padding:6px 0;color:{P.T2};font-size:13px;"
-            f"white-space:nowrap;border:none;{TABULAR}'>"
-            f"{int(n_val) if n_val is not None else 'no estimate'}</td>"
-        )
-        return rev_cell + eps_cell + analysts_cell
+        return rev_cell + eps_cell
 
     def _agenda_link(symbol, text, event_type):
         slug = "corporate-filings-board-meetings" if event_type == "board_meeting" else "corporate-filings-actions"
@@ -299,10 +321,9 @@ def render():
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Agenda</th>"
             f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Est. Rev (Rs cr)</th>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Est. EPS</th>"
             f"<th style='padding:4px 0 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Analysts</th>"
+            f"text-transform:uppercase;letter-spacing:0.05em;border:none;' "
+            f"title='Hover a value for its analyst count'>Est. EPS</th>"
             f"</tr>"
         )
         st.markdown(

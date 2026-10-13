@@ -118,6 +118,28 @@ def test_c_no_estimate_row_is_returned(db_path):
     assert df.iloc[0]["symbol"] == "PIIND"
 
 
+def test_c2_eps_and_revenue_analyst_counts_stay_distinct(db_path):
+    # Real bug, 13 Oct 2026: the Calendar subtab's Analysts column (since
+    # removed) showed n_analysts_eps next to the REVENUE estimate - TCS
+    # displayed "20 analysts" beside a revenue consensus actually built
+    # from 30. Separately, get_earnings_estimates' SELECT didn't even
+    # include n_analysts_rev, so the two counts couldn't be told apart by
+    # any reader of this function's output. Both must be distinct columns,
+    # correctly attached to their own measure.
+    conn = se.get_connection()
+    se.insert_snapshot(
+        conn, "TCS", "2026-10-08", "2026-10-07",
+        _fake_estimate(eps=38.07, rev=7.31e11, n_eps=20, n_rev=30),
+    )
+    conn.close()
+
+    df = events_db.get_earnings_estimates(symbols=["TCS"])
+    row = df.iloc[0]
+    assert row["n_analysts_eps"] == 20
+    assert row["n_analysts_rev"] == 30
+    assert row["n_analysts_eps"] != row["n_analysts_rev"]
+
+
 
 def test_e_actuals_fill_only_touches_actual_columns(db_path):
     conn = se.get_connection()

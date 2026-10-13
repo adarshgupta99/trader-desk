@@ -83,7 +83,7 @@ def get_earnings_estimates(symbols=None):
     """
     columns = [
         "symbol", "event_date", "snapshot_date", "eps_estimate",
-        "revenue_estimate", "n_analysts_eps",
+        "revenue_estimate", "n_analysts_eps", "n_analysts_rev",
         "revenue_actual_cons", "revenue_actual_std",
         "pat_actual_cons", "pat_actual_std",
         "eps_actual_cons", "eps_actual_std",

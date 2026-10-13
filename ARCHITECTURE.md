@@ -843,6 +843,36 @@ Verified via `AppTest`: no "Actual EPS" or "Surprise %" text anywhere on Calenda
 EPS" and "Analysts" still present, corrected footnote text renders. Suite 74/74 (no tests
 touched this UI path).
 
+**Analysts column removed too, replaced by a hover tooltip per cell - and a real
+mismatched-count bug caught in the process (13 Oct 2026, same session).** Asked whether
+the Calendar's "Analysts" column was for Est. Rev or Est. EPS, the honest answer was
+neither, correctly: `_estimate_cells` read `n_val = est.n_analysts_eps` and displayed it
+next to `rev_val = est.revenue_estimate` - the EPS analyst count, shown beside the revenue
+figure. Real on live data, not theoretical: TCS showed "20 analysts" next to a revenue
+consensus actually built from 30 (`n_analysts_rev`); HCLTECH 8 vs 6; NESTLEIND 8 vs 23.
+
+Adarsh's direction: drop the standalone column, put each estimate's own analyst count on
+that cell as a `title=` hover tooltip instead, so the count can never again be attached to
+the wrong figure. Est. Rev's tooltip reads `n_analysts_rev`, Est. EPS's reads
+`n_analysts_eps`, each cell gets `cursor:help` so the affordance is visible without
+hovering. Both counts now split by the same has_frozen/live-preview logic the revenue
+value itself already used.
+
+**A second bug, hiding behind the first:** `events_db.get_earnings_estimates()`'s SELECT
+never included `n_analysts_rev` at all - the column existed in the schema and was written
+by `jobs/snapshot_estimates.py`, but no reader of this function could have surfaced it,
+tooltip or otherwise, until it was added to the column list. Caught immediately by
+`AppTest` (`AttributeError: 'Pandas' object has no attribute 'n_analysts_rev'`) the moment
+the Calendar code tried to read it - the kind of bug a live UI test catches in one run that
+unit tests over `fetch_estimate()`'s dict shape never would, since that dict always had the
+field; only the read path leading to the UI was missing it.
+
+New regression test (`test_c2_eps_and_revenue_analyst_counts_stay_distinct`) snapshots TCS
+with `n_eps=20, n_rev=30` and asserts both come back distinct and correctly attached.
+Verified via `AppTest`: no "Analysts" header anywhere, TCS's Est. Rev cell carries
+`title='30 analysts'`, its Est. EPS cell `title='20 analysts'` - the exact split that
+disproves the old bug. Suite 75/75.
+
 **Read side.** `events_db.get_earnings_estimates(symbols=None)` reads `earnings_estimates`
 the same way `get_upcoming_events()` reads `events` — `mode=ro`, empty frame if the table
 or file doesn't exist. One wrinkle: `pandas.read_sql_query` turns a SQL `NULL` numeric
