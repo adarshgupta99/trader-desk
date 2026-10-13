@@ -126,8 +126,8 @@ def asset_card(label, ticker, period, decimal=2, height=220, value_size=28):
         # it's a plain text figure next to the date, not another control.
         day_color = P.UP if (day_pct is not None and day_pct >= 0) else P.DOWN
         day_html = (
-            f"<span style='font-size:12px;color:{day_color};font-weight:600;{TABULAR}'>"
-            f"{signed_pct(day_pct)}</span><span style='font-size:11px;color:{P.T2};"
+            f"<span style='font-size:15px;color:{day_color};font-weight:600;{TABULAR}'>"
+            f"{signed_pct(day_pct)}</span><span style='font-size:12px;color:{P.T2};"
             f"padding-left:3px;'>1D</span>"
         ) if day_pct is not None else ""
         st.markdown(
