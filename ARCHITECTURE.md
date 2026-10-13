@@ -1140,6 +1140,29 @@ maths it reuses is already covered by `analytics/sparkline.py`'s 20 fixture test
 via `AppTest` instead, same as the rest of this column's rendering checks. Suite 100/100 (no
 existing test touched).
 
+**Latest-bar rendering redone, same day, immediately after Adarsh saw it: style-only fix,
+no data/scaling change.** The first version's distinguishing marks - a border on the 30px
+hit-target wrapper, plus extra left margin - made the latest bar look like a tall box
+regardless of its real computed height, dwarfing the 6 history bars beside it. The fix moves
+the border onto the actual height-scaled bar element itself (the one already sized by the
+same `height_px`/min-max scale every other bar uses - nothing in `analytics/sparkline.py`
+changed), drops the extra margin entirely so all 7 bars sit identically spaced, and makes the
+distinction purely stylistic: history bars keep a solid fill, the latest bar gets
+`background:transparent` with a `2px solid` border in its own QoQ colour (same `P.UP`/
+`P.DOWN`/`P.T3` rule every bar already uses - no new colours), with `box-sizing:border-box`
+so the border is absorbed into the bar's own 7px×`height_px` box rather than growing past it.
+Tooltip wording changed to put `(latest)` inline after the quarter label
+(`QE Sep 2026 (latest): 73,188 cr (+1.3% QoQ)`) rather than a trailing suffix.
+
+Verified via `AppTest` against TCS/DMART/HCLTECH: 7 bars per track, every one exactly 7px
+wide with identical spacing, heights spanning the full 4.0-26.0px scale with the ceiling
+(26.0px) landing on whichever bar is actually the window's maximum (the latest bar for TCS
+and DMART), the latest bar's inner span showing `background:transparent;border:2px solid`
+in its own QoQ colour, and the corrected tooltip wording. No pixel-rendered screenshot was
+produced - no browser access here - so this is verified by inspecting the exact computed
+CSS values via the test harness; Adarsh's own eyes still confirm the actual rendering.
+Suite 100/100 (no existing test touched - same reasoning as the version above).
+
 **Read side.** `events_db.get_earnings_estimates(symbols=None)` reads `earnings_estimates`
 the same way `get_upcoming_events()` reads `events` — `mode=ro`, empty frame if the table
 or file doesn't exist. One wrinkle: `pandas.read_sql_query` turns a SQL `NULL` numeric

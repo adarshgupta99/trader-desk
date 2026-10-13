@@ -305,17 +305,20 @@ def render():
                 f"white-space:nowrap;border:none;'>no history</td>"
             )
 
-        # Bar geometry (13 Oct 2026 visual pass - rendering only, same
-        # min-max scaling as before via Block.height_px, see
-        # analytics/sparkline.py). Oldest bar gets the neutral/tertiary
-        # colour (no prior quarter to compare against), same as a bar
-        # right after a gap. NEW_GAP/NEW_BORDER set the just-reported
-        # quarter apart from the 6 historical ones - extra left margin as
-        # a visual break, plus an outline so it reads as "just landed"
-        # without inventing a new accent colour outside the palette.
+        # Bar geometry (13 Oct 2026 visual pass, redone same day after
+        # Adarsh flagged the first version: a border on the 30px-tall
+        # hit-target wrapper made the latest bar look like a tall box
+        # regardless of its real height, dwarfing the 6 history bars it
+        # sits beside, and an extra left margin on top of that only made
+        # it worse. Same min-max scaling as before via Block.height_px
+        # (see analytics/sparkline.py) - all 7 bars share one scale, one
+        # width, one spacing. The ONLY thing that marks the latest bar is
+        # style on the bar itself: solid fill for history, transparent
+        # fill + a QoQ-coloured outline for latest, via box-sizing:
+        # border-box so the 2px border is absorbed into the bar's own
+        # width/height rather than growing it. No extra margin, no taller
+        # box, no separate scale.
         BAR_W, BAR_GAP, TRACK_H = 7, 2, 30
-        NEW_GAP = 8
-        NEW_BORDER = f"1px solid {P.T2}"
 
         def _line(label, field, new_value):
             window = [(h["quarter_end"], h[field]) for h in history]
@@ -338,8 +341,9 @@ def render():
                 # hovering the empty space above a near-minimum-height bar
                 # (common: most bars aren't near the window's max) found
                 # nothing. The full column is now always hoverable.
+                quarter_label = _quarter_label(b.quarter_end) + (" (latest)" if is_new else "")
                 if b.height_px is None:
-                    title = f"{_quarter_label(b.quarter_end)}: no filing found"
+                    title = f"{quarter_label}: no filing found"
                     inner = ""
                 else:
                     prev_val = blocks[i - 1].value if i > 0 else None
@@ -348,11 +352,21 @@ def render():
                     # tooltip_text prints its value as-is - must be crore
                     # here (same unit as the latest-value print below),
                     # not the raw INR build_blocks works in internally.
-                    title = tooltip_text(_quarter_label(b.quarter_end), b.value / 1e7, qoq)
+                    title = tooltip_text(quarter_label, b.value / 1e7, qoq)
                     if is_new:
-                        title += " - just reported"
-                    inner = (f"<span style='display:block;width:100%;"
-                             f"height:{b.height_px:.1f}px;background:{color};'></span>")
+                        # Outline only, same QoQ colour the solid bars use
+                        # for background - style is the only thing that
+                        # marks this bar, never size. border-box keeps the
+                        # rendered box at exactly 7px x height_px; without
+                        # it the 2px border would add 4px to each
+                        # dimension on top of the computed size.
+                        inner = (f"<span style='display:block;box-sizing:border-box;"
+                                 f"width:100%;height:{b.height_px:.1f}px;"
+                                 f"background:transparent;border:2px solid {color};'></span>")
+                    else:
+                        inner = (f"<span style='display:block;box-sizing:border-box;"
+                                 f"width:100%;height:{b.height_px:.1f}px;"
+                                 f"background:{color};'></span>")
                 # The negative marker sits immediately before THIS
                 # quarter's column, not the row - it flags that specific
                 # quarter's own value went negative. Still not baked into
@@ -360,16 +374,11 @@ def render():
                 # QoQ direction same as any other (a smaller loss is
                 # still "up").
                 neg = f"<span style='color:{P.T3};'>-</span>" if b.is_negative else ""
-                # The just-reported quarter sits apart from the 6
-                # historical ones: extra left margin as a visual break,
-                # plus an outline so it reads as "just landed" without a
-                # new accent colour outside the existing palette.
-                extra = f"margin-left:{NEW_GAP}px;border:{NEW_BORDER};" if is_new else ""
                 bars.append(
                     f"{neg}<span data-tip='{title}' style='display:inline-flex;"
                     f"flex-direction:column;justify-content:flex-end;"
                     f"width:{BAR_W}px;height:{TRACK_H}px;"
-                    f"margin-right:{BAR_GAP}px;cursor:help;{extra}'>{inner}</span>"
+                    f"margin-right:{BAR_GAP}px;cursor:help;'>{inner}</span>"
                 )
             bars_html = (
                 f"<span style='display:inline-flex;align-items:flex-end;"
