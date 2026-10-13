@@ -1017,6 +1017,17 @@ returns `None`, and height/char never disagree on direction - quantization can t
 different heights at the same character level, so exact rank equality isn't the right
 assertion there).
 
+**Fixed same day: the tooltip didn't fire for most bars.** Adarsh reported getting no number
+on hover. Root cause: `title` lived on the visible coloured bar itself, bottom-aligned inside
+a 30px row - a near-minimum-height bar (4px, the common case, since most bars aren't near the
+window's max) left ~26px of empty, title-less space above it. Hovering anywhere but the exact
+few coloured pixels found nothing. Fixed by making each quarter a fixed `height:30px` column
+that carries the `title` and is itself the full hover target (`display:inline-flex;
+flex-direction:column; justify-content:flex-end`), with the coloured bar as a shorter inner
+`<span>` bottom-aligned inside it. The whole 30px column is now hoverable, not just the
+visible sliver. Verified via `AppTest`: BHEL's Mar-2025 bar's title span now reports
+`height:30px` with the 15.3px coloured bar nested inside it. Suite 99/99.
+
 **Read side.** `events_db.get_earnings_estimates(symbols=None)` reads `earnings_estimates`
 the same way `get_upcoming_events()` reads `events` — `mode=ro`, empty frame if the table
 or file doesn't exist. One wrinkle: `pandas.read_sql_query` turns a SQL `NULL` numeric

@@ -276,31 +276,40 @@ def render():
             blocks = build_blocks(window)
             bars = []
             for i, b in enumerate(blocks):
+                # Each quarter is a fixed-height (TRACK_H) hit-target
+                # column that carries the title, with the actual coloured
+                # bar as a shorter inner span bottom-aligned inside it.
+                # Putting the title on just the visible bar instead (the
+                # first version of this) made a short bar's hover target
+                # only as tall as its own few pixels within a 30px row -
+                # hovering the empty space above a near-minimum-height bar
+                # (common: most bars aren't near the window's max) found
+                # nothing. The full column is now always hoverable.
                 if b.height_px is None:
-                    bars.append(
-                        f"<span title='{_quarter_label(b.quarter_end)}: no filing found' "
-                        f"style='display:inline-block;width:{BAR_W}px;"
-                        f"margin-right:{BAR_GAP}px;height:0;'></span>"
-                    )
-                    continue
-                prev_val = blocks[i - 1].value if i > 0 else None
-                qoq = qoq_pct(b.value, prev_val)  # scale-invariant - fine on raw INR
-                color = {"up": P.UP, "down": P.DOWN}.get(b.direction, P.T3)
-                # tooltip_text prints its value argument as-is - must be
-                # crore here (same unit as the latest-value print below),
-                # not the raw INR build_blocks works in internally.
-                title = tooltip_text(_quarter_label(b.quarter_end), b.value / 1e7, qoq)
-                # The negative marker sits immediately before THIS bar,
-                # not the row - it flags that specific quarter's own value
-                # went negative. Still not baked into the bar's own
-                # colour: a loss quarter is coloured by its QoQ direction
-                # same as any other (a smaller loss is still "up").
+                    title = f"{_quarter_label(b.quarter_end)}: no filing found"
+                    inner = ""
+                else:
+                    prev_val = blocks[i - 1].value if i > 0 else None
+                    qoq = qoq_pct(b.value, prev_val)  # scale-invariant - fine on raw INR
+                    color = {"up": P.UP, "down": P.DOWN}.get(b.direction, P.T3)
+                    # tooltip_text prints its value as-is - must be crore
+                    # here (same unit as the latest-value print below),
+                    # not the raw INR build_blocks works in internally.
+                    title = tooltip_text(_quarter_label(b.quarter_end), b.value / 1e7, qoq)
+                    inner = (f"<span style='display:block;width:100%;"
+                             f"height:{b.height_px:.1f}px;background:{color};'></span>")
+                # The negative marker sits immediately before THIS
+                # quarter's column, not the row - it flags that specific
+                # quarter's own value went negative. Still not baked into
+                # the bar's own colour: a loss quarter is coloured by its
+                # QoQ direction same as any other (a smaller loss is
+                # still "up").
                 neg = f"<span style='color:{P.T3};'>-</span>" if b.is_negative else ""
                 bars.append(
-                    f"{neg}<span title='{title}' style='display:inline-block;"
-                    f"width:{BAR_W}px;margin-right:{BAR_GAP}px;"
-                    f"height:{b.height_px:.1f}px;background:{color};"
-                    f"cursor:help;'></span>"
+                    f"{neg}<span title='{title}' style='display:inline-flex;"
+                    f"flex-direction:column;justify-content:flex-end;"
+                    f"width:{BAR_W}px;height:{TRACK_H}px;"
+                    f"margin-right:{BAR_GAP}px;cursor:help;'>{inner}</span>"
                 )
             bars_html = (
                 f"<span style='display:inline-flex;align-items:flex-end;"
