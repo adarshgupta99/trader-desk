@@ -13,10 +13,23 @@ name: Daily events/estimates jobs
 # not NSE directly, so they aren't affected by that specific block. A failed
 # fetch_events.py step still shows red in the Actions log even though the job
 # overall succeeds - check there occasionally, nothing else surfaces it.
+#
+# RUNS EVERY DAY, WEEKENDS INCLUDED - do not "optimise" this back to 1-5.
+# snapshot_estimates.py only looks at tomorrow and the day after, and it
+# refuses to snapshot an event that is same-day or past (a late snapshot
+# would capture an estimate analysts already revised after the print, which
+# is the whole thing the T-1 freeze exists to prevent). So a Monday results
+# date has its entire snapshot window on Saturday and Sunday. With a
+# weekday-only cron that window is never visited and the quarter is lost
+# permanently - it cannot be backfilled later, by design.
+# Cost of a weekend run when nothing is due: a few seconds and no commit.
+# Real incident: HCLTECH and RBLBANK both announced Monday 12 Oct 2026 and
+# were silently skipped, found only because they never appeared in the
+# Past earnings tab.
 
 on:
   schedule:
-    - cron: '30 1 * * 1-5'  # 01:30 UTC = 7:00am IST, weekdays
+    - cron: '30 1 * * *'  # 01:30 UTC = 7:00am IST, EVERY day incl. weekends
   workflow_dispatch:
 
 permissions:
