@@ -231,9 +231,22 @@ heights are never comparable across rows or between the REV/PAT tracks.
   was being retried with the full backoff schedule, wasting ~75 seconds per occurrence for
   something retrying could never fix. Fixed to fail fast on that specific error. See
   ARCHITECTURE.md for the full investigation.
-- Tests: `tests/test_sparkline.py` (16 fixture cases for the pure scaling/QoQ engine,
-  `analytics/sparkline.py`) and `tests/test_refresh_earnings_history.py` (the retry-fast-fail
-  regression).
+- Tests: `tests/test_sparkline.py` (fixture cases for the pure scaling/QoQ engine,
+  `analytics/sparkline.py`) and `tests/test_refresh_earnings_history.py` (retry-fast-fail and
+  the lookback-window scope regressions).
+- Hover tooltips use `data-tip` + a CSS-only `[data-tip]:hover::after` popup
+  (`theme.py`'s `_MAIN_CSS`), not the native `title=` attribute - confirmed in a real browser
+  that `title=` never rendered anything on this app's `unsafe_allow_html` markup, for any
+  element, not just this column.
+- Rendering (13 Oct 2026): bars are HTML spans (`height:4-26px`, `width:7px`), not unicode
+  block characters - colours reuse the existing `P.UP`/`P.DOWN`/`P.T3` tokens rather than
+  new ones, so light/dark both resolve automatically.
+- A sector filter chip row (Calendar subtab only, `fno.DISPLAY_GROUPS`) narrows the table to
+  one sector at a time - a plain filter, not the Correlation tab's sector-pair drill-down.
+- The just-reported quarter (the one a row's own board meeting is about) renders as a 7th
+  bar, set apart with extra margin and an outline, once its actual lands in
+  `earnings_estimates` - no new fetch, same pipeline as Past earnings. A row that hasn't
+  reported yet stays at 6 bars.
 - **Not yet verified:** checked via `AppTest` only, same caveat as the rest of the Events
   tab - no real-browser check has been done.
 

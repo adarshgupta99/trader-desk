@@ -11,7 +11,9 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 import streamlit as st
 
+import fno
 from analytics.sparkline import build_blocks, qoq_pct, tooltip_text
+from jobs.fill_actuals import quarter_end_for_event_date
 from events_db import (IST, get_all_expected_moves, get_earnings_estimates,
                        get_earnings_history_quarters, get_eps_history,
                        get_last_success, get_live_estimate_preview,
@@ -240,7 +242,7 @@ def render():
         d = datetime.strptime(iso_date, "%Y-%m-%d")
         return f"QE {d.strftime('%b %Y')}"
 
-    def _history_sparkline_cell(symbol, purpose):
+    def _history_sparkline_cell(symbol, event_date, purpose):
         """One <td> for the HISTORY 6Q column: two stacked sparkline
         lines (REV, PAT), 6 unicode blocks oldest-to-newest plus the
         latest reported value, ~1.6x line spacing via line-height (no
@@ -277,7 +279,27 @@ def render():
         history = get_earnings_history_quarters(symbol)
         has_any = any(h["revenue_cons"] is not None or h["pat_cons"] is not None
                       for h in history)
-        if not history or not has_any:
+
+        # The just-reported quarter, as a 7th point - not part of the
+        # historical 6-quarter window (that deliberately stops BEFORE the
+        # quarter a row's own event reports on), but already sitting in
+        # earnings_estimates from the Past earnings actuals pipeline, so
+        # no new fetch is needed. Adarsh's ask, 13 Oct 2026: TCS/DMART had
+        # already reported Sep-2026 by the time this column shipped, and
+        # that quarter was invisible here even though it's the most
+        # recent, most relevant one. A row that hasn't reported yet
+        # (event_date still in the future) naturally has nothing in
+        # revenue_actual_cons/pat_actual_cons, so this is a no-op for it.
+        est = estimates_by_key.get((symbol, event_date))
+        new_rev = _num(est.revenue_actual_cons) if est is not None else None
+        new_pat = _num(est.pat_actual_cons) if est is not None else None
+        has_new_quarter = new_rev is not None or new_pat is not None
+        new_quarter_end = (
+            quarter_end_for_event_date(datetime.strptime(event_date, "%Y-%m-%d").date()).isoformat()
+            if has_new_quarter else None
+        )
+
+        if not history and not has_new_quarter:
             return (
                 f"<td style='padding:6px 0;color:{P.T3};font-size:12px;"
                 f"white-space:nowrap;border:none;'>no history</td>"
@@ -287,14 +309,26 @@ def render():
         # min-max scaling as before via Block.height_px, see
         # analytics/sparkline.py). Oldest bar gets the neutral/tertiary
         # colour (no prior quarter to compare against), same as a bar
-        # right after a gap.
+        # right after a gap. NEW_GAP/NEW_BORDER set the just-reported
+        # quarter apart from the 6 historical ones - extra left margin as
+        # a visual break, plus an outline so it reads as "just landed"
+        # without inventing a new accent colour outside the palette.
         BAR_W, BAR_GAP, TRACK_H = 7, 2, 30
+        NEW_GAP = 8
+        NEW_BORDER = f"1px solid {P.T2}"
 
-        def _line(label, field):
+        def _line(label, field, new_value):
             window = [(h["quarter_end"], h[field]) for h in history]
+            if has_new_quarter:
+                # Appended even when THIS field's new value is None (the
+                # other field has one) - keeps REV and PAT visually
+                # aligned at 7 columns each, the missing one rendering as
+                # its own ordinary gap bar.
+                window.append((new_quarter_end, new_value))
             blocks = build_blocks(window)
             bars = []
             for i, b in enumerate(blocks):
+                is_new = has_new_quarter and i == len(blocks) - 1
                 # Each quarter is a fixed-height (TRACK_H) hit-target
                 # column that carries the title, with the actual coloured
                 # bar as a shorter inner span bottom-aligned inside it.
@@ -315,6 +349,8 @@ def render():
                     # here (same unit as the latest-value print below),
                     # not the raw INR build_blocks works in internally.
                     title = tooltip_text(_quarter_label(b.quarter_end), b.value / 1e7, qoq)
+                    if is_new:
+                        title += " - just reported"
                     inner = (f"<span style='display:block;width:100%;"
                              f"height:{b.height_px:.1f}px;background:{color};'></span>")
                 # The negative marker sits immediately before THIS
@@ -324,11 +360,16 @@ def render():
                 # QoQ direction same as any other (a smaller loss is
                 # still "up").
                 neg = f"<span style='color:{P.T3};'>-</span>" if b.is_negative else ""
+                # The just-reported quarter sits apart from the 6
+                # historical ones: extra left margin as a visual break,
+                # plus an outline so it reads as "just landed" without a
+                # new accent colour outside the existing palette.
+                extra = f"margin-left:{NEW_GAP}px;border:{NEW_BORDER};" if is_new else ""
                 bars.append(
                     f"{neg}<span data-tip='{title}' style='display:inline-flex;"
                     f"flex-direction:column;justify-content:flex-end;"
                     f"width:{BAR_W}px;height:{TRACK_H}px;"
-                    f"margin-right:{BAR_GAP}px;cursor:help;'>{inner}</span>"
+                    f"margin-right:{BAR_GAP}px;cursor:help;{extra}'>{inner}</span>"
                 )
             bars_html = (
                 f"<span style='display:inline-flex;align-items:flex-end;"
@@ -342,8 +383,8 @@ def render():
                 f"<span style='color:{P.T1};{TABULAR}'>{latest_text}</span>"
             )
 
-        rev_line = _line("REV", "revenue_cons")
-        pat_line = _line("PAT", "pat_cons")
+        rev_line = _line("REV", "revenue_cons", new_rev)
+        pat_line = _line("PAT", "pat_cons", new_pat)
         return (
             f"<td style='padding:6px 0;font-size:13px;white-space:nowrap;"
             f"border:none;line-height:1.6;'>{rev_line}<br/>{pat_line}</td>"
@@ -401,6 +442,22 @@ def render():
     else:
         type_df = events_df[events_df["event_type"] == event_type] if len(events_df) else events_df
 
+    # Sector filter, Calendar only - this is a plain filter chip row over
+    # the existing fno.DISPLAY_GROUPS membership data, not the Correlation
+    # tab's sector-pair drill-down (a different, correlation-specific
+    # feature over the same sector labels). Single-select: one sector at
+    # a time, or none for everything.
+    if subtab == "Calendar" and len(type_df):
+        st.markdown("<div class='chip-label' style='margin-top:8px;'>Sector</div>",
+                    unsafe_allow_html=True)
+        sector = st.pills(
+            "ev_sector", fno.DISPLAY_GROUPS, key="ev_sector",
+            label_visibility="collapsed",
+        )
+        if sector:
+            in_sector = set(fno.symbols_in_display_group(sector))
+            type_df = type_df[type_df["symbol"].isin(in_sector)]
+
     st.markdown("<div class='chip-label' style='margin-top:8px;'>Search</div>", unsafe_allow_html=True)
     search_text = st.text_input(
         "ev_search", placeholder="Search by symbol", key="ev_search",
@@ -435,10 +492,12 @@ def render():
             f"border:none;{TABULAR}'>{_fmt_date(r.event_date)}</td>"
             f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;"
             f"border:none;'>{r.symbol}</td>"
-            f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;border:none;'>"
+            f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;border:none;"
+            f"max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+            f"cursor:help;' data-tip='{r.purpose}'>"
             f"{_agenda_link(r.symbol, r.purpose, 'board_meeting')}</td>"
             f"{_estimate_cells(r.symbol, r.event_date)}"
-            f"{_history_sparkline_cell(r.symbol, r.purpose)}"
+            f"{_history_sparkline_cell(r.symbol, r.event_date, r.purpose)}"
             f"</tr>"
             for r in type_df.itertuples()
         )

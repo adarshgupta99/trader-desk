@@ -1100,6 +1100,46 @@ already used for the daily-jobs cron schedule. New regression test
 20-days-ago one, and an upcoming one, and asserts only the stale one is excluded. Full
 backfill rerun to pick up every symbol newly in scope. Suite 100/100.
 
+**Three more additions, same day: sector filter chips, a 7th "just reported" bar, a narrower
+Agenda column.**
+
+- **Sector filter**, Calendar subtab only - a single-select `st.pills` row over
+  `fno.DISPLAY_GROUPS`, filtering `type_df` to `fno.symbols_in_display_group(sector)`.
+  Explicitly NOT the Correlation tab's sector-pair drill-down (a different, correlation-
+  specific heatmap feature reusing the same 15 labels) - Adarsh's ask was the simpler
+  "click a sector, see only its stocks," which is what this is. Verified via `AppTest`:
+  selecting "IT" keeps TCS, drops RBLBANK.
+
+- **A 7th bar for the quarter a row's own event just reported.** The 6-quarter window
+  deliberately stops BEFORE that quarter (so a row's own Est./Actual columns describe a
+  quarter the sparkline doesn't repeat) - but that meant TCS and DMART, both already
+  reported by the time this column shipped, never showed their most recent, most relevant
+  print at all. No new fetch needed: the just-reported quarter's `revenue_actual_cons`/
+  `pat_actual_cons` already sit in `earnings_estimates` from the Past earnings actuals
+  pipeline, read via the same `estimates_by_key` lookup `_estimate_cells` already uses.
+  `quarter_end_for_event_date` (from `jobs/fill_actuals.py`, imported rather than
+  duplicated) names which quarter that is. When available, it's appended as a 7th point to
+  the SAME min-max scale as the other 6 (so heights stay comparable, no special-cased
+  maths) and rendered with an 8px left margin plus a `1px solid` outline - a visual break
+  and a border, not a new accent colour, so it reads as "just landed" without introducing
+  anything outside the existing palette. A row that hasn't reported yet contributes nothing
+  (`revenue_actual_cons`/`pat_actual_cons` are still NULL), so it stays at exactly 6, no
+  special-casing required. A row with ZERO historical quarters but a fresh first-ever
+  report (new listing) still shows that one bar rather than "no history," since the gate
+  was widened to `not history and not has_new_quarter`. Verified via `AppTest`: TCS now
+  shows 7 REV bars, the 7th tagged `QE Sep 2026: 73,188 cr (+1.3% QoQ) - just reported` with
+  the border styling present; ICICIGI (not yet reported) still shows exactly 6, no marker.
+
+- **Agenda column** capped to `max-width:160px` with `text-overflow:ellipsis`, full text on
+  `data-tip` hover (not `title=` - this table's native tooltips were already confirmed not
+  to render, see the two entries above).
+
+No new unit tests for the 7-bar logic specifically - it's UI-embedded HTML construction in a
+nested closure, same as the rest of this cell's rendering, and the underlying scaling/QoQ
+maths it reuses is already covered by `analytics/sparkline.py`'s 20 fixture tests. Verified
+via `AppTest` instead, same as the rest of this column's rendering checks. Suite 100/100 (no
+existing test touched).
+
 **Read side.** `events_db.get_earnings_estimates(symbols=None)` reads `earnings_estimates`
 the same way `get_upcoming_events()` reads `events` — `mode=ro`, empty frame if the table
 or file doesn't exist. One wrinkle: `pandas.read_sql_query` turns a SQL `NULL` numeric
