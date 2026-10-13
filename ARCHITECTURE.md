@@ -490,6 +490,21 @@ The small shared modules. `periods.py` holds `PERIODS`, `CHART_PRESETS`,
 picker; `constituents.py` the approximate index weights; `formatting.py` the signed /
 decimal / INR-grouping rules; `components.py` the price card and chart shared by five tabs.
 
+**1D change added to every small-multiples card (13 Oct 2026).** Adarsh asked to show each
+index/asset's latest 1-day return on the Indices/India/FX/Commodities/Volatility grids,
+alongside whatever period is selected (1M by default) - "don't add a different button,
+just add a print": plain text, no new control. `get_price_history()` already returns one
+row per trading day regardless of the requested period, so `price_chart()` computes it for
+free from the last two rows already in hand (`last / df["Close"].iloc[-2] - 1`) rather than
+a second fetch - `None` when there's no prior row yet (a one-row period or a brand-new
+instrument), rendered as nothing rather than a blank "1D" badge. Printed next to the date
+under the big value, signed and colour-coded the same as the existing period badge
+(`signed_pct`, `P.UP`/`P.DOWN`). `price_chart()`'s return signature grew a 5th value
+(`day_pct`); it has exactly one caller (`asset_card`), confirmed by grep before changing
+it. Verified via `AppTest` across all five grid tabs, zero exceptions; Indices' S&P 500
+card confirmed rendering `-0.04% 1D` in signal terracotta next to `12 Oct 2026`. Suite
+74/74 (no existing test touched this code path).
+
 ---
 
 ### `data/symbols.csv`

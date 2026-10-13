@@ -25,12 +25,18 @@ def price_chart(label, ticker, period, height=220):
     df = get_price_history(ticker, period=period)
     df = df.dropna(subset=["Close"])
     if df.empty:
-        return None, None, None, None
+        return None, None, None, None, None
 
     last  = df["Close"].iloc[-1]
     first = df["Close"].iloc[0]
     pct   = (last / first - 1) * 100
     latest_date = df.index[-1].strftime("%d %b %Y")
+
+    # get_price_history returns one row per trading day regardless of
+    # `period`, so the last two rows ARE the latest 1-day return - no
+    # second fetch needed. None when there isn't a prior row yet (a
+    # period with only one trading day in it, or a brand-new instrument).
+    day_pct = (last / df["Close"].iloc[-2] - 1) * 100 if len(df) >= 2 else None
 
     spread = df["Close"].max() - df["Close"].min()
     ymin = df["Close"].min() - spread * 0.1
@@ -61,7 +67,7 @@ def price_chart(label, ticker, period, height=220):
         hoverlabel=dict(bgcolor=P.TOOLTIP_BG, bordercolor=P.BORDER,
                         font=dict(size=12, color=P.T1, family="Inter, Arial, sans-serif")),
     )
-    return fig, last, pct, latest_date
+    return fig, last, pct, latest_date, day_pct
 
 
 def _constituents_popover(label, members):
@@ -88,7 +94,7 @@ def _constituents_popover(label, members):
 
 def asset_card(label, ticker, period, decimal=2, height=220, value_size=28):
     P = palette()
-    fig, last, pct, latest_date = price_chart(label, ticker, period, height)
+    fig, last, pct, latest_date, day_pct = price_chart(label, ticker, period, height)
     if fig is None:
         st.warning(f"No data — {label}")
         return
@@ -116,11 +122,20 @@ def asset_card(label, ticker, period, decimal=2, height=220, value_size=28):
                 f"</div>",
                 unsafe_allow_html=True,
             )
+        # 1D change is printed here regardless of the period chip above -
+        # it's a plain text figure next to the date, not another control.
+        day_color = P.UP if (day_pct is not None and day_pct >= 0) else P.DOWN
+        day_html = (
+            f"<span style='font-size:12px;color:{day_color};font-weight:600;{TABULAR}'>"
+            f"{signed_pct(day_pct)}</span><span style='font-size:11px;color:{P.T2};"
+            f"padding-left:3px;'>1D</span>"
+        ) if day_pct is not None else ""
         st.markdown(
             f"<div style='display:flex;align-items:baseline;gap:10px;margin:2px 0 4px 0;'>"
             f"<span style='font-size:{value_size}px;font-weight:600;color:{P.T1};"
             f"line-height:1.1;{TABULAR}'>{last:,.{decimal}f}</span>"
             f"<span style='font-size:12px;color:{P.T2};'>{latest_date}</span>"
+            f"{day_html}"
             f"</div>",
             unsafe_allow_html=True,
         )
