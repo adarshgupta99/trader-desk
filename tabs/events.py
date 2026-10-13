@@ -210,14 +210,14 @@ def render():
 
         if rev_val is None:
             rev_cell = (
-                f"<td style='padding:6px 16px 6px 0;color:{P.T3};font-size:13px;"
+                f"<td style='padding:6px 8px 6px 0;color:{P.T3};font-size:13px;"
                 f"white-space:nowrap;border:none;'>no estimate</td>"
             )
         else:
             val_color = P.T2 if is_preview else P.T1
             rev_text = f"{'~' if is_preview else ''}{_fmt_rev_cr(rev_val)}"
             rev_cell = (
-                f"<td style='padding:6px 16px 6px 0;color:{val_color};font-size:13px;"
+                f"<td style='padding:6px 8px 6px 0;color:{val_color};font-size:13px;"
                 f"white-space:nowrap;border:none;cursor:help;{TABULAR}'"
                 f"{_analysts_title(n_rev_val)}>{rev_text}</td>"
             )
@@ -497,11 +497,11 @@ def render():
 
         rows = "".join(
             f"<tr style='border-bottom:1px solid {P.BORDER};'>"
-            f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;"
+            f"<td style='padding:6px 8px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;"
             f"border:none;{TABULAR}'>{_fmt_date(r.event_date)}</td>"
-            f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;"
+            f"<td style='padding:6px 8px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;"
             f"border:none;'>{r.symbol}</td>"
-            f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;border:none;"
+            f"<td style='padding:6px 8px 6px 0;color:{P.T2};font-size:13px;border:none;"
             f"max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
             f"cursor:help;' data-tip='{r.purpose}'>"
             f"{_agenda_link(r.symbol, r.purpose, 'board_meeting')}</td>"
@@ -512,15 +512,15 @@ def render():
         )
         header = (
             f"<tr style='border-bottom:1px solid {P.BORDER};'>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
+            f"<th style='padding:4px 8px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Board meeting</th>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
+            f"<th style='padding:4px 8px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Symbol</th>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
+            f"<th style='padding:4px 8px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Agenda</th>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
+            f"<th style='padding:4px 8px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Est. Rev (Rs cr)</th>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
+            f"<th style='padding:4px 8px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;' "
             f"data-tip='Hover a value for its analyst count'>Est. EPS</th>"
             f"<th style='padding:4px 0 6px 0;color:{P.T3};font-size:12px;text-align:left;"
