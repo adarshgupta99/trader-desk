@@ -239,3 +239,23 @@ def test_bank_missing_interest_expended_falls_back_and_says_so():
     facts = parse_facts(BANK_DOC.encode(), date(2026, 6, 30))
     assert facts["revenue"] == pytest.approx(1331103600000)
     assert facts["revenue_concept"] == "Income"
+
+
+# --- quarter_window / previous_quarter_end ---------------------------------
+
+def test_previous_quarter_end_steps_back_one_quarter():
+    from nse_results import previous_quarter_end
+    assert previous_quarter_end(date(2026, 9, 30)) == date(2026, 6, 30)
+    assert previous_quarter_end(date(2026, 6, 30)) == date(2026, 3, 31)
+    assert previous_quarter_end(date(2026, 3, 31)) == date(2025, 12, 31)
+    assert previous_quarter_end(date(2025, 12, 31)) == date(2025, 9, 30)
+
+
+def test_quarter_window_is_oldest_first_and_inclusive():
+    from nse_results import quarter_window
+    window = quarter_window(date(2026, 9, 30), 6)
+    assert window == [
+        date(2025, 6, 30), date(2025, 9, 30), date(2025, 12, 31),
+        date(2026, 3, 31), date(2026, 6, 30), date(2026, 9, 30),
+    ]
+    assert len(window) == 6

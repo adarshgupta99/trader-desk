@@ -11,10 +11,11 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 import streamlit as st
 
+from analytics.sparkline import build_blocks, qoq_pct, tooltip_text
 from events_db import (IST, get_all_expected_moves, get_earnings_estimates,
-                       get_eps_history, get_last_success,
-                       get_live_estimate_preview, get_upcoming_events,
-                       match_eps_row)
+                       get_earnings_history_quarters, get_eps_history,
+                       get_last_success, get_live_estimate_preview,
+                       get_upcoming_events, match_eps_row)
 from theme import TABULAR, palette
 from watchlists import (PRESET_NAMES, WATCHLIST_PRESETS, get_custom_lists,
                         get_list_items)
@@ -110,6 +111,12 @@ def render():
 
     def _fmt_rev_cr(v):
         return f"{v / 1e7:,.2f}" if v is not None else None
+
+    def _fmt_cr0(v):
+        """Rs crore, no decimals - the HISTORY 6Q sparkline's latest-value
+        print, a coarser format than the 2-decimal Est./Actual columns
+        since this one is about shape, not precision."""
+        return f"{v / 1e7:,.0f}" if v is not None else None
 
     def _has_frozen_estimate(symbol, event_date):
         """Whether a frozen T-1 revenue snapshot exists - EPS no longer goes
@@ -224,6 +231,82 @@ def render():
 
         return rev_cell + eps_cell
 
+    def _quarter_label(iso_date):
+        d = datetime.strptime(iso_date, "%Y-%m-%d")
+        return f"QE {d.strftime('%b %Y')}"
+
+    def _history_sparkline_cell(symbol, subtype):
+        """One <td> for the HISTORY 6Q column: two stacked sparkline
+        lines (REV, PAT), 6 unicode blocks oldest-to-newest plus the
+        latest reported value, ~1.6x line spacing via line-height (no
+        blank line). Empty for a non-results board meeting (dividend/
+        other/fundraise) - there is no earnings history to show there.
+
+        Revenue/PAT come straight from get_earnings_history_quarters,
+        which already carries the bank-revenue derivation (InterestEarned
+        - InterestExpended + OtherIncome) the same pipeline uses for the
+        Past earnings tab's actuals - no separate bank handling needed
+        here (13 Oct 2026, Adarsh's direction: reuse it rather than
+        suppress the REV track for banks).
+
+        Scaling, colour and the gap/negative rules all live in
+        analytics.sparkline.build_blocks - this function only turns that
+        into HTML."""
+        if subtype != "results":
+            return "<td style='border:none;'></td>"
+
+        history = get_earnings_history_quarters(symbol)
+        has_any = any(h["revenue_cons"] is not None or h["pat_cons"] is not None
+                      for h in history)
+        if not history or not has_any:
+            return (
+                f"<td style='padding:6px 0;color:{P.T3};font-size:12px;"
+                f"white-space:nowrap;border:none;'>no history</td>"
+            )
+
+        def _line(label, field):
+            window = [(h["quarter_end"], h[field]) for h in history]
+            blocks = build_blocks(window)
+            spans = []
+            for i, b in enumerate(blocks):
+                if b.char is None:
+                    spans.append(
+                        f"<span title='{_quarter_label(b.quarter_end)}: no filing found' "
+                        f"style='color:{P.T3};'> </span>"
+                    )
+                    continue
+                prev_val = blocks[i - 1].value if i > 0 else None
+                qoq = qoq_pct(b.value, prev_val)  # scale-invariant - fine on raw INR
+                color = {"up": P.UP, "down": P.DOWN}.get(b.direction, P.T1)
+                # tooltip_text prints its value argument as-is - must be
+                # crore here (same unit as the latest-value print below),
+                # not the raw INR build_blocks works in internally.
+                title = tooltip_text(_quarter_label(b.quarter_end), b.value / 1e7, qoq)
+                # The negative marker is its own span, not baked into the
+                # block colour - a loss quarter is still coloured by its
+                # OWN QoQ direction (a smaller loss is still "up"), and
+                # the marker exists only to flag "this one went negative",
+                # separately from whether it improved or worsened.
+                neg = f"<span style='color:{P.T3};'>-</span>" if b.is_negative else ""
+                spans.append(
+                    f"{neg}<span title='{title}' style='color:{color};"
+                    f"cursor:help;'>{b.char}</span>"
+                )
+            latest = next((b.value for b in reversed(blocks) if b.value is not None), None)
+            latest_text = _fmt_cr0(latest) if latest is not None else "-"
+            return (
+                f"<span style='color:{P.T3};font-size:10px;letter-spacing:0.03em;'>{label}</span> "
+                f"{''.join(spans)}&nbsp;&nbsp;"
+                f"<span style='color:{P.T1};{TABULAR}'>{latest_text}</span>"
+            )
+
+        rev_line = _line("REV", "revenue_cons")
+        pat_line = _line("PAT", "pat_cons")
+        return (
+            f"<td style='padding:6px 0;font-size:13px;white-space:nowrap;"
+            f"border:none;line-height:1.6;'>{rev_line}<br/>{pat_line}</td>"
+        )
+
     def _agenda_link(symbol, text, event_type):
         slug = "corporate-filings-board-meetings" if event_type == "board_meeting" else "corporate-filings-actions"
         url = f"https://www.nseindia.com/companies-listing/{slug}?symbol={symbol}"
@@ -308,6 +391,7 @@ def render():
             f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;border:none;'>"
             f"{_agenda_link(r.symbol, r.purpose, 'board_meeting')}</td>"
             f"{_estimate_cells(r.symbol, r.event_date)}"
+            f"{_history_sparkline_cell(r.symbol, r.subtype)}"
             f"</tr>"
             for r in type_df.itertuples()
         )
@@ -321,13 +405,19 @@ def render():
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Agenda</th>"
             f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Est. Rev (Rs cr)</th>"
-            f"<th style='padding:4px 0 6px 0;color:{P.T3};font-size:12px;text-align:left;"
+            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;' "
             f"title='Hover a value for its analyst count'>Est. EPS</th>"
+            f"<th style='padding:4px 0 6px 0;color:{P.T3};font-size:12px;text-align:left;"
+            f"text-transform:uppercase;letter-spacing:0.05em;border:none;' "
+            f"title='Last 6 reported quarters, consolidated. Hover a block for its value "
+            f"and QoQ change.'>History 6Q (Rs cr)</th>"
             f"</tr>"
         )
         st.markdown(
-            f"<table style='border-collapse:collapse;border:none;width:100%;margin-top:10px;'>{header}{rows}</table>",
+            f"<div style='overflow-x:auto;'>"
+            f"<table style='border-collapse:collapse;border:none;width:100%;margin-top:10px;'>"
+            f"{header}{rows}</table></div>",
             unsafe_allow_html=True,
         )
         if len(estimates_by_key) or saw_preview:

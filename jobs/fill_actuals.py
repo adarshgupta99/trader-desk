@@ -103,6 +103,17 @@ def call_with_retry(label, fn, *args, **kwargs):
             time.sleep(delay)
         try:
             return fn(*args, **kwargs)
+        except ValueError:
+            # nse_results.parse_facts raises ValueError when the fetched
+            # filing genuinely has no ~3-month context for the target
+            # quarter - a property of that document, not a network blip;
+            # retrying with backoff can't change what's in the file. Found
+            # live 13 Oct 2026 via jobs/refresh_earnings_history.py:
+            # ICICIPRULI (a life insurer) files under a different XBRL
+            # taxonomy variant whose declared contexts span ~356/~362
+            # days - neither is a quarter at all, by that insurer's own
+            # convention, not a parsing bug here.
+            raise
         except Exception as e:
             last_error = e
             if _is_rate_limit(e):

@@ -63,21 +63,26 @@ trader-desk/
 │   ├── fetch_intraday.py        # Daily cron: downloads 15m + daily F&O bars into the store
 │   ├── snapshot_estimates.py    # Daily T-1 snapshot of analyst consensus (earnings_estimates)
 │   ├── fill_actuals.py          # Fills actual EPS/revenue + surprise % once results are out
-│   └── refresh_expected_moves.py # Discovers results filings via the NSE archive, fetches price bars, computes and stores expected-move prints/summaries
+│   ├── refresh_expected_moves.py # Discovers results filings via the NSE archive, fetches price bars, computes and stores expected-move prints/summaries
+│   └── refresh_earnings_history.py # Backfills 6 reported quarters of revenue/PAT per symbol for the Calendar subtab's HISTORY 6Q sparkline
 ├── db/
 │   ├── schema_estimates.sql     # earnings_estimates table + the immutability trigger
-│   └── schema_expected_move.sql # earnings_move_prices/prints/summaries tables + the identity-freeze trigger
+│   ├── schema_expected_move.sql # earnings_move_prices/prints/summaries tables + the identity-freeze trigger
+│   └── schema_earnings_history.sql # earnings_history_quarters table - one row per (symbol, quarter_end), gaps stored not dropped
 ├── docs/
 │   ├── intraday_discovery.txt   # Output of discover_intraday.py — the numbers the correlation feature is sized against
 │   ├── estimates_discovery.txt  # Output of discover_estimates.py, plus the nselib-actuals discovery note
 │   └── expected_move_discovery.txt # NSE archive filing-clustering rules the refresh job's identify_filings() encodes
 ├── data/bars_daily_500d.db  # Committed daily-bars subset (~10MB) so the DEPLOYED app's Correlation tab has data; read-only fallback when no local store exists
-├── nse_results.py       # NSE integrated-filing XBRL -> quarterly actuals (EPS/revenue/PAT); handles YTD-context, bank-taxonomy and standalone-vs-consolidated traps
+├── nse_results.py       # NSE integrated-filing XBRL -> quarterly actuals (EPS/revenue/PAT); handles YTD-context, bank-taxonomy and standalone-vs-consolidated traps; also quarter_window/previous_quarter_end for rolling N-quarter windows
+├── analytics/sparkline.py # Pure scaling/QoQ/colour logic for the HISTORY 6Q column - min-max blocks, gap handling, no HTML
 ├── trading_calendar.py  # NSE trading-day wrapper (is_trading_day, next_trading_day, session_bounds_ist) for the expected-move window logic
 ├── tests/
 │   ├── test_correlation.py      # Acceptance checks A-K for the correlation feature
 │   ├── test_estimates.py        # Acceptance checks A-G for the analyst estimates feature (H is manual)
-│   ├── test_nse_results.py      # 12 fixture tests for nse_results.py: YTD-context trap, bank taxonomy, filing selection
+│   ├── test_nse_results.py      # Fixture tests for nse_results.py: YTD-context trap, bank taxonomy, filing selection, quarter_window
+│   ├── test_sparkline.py        # 16 fixture tests for analytics/sparkline.py: scaling, gaps, QoQ direction, negative values
+│   ├── test_refresh_earnings_history.py # Regression test: a ValueError (deterministic parse failure) must fail fast, not burn the retry schedule
 │   ├── test_expected_move.py    # 26 fixture tests for analytics/expected_move.py's pure calc engine
 │   └── test_refresh_expected_moves.py # Regression tests for 2 real bugs caught during the live backfill (abbreviated month parsing, same-day-sibling vs. genuine revision)
 ├── fno_sectors.json    # 213 F&O stocks with sector labels (hand-supplied, 5 Oct 2026)
@@ -872,6 +877,105 @@ with `n_eps=20, n_rev=30` and asserts both come back distinct and correctly atta
 Verified via `AppTest`: no "Analysts" header anywhere, TCS's Est. Rev cell carries
 `title='30 analysts'`, its Est. EPS cell `title='20 analysts'` - the exact split that
 disproves the old bug. Suite 75/75.
+
+---
+
+### HISTORY 6Q sparkline column (13 Oct 2026, Adarsh's spec)
+
+A new column on the Calendar subtab's results rows only (dividend/other/fundraise board
+meetings get an empty cell - there's no earnings history to show there): two stacked
+unicode-block sparklines, REV above PAT, each the last 6 REPORTED calendar quarters of
+consolidated revenue/PAT plus the latest value in ₹cr. Scope is deliberately narrow - only
+symbols with an upcoming results board meeting get backfilled, the exact set the column can
+ever render for, not the full 213-symbol F&O universe (that was the Expected-move tracker's
+own, different call, for a dedicated ranking subtab with no scheduled-event requirement).
+
+**Three design decisions Adarsh made explicitly, confirmed before building:**
+1. **Storage, not a live fetch per page load.** Each historical quarter is a separate NSE
+   XBRL document (established earlier the same day for the actuals work) - 6 symbols-with-
+   upcoming-events × 6 quarters would be dozens of NSE requests on every Calendar tab visit.
+   Built the same way as every other NSE-sourced feature here: a backing table
+   (`earnings_history_quarters`) plus a backfill job (`jobs/refresh_earnings_history.py`),
+   the UI only ever reads.
+2. **Banks use the already-verified derived revenue, not suppression.** The original spec
+   called for blanking the REV track on banks ("the revenue concept does not map"). Adarsh's
+   direction: reuse `nse_results.parse_facts`'s existing bank derivation
+   (`InterestEarned - InterestExpended + OtherIncome`, paisa-exact against yfinance's
+   reported Total Revenue, built earlier the same day) instead - so no special-casing exists
+   in this column's code at all; `get_quarter_actuals` already returns a usable revenue
+   figure for a bank, full stop.
+3. **The negative-quarter marker is per-quarter, not a single flag before the row.** A small
+   grey "-" renders immediately before the block for the specific quarter that went negative
+   - styled separately from the block's own QoQ-direction colour, since a loss quarter is
+   still coloured by whether it's bigger or smaller than the prior one, not by the fact that
+   it's a loss at all.
+
+**`analytics/sparkline.py`** is the pure logic (no HTML, no Streamlit, no network, fixture-
+tested in isolation): `build_blocks(window)` takes `[(quarter_end, value_or_None), ...]`
+oldest-first and returns one `Block` per quarter with its scaled character, QoQ direction,
+and whether that quarter's own value was negative.
+- **Scaling is plain min-max over whatever values are present.** The spec calls this "signed
+  min-max" for handling negative numbers, but that's just what min-max already does - the
+  most negative value becomes the floor, no separate branch needed. A flat window (every
+  present value equal) maps every block to the middle level rather than arbitrarily full or
+  empty, since there's no real shape to represent.
+- **A gap breaks the QoQ chain.** The quarter immediately after a missing one has no real
+  prior to compare against and renders with direction `"none"` (neutral), rather than
+  silently reaching past the gap to compare against the quarter before it.
+- **Missing values never affect the scale.** min/max are computed only over present values,
+  so two gaps either side of a flat trio still read as flat, not stretched by phantom
+  extremes.
+
+**The job (`jobs/refresh_earnings_history.py`)** computes, per due symbol, the 6-quarter
+window ending the quarter BEFORE the one its upcoming board meeting will report (e.g. a
+13 Oct 2026 meeting reporting Sep-2026 gets a Mar-2025-through-Jun-2026 window), fetches one
+filing index and up to 6 XBRL documents (consolidated only - half the fetch cost of the
+dual-basis actuals job), and **stores a row for every quarter in the window even when NSE
+has no filing for it** - `revenue_cons`/`pat_cons` both `NULL`, a real, logged, expected
+gap, never dropped and never interpolated. `previous_quarter_end`/`quarter_window`, added to
+`nse_results.py` as general quarter-stepping utilities (not job-specific), build the window;
+`quarter_end_for_event_date` stays in `jobs/fill_actuals.py` since it answers a different
+question (which quarter does THIS event report on, not a window ending at a known quarter).
+
+**A real bug found and fixed during the first live backfill, in both NSE-actuals jobs at
+once.** `call_with_retry` retried any non-rate-limit exception blindly, including
+`parse_facts`'s `ValueError` for "this filing has no 3-month context" - a deterministic
+property of the document, not a transient fetch problem, so retrying with backoff could
+never produce a different result. Caught live on **ICICIPRULI**, a life insurer: its XBRL
+files under a different taxonomy variant (`INTEGRATED_FILING_LI_...`) whose declared
+contexts span ~356 and ~362 days - neither is a quarter at all, by that insurer's own filing
+convention. Before the fix this burned the full 4-attempt, ~75-second backoff schedule for
+every insurer quarter checked; after, it fails in under a second and is correctly stored as
+a gap. The identical flaw existed in `jobs/fill_actuals.py` (same `call_with_retry` shape,
+same `nse_results.get_quarter_actuals` call) and was fixed there too, even though it hadn't
+fired yet - it would have, the next time an insurer's own current quarter came due. New
+regression test (`test_refresh_earnings_history.py`) asserts a `ValueError` produces zero
+retry-sleep calls while a generic error still backs off normally.
+
+**A unit bug caught by eye before shipping, not by a test.** The per-block hover tooltip
+initially printed the raw absolute-INR value - `"QE Sep 2025: 19,602,000,000,000 cr"` - while
+the line's own latest-value print correctly showed `19,602` (crore). `build_blocks` and
+`qoq_pct` work in raw INR throughout (percentage change is scale-invariant, so this is
+harmless for the maths), but the UI must divide by `1e7` before handing a value to
+`tooltip_text`, which prints its argument as-is. Fixed in `tabs/events.py`'s `_line()`;
+nothing in `analytics/sparkline.py` needed to change.
+
+**One live data point investigated and found to be real, not a bug.** CANBK's derived
+revenue dropped from ~₹19,602cr to ~₹10,381cr between Sep-2025 and Dec-2025 - a near-halving
+that looked suspicious enough to check before trusting. Verified against the raw XBRL: the
+Dec-2025 context is a clean `2025-10-01`–`2025-12-31` span (a genuine quarter, not a parsing
+error), and the swing traces entirely to `OtherIncome` dropping from ~₹9,918cr to ~₹2,152cr
+quarter over quarter while `InterestEarned`/`InterestExpended` stayed smooth and consistent
+with neighbouring quarters - plausible treasury/trading-gain volatility for a bank, not an
+extraction fault. Left as-is; this is exactly the kind of real shape the sparkline exists to
+surface.
+
+**Also verified:** TATAELXSI and COLPAL are standalone-only filers with **zero** consolidated
+quarters in the window - every slot a gap, rendering "no history" rather than a sparkline of
+nothing. Confirmed via `AppTest`: the HISTORY 6Q header renders, CANBK's corrected tooltip
+reads `19,602 cr`, TATAELXSI's cell reads "no history", no exception. Full backfill run
+across every symbol with an upcoming results board meeting (88 symbols); see the job's log
+for the final per-symbol tally. Suite 95/95.
 
 **Read side.** `events_db.get_earnings_estimates(symbols=None)` reads `earnings_estimates`
 the same way `get_upcoming_events()` reads `events` — `mode=ro`, empty frame if the table

@@ -196,6 +196,46 @@ in the table as a normal row showing "Unavailable", never silently dropped.
   Treat the UI as functionally wired but visually unconfirmed until
   checked by eye.
 
+## Earnings history sparkline (side build, 13 October 2026)
+
+A new column on the Events tab's Calendar subtab, results rows only: **HISTORY 6Q (RS CR)**
+- two stacked unicode-block sparklines (REV, PAT), the last 6 reported calendar quarters of
+NSE-filed consolidated revenue/PAT, plus the latest value. Shape per row only - block
+heights are never comparable across rows or between the REV/PAT tracks.
+
+- Source: NSE integrated-filing XBRL, same pipeline as the Past earnings tab's actuals
+  (`nse_results.py`) - consolidated basis, diluted not relevant here (revenue/PAT have no
+  dilution axis). A bank's revenue is the already-verified derivation
+  (`InterestEarned - InterestExpended + OtherIncome`), reused as-is rather than suppressed.
+- Scaling is min-max over whatever values are present in the 6-quarter window; a missing
+  quarter (`NULL` in storage) renders as a blank space, never interpolated, never affects
+  the scale. Each block is coloured by that quarter's own QoQ direction; the oldest quarter
+  in the window and any quarter right after a gap render neutral (no prior to compare
+  against). A small grey "-" marks a quarter whose own value went negative, separate from
+  its QoQ colour.
+- Storage: one additive table, `earnings_history_quarters` (`db/schema_earnings_history.sql`)
+  - a row per (symbol, quarter_end), gaps stored explicitly rather than just absent rows.
+  Job: `jobs/refresh_earnings_history.py`, scoped only to symbols with an upcoming results
+  board meeting (the exact set the column can ever render for) - run manually or in the
+  same daily cron slot as the estimates/actuals jobs, after them:
+  ```
+  .venv/bin/python -m jobs.refresh_earnings_history
+  .venv/bin/python -m jobs.refresh_earnings_history --symbols TCS,RELIANCE
+  ```
+  Both read-write `events.db`, same as every other events-feature job; the app only reads
+  it (`events_db.get_earnings_history_quarters`), never writes.
+- A real bug fixed the same day, in both this job and `jobs/fill_actuals.py` at once: a
+  deterministic parse failure (a filing with no 3-month context - found live on ICICIPRULI,
+  a life insurer filing under a different XBRL taxonomy whose contexts span ~356/~362 days)
+  was being retried with the full backoff schedule, wasting ~75 seconds per occurrence for
+  something retrying could never fix. Fixed to fail fast on that specific error. See
+  ARCHITECTURE.md for the full investigation.
+- Tests: `tests/test_sparkline.py` (16 fixture cases for the pure scaling/QoQ engine,
+  `analytics/sparkline.py`) and `tests/test_refresh_earnings_history.py` (the retry-fast-fail
+  regression).
+- **Not yet verified:** checked via `AppTest` only, same caveat as the rest of the Events
+  tab - no real-browser check has been done.
+
 ## Starting state (handoff: 3 October 2026)
 
 - Repo: `adarshgupta99/trader-desk`; intended to remain private.

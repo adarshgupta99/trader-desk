@@ -327,3 +327,34 @@ def get_quarter_actuals(symbol, quarter_end, basis=BASIS_CONSOLIDATED, rows=None
         "seq_id": filing.get("seq_Id"),
     })
     return facts
+
+
+#: Calendar quarter ends in reverse chronological order - the sequence a
+#: company reports in regardless of its own fiscal year, since NSE filings
+#: carry their own qe_Date rather than requiring one inferred from a
+#: fiscal calendar.
+_QUARTER_ENDS_DESC = ((12, 31), (9, 30), (6, 30), (3, 31))
+
+
+def previous_quarter_end(quarter_end):
+    """The calendar quarter immediately before `quarter_end`. Walks the
+    fixed Mar/Jun/Sep/Dec sequence - used to build a rolling N-quarter
+    window backward from a known quarter end, not to infer one from an
+    arbitrary date (see jobs/fill_actuals.quarter_end_for_event_date for
+    that, a different and non-reusable job)."""
+    for month, day in _QUARTER_ENDS_DESC:
+        candidate = date(quarter_end.year, month, day)
+        if candidate < quarter_end:
+            return candidate
+    return date(quarter_end.year - 1, 12, 31)
+
+
+def quarter_window(end_quarter, count):
+    """`count` calendar quarter ends, oldest first, ending at and
+    including `end_quarter`."""
+    out = [end_quarter]
+    for _ in range(count - 1):
+        out.append(previous_quarter_end(out[-1]))
+    return list(reversed(out))
+
+

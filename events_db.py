@@ -321,6 +321,34 @@ def get_all_expected_moves():
 
 
 @st.cache_data(ttl=3600)
+def get_earnings_history_quarters(symbol):
+    """The last 6 reported quarters stored for `symbol` (one row per
+    quarter_end, oldest first) for the Calendar subtab's HISTORY 6Q
+    sparkline - see jobs/refresh_earnings_history.py and
+    db/schema_earnings_history.sql.
+
+    A row with revenue_cons/pat_cons both None is a real, stored gap (NSE
+    has no filing for that quarter) - kept, not filtered out, so the
+    sparkline can render a blank space at the right position rather than
+    silently compressing the window. Returns an empty list if the table
+    doesn't exist yet or the symbol has never been refreshed - never
+    raises; the caller treats that as "no history" the same way."""
+    if not os.path.exists(DB_PATH):
+        return []
+    columns = ["quarter_end", "revenue_cons", "pat_cons"]
+    try:
+        with _read_connection() as conn:
+            rows = conn.execute(
+                f"SELECT {', '.join(columns)} FROM earnings_history_quarters "
+                "WHERE symbol = ? ORDER BY quarter_end ASC",
+                (symbol,),
+            ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    return [dict(zip(columns, r)) for r in rows]
+
+
+@st.cache_data(ttl=3600)
 def get_expected_move_history(symbol):
     """Every stored print for a symbol, newest filing first - the
     expandable history behind the Calendar row's summary. Returns an
