@@ -510,15 +510,24 @@ def render():
             f"</tr>"
             for r in type_df.itertuples()
         )
-        # table-layout:fixed (set on the <table> below) reads column widths
-        # from THIS row - the five widths below are what actually makes
-        # Board meeting/Symbol/Agenda/Est. Rev/Est. EPS narrower. Padding
-        # alone (tried first, 13 Oct 2026) did nothing visible: with
-        # table-layout's default (auto) and the table at width:100%, the
-        # browser redistributes saved padding space across every column
-        # regardless, since there's no per-column width to hold it to.
-        # History 6Q is left with no explicit width so it absorbs
-        # whatever's left - it needs the most room (7 bars x 2 tracks).
+        # table-layout:fixed (set on the <table> below, which is NOT
+        # width:100% - two bugs, found and fixed one after the other on
+        # 13 Oct 2026) reads column widths from THIS row.
+        #   1. Padding alone did nothing visible: with table-layout's
+        #      default (auto) and the table at width:100%, the browser
+        #      redistributes saved padding space across every column
+        #      regardless, since nothing holds a column to a given width.
+        #   2. table-layout:fixed + explicit widths on 5 of 6 columns,
+        #      with History 6Q left unconstrained and the table still at
+        #      width:100%, visibly fixed the first five - but dumped
+        #      ALL the leftover space from forcing the table to 100% into
+        #      the one column with no explicit width, which on a wide
+        #      screen is far more than 7 bars need. Every column now has
+        #      an explicit width (History 6Q: 230px, enough for 7 bars
+        #      across two tracks plus the value text) and the table is
+        #      sized to the sum of them, not stretched to fill the page -
+        #      a narrow table with page margin beside it, not a wide one
+        #      with dead space inside its own last column.
         header = (
             f"<tr style='border-bottom:1px solid {P.BORDER};'>"
             f"<th style='padding:4px 8px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
@@ -535,14 +544,14 @@ def render():
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;width:80px;' "
             f"data-tip='Hover a value for its analyst count'>Est. EPS</th>"
             f"<th style='padding:4px 0 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;' "
+            f"text-transform:uppercase;letter-spacing:0.05em;border:none;width:230px;' "
             f"data-tip='Last 6 reported quarters, consolidated. Hover a block for its value "
             f"and QoQ change.'>History 6Q (Rs cr)</th>"
             f"</tr>"
         )
         st.markdown(
             f"<div style='overflow-x:auto;'>"
-            f"<table style='border-collapse:collapse;border:none;width:100%;"
+            f"<table style='border-collapse:collapse;border:none;"
             f"table-layout:fixed;margin-top:10px;'>"
             f"{header}{rows}</table></div>",
             unsafe_allow_html=True,
