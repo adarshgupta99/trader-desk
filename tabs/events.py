@@ -111,15 +111,6 @@ def render():
     def _fmt_rev_cr(v):
         return f"{v / 1e7:,.2f}" if v is not None else None
 
-    def _surprise_text_color(pct):
-        """(text, color) for a surprise % value - shared by the EPS surprise
-        in the Calendar table and both surprises on the Past earnings tab."""
-        if pct is None:
-            return "-", P.T2
-        sign = "+" if pct > 0 else ("" if pct < 0 else "+")
-        color = P.UP if pct > 0 else (P.DOWN if pct < 0 else P.T1)
-        return f"{sign}{pct:.2f}%", color
-
     def _has_frozen_estimate(symbol, event_date):
         """Whether a frozen T-1 revenue snapshot exists - EPS no longer goes
         through this table, so only revenue_estimate matters here now."""
@@ -127,24 +118,29 @@ def render():
         return est is not None and est.revenue_estimate is not None
 
     def _estimate_cells(symbol, event_date):
-        """Returns the 5 <td> cells for Est. Rev / Est. EPS / Analysts /
-        Actual EPS / Surprise %, for one Calendar row. None values from a
-        missing snapshot or a NULL estimate both render as "no estimate" -
-        the row itself is never dropped either way.
+        """Returns the 3 <td> cells for Est. Rev / Est. EPS / Analysts, for
+        one Calendar row. None values from a missing snapshot or a NULL
+        estimate both render as "no estimate" - the row itself is never
+        dropped either way.
 
         Revenue still goes through the frozen T-1 snapshot (estimates_by_key,
         from earnings_estimates): if there's no frozen row yet and the event
         hasn't passed, falls back to a live, unfrozen consensus preview
         (secondary colour, "~" prefix) from preview_map - replaced by the
-        real frozen row once the T-1 job runs, never stored, never used for
-        surprise %. Includes event_date == today: the T-1 job should have
-        frozen that row yesterday, but if it hasn't run yet there's no
-        reason to show nothing when a live number is available.
+        real frozen row once the T-1 job runs, never stored. Includes
+        event_date == today: the T-1 job should have frozen that row
+        yesterday, but if it hasn't run yet there's no reason to show
+        nothing when a live number is available.
 
-        EPS (estimate, actual, surprise) comes from get_eps_history() /
-        eps_map instead - Yahoo's own per-quarter table, live, no freezing
-        needed on our side (see events_db.get_eps_history). Not yet reported
-        renders the same "~" preview styling as an unfrozen revenue number.
+        EPS estimate comes from get_eps_history()/eps_map instead - Yahoo's
+        own per-quarter table, live, no freezing needed on our side (see
+        events_db.get_eps_history). Not yet reported renders the same "~"
+        preview styling as an unfrozen revenue number - eps_is_preview below
+        is still computed from whether Yahoo has an actual for the quarter
+        yet, even though the actual itself is no longer shown here (see
+        the Past earnings tab for NSE's own actuals, both bases, no
+        comparison to the estimate - 13 Oct 2026, Adarsh's direction, which
+        this Calendar column dropped for consistency).
 
         preview_map and eps_map are prefetched concurrently for every symbol
         that needs them before any row is built - see render()."""
@@ -166,9 +162,11 @@ def render():
 
         eps_row = match_eps_row(eps_map.get(symbol), event_date)
         eps_est_val = eps_row["eps_estimate"] if eps_row is not None else None
-        eps_actual_val = eps_row["eps_actual"] if eps_row is not None else None
-        eps_surprise_val = eps_row["eps_surprise_pct"] if eps_row is not None else None
-        eps_is_preview = eps_row is not None and eps_actual_val is None
+        # Not rendered any more (Actual EPS/Surprise % dropped from Calendar),
+        # but still needed to tell "Yahoo has an estimate, quarter hasn't
+        # reported yet" apart from "Yahoo has a real reported quarter" for
+        # the Est. EPS cell's own preview styling below.
+        eps_is_preview = eps_row is not None and eps_row["eps_actual"] is None
 
         if rev_val is None:
             no_est_td = (
@@ -198,21 +196,11 @@ def render():
             )
 
         analysts_cell = (
-            f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;"
+            f"<td style='padding:6px 0;color:{P.T2};font-size:13px;"
             f"white-space:nowrap;border:none;{TABULAR}'>"
             f"{int(n_val) if n_val is not None else 'no estimate'}</td>"
         )
-        actual_text = _fmt_eps(eps_actual_val) or "-"
-        actual_cell = (
-            f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;"
-            f"white-space:nowrap;border:none;{TABULAR}'>{actual_text}</td>"
-        )
-        surprise_text, surprise_color = _surprise_text_color(eps_surprise_val)
-        surprise_cell = (
-            f"<td style='padding:6px 0;color:{surprise_color};font-size:13px;"
-            f"white-space:nowrap;border:none;{TABULAR}'>{surprise_text}</td>"
-        )
-        return rev_cell + eps_cell + analysts_cell + actual_cell + surprise_cell
+        return rev_cell + eps_cell + analysts_cell
 
     def _agenda_link(symbol, text, event_type):
         slug = "corporate-filings-board-meetings" if event_type == "board_meeting" else "corporate-filings-actions"
@@ -313,12 +301,8 @@ def render():
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Est. Rev (Rs cr)</th>"
             f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Est. EPS</th>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Analysts</th>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Actual EPS</th>"
             f"<th style='padding:4px 0 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Surprise %</th>"
+            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Analysts</th>"
             f"</tr>"
         )
         st.markdown(
@@ -327,10 +311,11 @@ def render():
         )
         if len(estimates_by_key) or saw_preview:
             note = (
-                "Revenue estimates are frozen the day before each result and "
-                "never revised. EPS estimate/actual come live from Yahoo's own "
-                "per-quarter history, which it keeps unrevised once a result "
-                "is out."
+                "Revenue estimate is frozen the day before each result and "
+                "never revised. EPS estimate comes live from Yahoo's own "
+                "per-quarter history, which CAN revise after a result is out "
+                "- see the Past earnings tab for NSE's own reported numbers, "
+                "which never revise once filed."
             )
             if saw_preview:
                 note += (

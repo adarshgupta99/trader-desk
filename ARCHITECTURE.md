@@ -803,6 +803,31 @@ Verified via `AppTest`: Calendar subtab renders with no exception, no "Expected 
 Expected moves subtab separately confirmed unaffected - all four of its own columns still
 render. Suite 74/74 (no tests touched this UI path).
 
+**Actual EPS / Surprise % also removed from the Calendar subtab (13 Oct 2026, same
+session).** Calendar is now Est. Rev / Est. EPS / Analysts only - three columns, not five.
+NSE's own actuals, both bases, live on the Past earnings tab; this was the last place in
+the app still doing a cross-source comparison (Yahoo-estimate vs Yahoo-actual, both from
+`get_eps_history`), so dropping it finishes the "no comparisons" direction from earlier in
+the day rather than leaving one inconsistent exception.
+
+`_estimate_cells()` still computes `eps_is_preview` from whether Yahoo has an actual for
+the quarter yet - that's retained because it drives the Est. EPS cell's own "~" preview
+styling (a result that hasn't reported should still look provisional), even though the
+actual value itself is no longer rendered. `_surprise_text_color()` is deleted outright:
+with both its callers gone (Calendar's EPS surprise, Past earnings' old revenue/EPS
+surprise), it was dead code, not a kept utility.
+
+**A footnote bug fixed in passing.** The Calendar table's note claimed "Yahoo... keeps
+\[the EPS estimate\] unrevised once a result is out" - the exact claim already disproved
+the same day while fixing the Past earnings tab (DMART's Yahoo-sourced estimate read 13.93
+at T-1 and 13.42 after the print). This Calendar footnote had been asserting the same
+false thing independently; corrected to say Yahoo's figure *can* revise, and points to
+Past earnings for NSE's filed numbers, which can't.
+
+Verified via `AppTest`: no "Actual EPS" or "Surprise %" text anywhere on Calendar, "Est.
+EPS" and "Analysts" still present, corrected footnote text renders. Suite 74/74 (no tests
+touched this UI path).
+
 **Read side.** `events_db.get_earnings_estimates(symbols=None)` reads `earnings_estimates`
 the same way `get_upcoming_events()` reads `events` — `mode=ro`, empty frame if the table
 or file doesn't exist. One wrinkle: `pandas.read_sql_query` turns a SQL `NULL` numeric
