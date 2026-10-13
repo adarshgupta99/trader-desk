@@ -194,12 +194,17 @@ def render():
             n_eps_val = None
 
         def _analysts_title(n):
+            # data-tip, not title= - a plain title attribute on this
+            # unsafe_allow_html markup was confirmed not to show anything
+            # on hover in a real browser (13 Oct 2026); the CSS-only
+            # [data-tip]:hover tooltip in theme.py's _MAIN_CSS renders it
+            # instead.
             n = _num(n)
             if n is None:
                 return ""
             n = int(n)
             plural = "s" if n != 1 else ""
-            return f" title='{n} analyst{plural}'"
+            return f" data-tip='{n} analyst{plural}'"
 
         if rev_val is None:
             rev_cell = (
@@ -306,7 +311,7 @@ def render():
                 # still "up").
                 neg = f"<span style='color:{P.T3};'>-</span>" if b.is_negative else ""
                 bars.append(
-                    f"{neg}<span title='{title}' style='display:inline-flex;"
+                    f"{neg}<span data-tip='{title}' style='display:inline-flex;"
                     f"flex-direction:column;justify-content:flex-end;"
                     f"width:{BAR_W}px;height:{TRACK_H}px;"
                     f"margin-right:{BAR_GAP}px;cursor:help;'>{inner}</span>"
@@ -430,10 +435,10 @@ def render():
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Est. Rev (Rs cr)</th>"
             f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;' "
-            f"title='Hover a value for its analyst count'>Est. EPS</th>"
+            f"data-tip='Hover a value for its analyst count'>Est. EPS</th>"
             f"<th style='padding:4px 0 6px 0;color:{P.T3};font-size:12px;text-align:left;"
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;' "
-            f"title='Last 6 reported quarters, consolidated. Hover a block for its value "
+            f"data-tip='Last 6 reported quarters, consolidated. Hover a block for its value "
             f"and QoQ change.'>History 6Q (Rs cr)</th>"
             f"</tr>"
         )

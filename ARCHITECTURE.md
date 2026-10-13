@@ -1028,6 +1028,35 @@ flex-direction:column; justify-content:flex-end`), with the coloured bar as a sh
 visible sliver. Verified via `AppTest`: BHEL's Mar-2025 bar's title span now reports
 `height:30px` with the 15.3px coloured bar nested inside it. Suite 99/99.
 
+**Still didn't work - because native `title=` tooltips never fired at all, on anything, in
+this app's rendering environment.** Adarsh reported hovering a bar still showed nothing after
+the hit-target fix; asked whether the pre-existing `title=` tooltip on Est. Rev/Est. EPS's
+"N analysts" (built the same day, before the sparkline work) also failed, and it did - a
+systemic failure, not a bars-specific one. The hit-target fix above was a real bug and stays
+fixed, but it was never the actual blocker Adarsh was hitting.
+
+No browser access here to root-cause exactly why the native attribute wasn't rendering a
+popup (sanitization, a CSS override, or something else in Streamlit's `unsafe_allow_html`
+pipeline) - theme.py's own global CSS injection via the identical mechanism (`st.markdown(
+_MAIN_CSS, unsafe_allow_html=True)`) demonstrably works for everything else in this app, so
+raw HTML/CSS isn't being stripped wholesale; something specific to the browser's native
+`title` popup specifically isn't showing.
+
+Fixed by not depending on the browser's native tooltip at all: a CSS-only hover tooltip added
+to `theme.py`'s `_MAIN_CSS` (injected once per run via the existing `inject_css()`, so it
+applies globally, not per-feature) - `[data-tip]:hover::after { content: attr(data-tip); ...
+}`, positioned via `position:relative`/`absolute`, styled from the existing `--card-bg`/
+`--primary-text`/`--card-border` custom properties so it matches the app's theme rather than
+introducing new colours. Every spot that used `title=` now uses `data-tip=` instead: the
+sparkline bars, the Est. Rev/Est. EPS analyst-count cells, and the two column-header hints.
+Nothing about WHAT is shown changed, only HOW it's rendered - fully CSS, no JS, no dependency
+on browser-specific native-tooltip behaviour.
+
+Verified via `AppTest` that the CSS rule is present in the injected stylesheet and every
+former `title=` site now carries `data-tip=` with identical text. Suite 99/99 (no test
+exercises actual hover rendering - that still needs Adarsh's eyes in a real browser, same gap
+as the rest of this UI).
+
 **Read side.** `events_db.get_earnings_estimates(symbols=None)` reads `earnings_estimates`
 the same way `get_upcoming_events()` reads `events` — `mode=ro`, empty frame if the table
 or file doesn't exist. One wrinkle: `pandas.read_sql_query` turns a SQL `NULL` numeric

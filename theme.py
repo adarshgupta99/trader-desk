@@ -372,6 +372,36 @@ _MAIN_CSS = """
     .st-key-theme_sync { position: absolute; width: 0; height: 0; overflow: hidden;
                          opacity: 0; pointer-events: none; }
 
+    /* CSS-only hover tooltip, independent of the browser's native title=
+       popup (13 Oct 2026: confirmed in a real browser that a plain
+       title= attribute on injected unsafe_allow_html markup - both the
+       HISTORY 6Q bars and the Analysts tooltip on Est. Rev/Est. EPS -
+       never showed anything on hover. Root cause not pinned down from
+       here with no browser access; this renders the tooltip ourselves
+       via CSS rather than depending on whatever native title= needs).
+       Usage: data-tip="text to show" plus position:relative on the same
+       element (or a wrapper) - no JS needed. */
+    [data-tip] { position: relative; }
+    [data-tip]:hover::after {
+        content: attr(data-tip);
+        position: absolute;
+        left: 50%;
+        bottom: 100%;
+        transform: translateX(-50%);
+        margin-bottom: 6px;
+        background: var(--card-bg);
+        color: var(--primary-text);
+        border: 1px solid var(--card-border);
+        padding: 4px 8px;
+        font-size: 12px;
+        line-height: 1.4;
+        white-space: nowrap;
+        border-radius: 2px;
+        z-index: 1000;
+        pointer-events: none;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+
 </style>
 """
 
