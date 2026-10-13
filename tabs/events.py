@@ -264,39 +264,53 @@ def render():
                 f"white-space:nowrap;border:none;'>no history</td>"
             )
 
+        # Bar geometry (13 Oct 2026 visual pass - rendering only, same
+        # min-max scaling as before via Block.height_px, see
+        # analytics/sparkline.py). Oldest bar gets the neutral/tertiary
+        # colour (no prior quarter to compare against), same as a bar
+        # right after a gap.
+        BAR_W, BAR_GAP, TRACK_H = 7, 2, 30
+
         def _line(label, field):
             window = [(h["quarter_end"], h[field]) for h in history]
             blocks = build_blocks(window)
-            spans = []
+            bars = []
             for i, b in enumerate(blocks):
-                if b.char is None:
-                    spans.append(
+                if b.height_px is None:
+                    bars.append(
                         f"<span title='{_quarter_label(b.quarter_end)}: no filing found' "
-                        f"style='color:{P.T3};'> </span>"
+                        f"style='display:inline-block;width:{BAR_W}px;"
+                        f"margin-right:{BAR_GAP}px;height:0;'></span>"
                     )
                     continue
                 prev_val = blocks[i - 1].value if i > 0 else None
                 qoq = qoq_pct(b.value, prev_val)  # scale-invariant - fine on raw INR
-                color = {"up": P.UP, "down": P.DOWN}.get(b.direction, P.T1)
+                color = {"up": P.UP, "down": P.DOWN}.get(b.direction, P.T3)
                 # tooltip_text prints its value argument as-is - must be
                 # crore here (same unit as the latest-value print below),
                 # not the raw INR build_blocks works in internally.
                 title = tooltip_text(_quarter_label(b.quarter_end), b.value / 1e7, qoq)
-                # The negative marker is its own span, not baked into the
-                # block colour - a loss quarter is still coloured by its
-                # OWN QoQ direction (a smaller loss is still "up"), and
-                # the marker exists only to flag "this one went negative",
-                # separately from whether it improved or worsened.
+                # The negative marker sits immediately before THIS bar,
+                # not the row - it flags that specific quarter's own value
+                # went negative. Still not baked into the bar's own
+                # colour: a loss quarter is coloured by its QoQ direction
+                # same as any other (a smaller loss is still "up").
                 neg = f"<span style='color:{P.T3};'>-</span>" if b.is_negative else ""
-                spans.append(
-                    f"{neg}<span title='{title}' style='color:{color};"
-                    f"cursor:help;'>{b.char}</span>"
+                bars.append(
+                    f"{neg}<span title='{title}' style='display:inline-block;"
+                    f"width:{BAR_W}px;margin-right:{BAR_GAP}px;"
+                    f"height:{b.height_px:.1f}px;background:{color};"
+                    f"cursor:help;'></span>"
                 )
+            bars_html = (
+                f"<span style='display:inline-flex;align-items:flex-end;"
+                f"height:{TRACK_H}px;vertical-align:middle;'>{''.join(bars)}</span>"
+            )
             latest = next((b.value for b in reversed(blocks) if b.value is not None), None)
             latest_text = _fmt_cr0(latest) if latest is not None else "-"
             return (
-                f"<span style='color:{P.T3};font-size:10px;letter-spacing:0.03em;'>{label}</span> "
-                f"{''.join(spans)}&nbsp;&nbsp;"
+                f"<span style='color:{P.T3};font-variant:small-caps;'>{label}</span> "
+                f"{bars_html}&nbsp;&nbsp;"
                 f"<span style='color:{P.T1};{TABULAR}'>{latest_text}</span>"
             )
 

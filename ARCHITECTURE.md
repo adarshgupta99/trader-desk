@@ -977,6 +977,46 @@ reads `19,602 cr`, TATAELXSI's cell reads "no history", no exception. Full backf
 across every symbol with an upcoming results board meeting (88 symbols); see the job's log
 for the final per-symbol tally. Suite 95/95.
 
+**Visual-only rendering pass (13 Oct 2026, same day): unicode block characters replaced with
+HTML bar spans.** No data, scaling, or logic change - `analytics.sparkline.Block` gained a
+`height_px` field (continuous 4-26px, same lo/hi scale as the existing 8-level `char` field,
+just not quantized) alongside `char`, which stays exactly as it was for the 20 existing
+fixture tests. Each quarter is now `display:inline-block; width:7px; margin-right:2px;
+height:{height_px}px; background:{colour}`, six of them wrapped in `display:inline-flex;
+align-items:flex-end; height:30px` so every bar shares one baseline regardless of height.
+REV/PAT labels dropped their 10px override (inherits the cell's 13px, matching Est. Rev) and
+gained `font-variant:small-caps`. A missing quarter is a zero-height, invisible span with
+the same width/margin, not a space character - keeps its slot for alignment inside the flex
+row rather than relying on a literal space glyph.
+
+**Colour source resolved before touching anything, not guessed.** The brief's three hex
+values (`#A6D3A0`/`#D6946E`/`#989080`) were close to but not identical to the existing dark-
+theme tokens (`P.UP` #9AC69C, `P.DOWN` #E8A078, `P.T3` #AAA197) - introducing new one-off
+hex values here would have broken the design language's "define the palette once, nothing
+outside it" rule. Adarsh's call: reuse the existing tokens. They already resolve correctly
+per-theme via `palette()`, so the bars match light and dark automatically with no new colour
+definitions anywhere.
+
+**The negative-quarter marker's placement was corrected mid-edit, not left as drifted.** A
+first draft accidentally moved the "-" marker from "immediately before the specific negative
+bar" (Adarsh's explicit 13 Oct direction, confirmed earlier the same day) to "once before the
+latest value, flagging that the window contains a loss somewhere" - a real behaviour change
+this pass was never supposed to make ("rendering only, no logic changes"). Caught before
+shipping and reverted to the original per-quarter placement, just reskinned for a bar instead
+of a text character. Also corrected a stale assumption in the brief itself: "bank REV
+suppression" doesn't exist to preserve - Adarsh's 13 Oct direction was the opposite (reuse
+the derived bank revenue), so "keep it exactly as it is" was read as keeping that, not
+reintroducing suppression.
+
+Verified via `AppTest` against BHEL's real negative PAT quarter (Jun-2025, -456cr): the "-"
+sits immediately before that one bar, the bar is still coloured by its own QoQ direction
+(terracotta, a down move), the oldest bar (Mar-2025) renders in the neutral token, heights
+span the full 4.0-26.0px range, and gap bars render as `height:0` with a "no filing found"
+title. Suite 99/99 (4 new fixture tests for `height_px`: extremes, flat-window midpoint, gap
+returns `None`, and height/char never disagree on direction - quantization can tie two
+different heights at the same character level, so exact rank equality isn't the right
+assertion there).
+
 **Read side.** `events_db.get_earnings_estimates(symbols=None)` reads `earnings_estimates`
 the same way `get_upcoming_events()` reads `events` — `mode=ro`, empty frame if the table
 or file doesn't exist. One wrinkle: `pandas.read_sql_query` turns a SQL `NULL` numeric

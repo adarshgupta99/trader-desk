@@ -19,9 +19,18 @@ the min/max - a gap is absent from the window's story, not a zero in it.
 from dataclasses import dataclass
 
 #: Oldest (level 1) to newest/tallest (level 8). Index 0 unused - levels
-#: are 1-indexed to read naturally against "8 levels" in the spec.
+#: are 1-indexed to read naturally against "8 levels" in the spec. Kept
+#: alongside height_px (added 13 Oct 2026 for the HTML-bar rendering pass)
+#: rather than replaced - both are derived from the identical lo/hi scale,
+#: so nothing here changes by adding a second representation of the same
+#: number.
 BLOCKS = (None, "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█")
 MID_LEVEL = 4  # used for every block when the window has no variation at all
+
+#: Pixel height range for the HTML-bar rendering (13 Oct 2026 visual pass).
+#: Same lo/hi scale as the block-level mapping above, continuous instead
+#: of quantized to 8 steps - the same formula shape, different resolution.
+MIN_PX, MAX_PX = 4, 26
 
 
 @dataclass
@@ -29,6 +38,7 @@ class Block:
     quarter_end: str      # ISO date
     value: float | None   # None = gap, render blank
     char: str | None      # one of BLOCKS, or None for a gap
+    height_px: float | None  # continuous 4-26, same scale as char; None for a gap
     direction: str        # "up" | "down" | "flat" | "none" (none = no prior to compare, or a gap on either side)
     is_negative: bool     # this quarter's own value is < 0
 
@@ -43,6 +53,16 @@ def _level_for(value, lo, hi):
     return 1 + round(frac * 7)  # 1..8
 
 
+def _height_for(value, lo, hi):
+    """value -> pixel height (MIN_PX-MAX_PX). Identical scale to
+    _level_for (same lo/hi, same flat-window rule), just not quantized
+    into 8 discrete steps."""
+    if lo == hi:
+        return (MIN_PX + MAX_PX) / 2
+    frac = (value - lo) / (hi - lo)
+    return MIN_PX + frac * (MAX_PX - MIN_PX)
+
+
 def build_blocks(window):
     """window: list of (quarter_end_iso, value_or_None), oldest first.
     Returns a list[Block], same order and length."""
@@ -53,11 +73,12 @@ def build_blocks(window):
     prev_value = None
     for qe, value in window:
         if value is None:
-            blocks.append(Block(qe, None, None, "none", False))
+            blocks.append(Block(qe, None, None, None, "none", False))
             prev_value = None  # a gap breaks the QoQ chain, doesn't fake-carry
             continue
         level = _level_for(value, lo, hi)
         char = BLOCKS[level]
+        height = _height_for(value, lo, hi)
         if prev_value is None:
             direction = "none"
         elif value > prev_value:
@@ -66,7 +87,7 @@ def build_blocks(window):
             direction = "down"
         else:
             direction = "flat"
-        blocks.append(Block(qe, value, char, direction, value < 0))
+        blocks.append(Block(qe, value, char, height, direction, value < 0))
         prev_value = value
     return blocks
 

@@ -97,3 +97,36 @@ def test_tooltip_omits_qoq_clause_when_none():
     text = tooltip_text("QE Mar 2025", 50000, None)
     assert text == "QE Mar 2025: 50,000 cr"
     assert "QoQ" not in text
+
+
+# --- height_px: the continuous bar-height rendering pass (13 Oct 2026) ----
+
+def test_height_px_uses_the_full_range_at_the_extremes():
+    from analytics.sparkline import MAX_PX, MIN_PX
+    blocks = build_blocks(_w(10, 20, 30, 40, 50, 60))
+    assert blocks[0].height_px == pytest.approx(MIN_PX)
+    assert blocks[-1].height_px == pytest.approx(MAX_PX)
+
+
+def test_height_px_is_the_midpoint_on_a_flat_window():
+    from analytics.sparkline import MAX_PX, MIN_PX
+    blocks = build_blocks(_w(50, 50, 50, 50, 50, 50))
+    mid = (MIN_PX + MAX_PX) / 2
+    assert all(b.height_px == pytest.approx(mid) for b in blocks)
+
+
+def test_height_px_is_none_for_a_gap():
+    blocks = build_blocks(_w(10, None, 30))
+    assert blocks[1].height_px is None
+
+
+def test_height_px_and_char_never_disagree_on_direction():
+    # Both are derived from the identical lo/hi scale, so a STRICTLY
+    # taller bar can never map to a LOWER block level - they may tie at
+    # the same level (char quantizes to 8 steps, height_px doesn't), but
+    # never invert.
+    blocks = build_blocks(_w(5, 40, 15, 60, 25, 10))
+    for a in blocks:
+        for b in blocks:
+            if a.height_px < b.height_px:
+                assert BLOCKS.index(a.char) <= BLOCKS.index(b.char)
