@@ -114,10 +114,26 @@ def _is_rate_limit(exc):
     return "429" in text or "too many requests" in text or "rate limit" in text
 
 
+#: Must match tabs/events.py's `get_upcoming_events(..., lookback_days=14)`
+#: call for the Calendar subtab - that's what keeps a just-reported
+#: result's row (and its HISTORY 6Q cell) visible for a while instead of
+#: vanishing the moment event_date passes. Missed this the first time
+#: (13 Oct 2026): due_symbols only looked forward, so TCS/DMART/HCLTECH/
+#: etc - all reported in the last few days, still shown in Calendar -
+#: were never backfilled and showed "no history" despite being exactly
+#: the rows a reader would most want it for. No shared constant between
+#: this job and the UI module on purpose (the job intentionally has no
+#: Streamlit/events_db dependency) - keep these two literals in sync by
+#: hand if the Calendar's window ever changes.
+CALENDAR_LOOKBACK_DAYS = 14
+
+
 def due_symbols(conn):
-    """Symbols with an upcoming results board meeting - the exact set the
-    Calendar table can show a HISTORY 6Q cell for."""
-    today_str = date.today().isoformat()
+    """Symbols with a results board meeting in the window the Calendar
+    table actually shows - upcoming, plus the last CALENDAR_LOOKBACK_DAYS
+    days so a just-reported quarter still gets its HISTORY 6Q filled in."""
+    today = date.today()
+    from_date = (today - timedelta(days=CALENDAR_LOOKBACK_DAYS)).isoformat()
     rows = conn.execute(
         """
         SELECT DISTINCT symbol, event_date FROM events
@@ -126,7 +142,7 @@ def due_symbols(conn):
           AND event_date >= ?
         ORDER BY symbol
         """,
-        (today_str,),
+        (from_date,),
     ).fetchall()
     return rows
 

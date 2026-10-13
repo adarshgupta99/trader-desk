@@ -1082,6 +1082,24 @@ DABUR, GODREJCP - all classified `dividend` or `fundraise` despite their purpose
 containing "Results." All fixed by the one change, verified via `AppTest`: Asian Paints now
 renders real bars (`QE Mar 2025: 8,359 cr` as its oldest quarter). Suite 99/99.
 
+**Second real bug, same column, found minutes later: the backfill job's own scope window
+didn't match the Calendar table's.** TCS, DMART, HCLTECH, RBLBANK and others - all reported
+8-12 Oct 2026, still showing in Calendar because `get_upcoming_events(..., lookback_days=14)`
+deliberately keeps a just-reported row visible for a while - all showed "no history" despite
+being exactly the rows a reader most wants it for. `due_symbols()` only selected
+`event_date >= today`, a forward-only window that never matched the UI's own backward-looking
+one; nothing had ever fetched these symbols' history at all.
+
+Fixed by adding `CALENDAR_LOOKBACK_DAYS = 14` to `jobs/refresh_earnings_history.py` and
+widening `due_symbols()`'s query to `event_date >= today - 14 days`, matching
+`tabs/events.py`'s literal exactly. No shared constant between the two modules on purpose -
+the job intentionally carries no Streamlit/`events_db` dependency - so a comment in each file
+points at the other, the same "keep two literals in sync by hand, flag it loudly" pattern
+already used for the daily-jobs cron schedule. New regression test
+(`test_due_symbols_includes_a_recently_reported_event`) plants a 5-days-ago event, a
+20-days-ago one, and an upcoming one, and asserts only the stale one is excluded. Full
+backfill rerun to pick up every symbol newly in scope. Suite 100/100.
+
 **Read side.** `events_db.get_earnings_estimates(symbols=None)` reads `earnings_estimates`
 the same way `get_upcoming_events()` reads `events` — `mode=ro`, empty frame if the table
 or file doesn't exist. One wrinkle: `pandas.read_sql_query` turns a SQL `NULL` numeric

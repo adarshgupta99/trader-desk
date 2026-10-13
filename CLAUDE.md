@@ -215,9 +215,10 @@ heights are never comparable across rows or between the REV/PAT tracks.
   its QoQ colour.
 - Storage: one additive table, `earnings_history_quarters` (`db/schema_earnings_history.sql`)
   - a row per (symbol, quarter_end), gaps stored explicitly rather than just absent rows.
-  Job: `jobs/refresh_earnings_history.py`, scoped only to symbols with an upcoming results
-  board meeting (the exact set the column can ever render for) - run manually or in the
-  same daily cron slot as the estimates/actuals jobs, after them:
+  Job: `jobs/refresh_earnings_history.py`, scoped to symbols with a results board meeting
+  either upcoming or within the last 14 days (`CALENDAR_LOOKBACK_DAYS`, must match
+  `tabs/events.py`'s own `lookback_days=14` - the exact window Calendar actually shows) -
+  run manually or in the same daily cron slot as the estimates/actuals jobs, after them:
   ```
   .venv/bin/python -m jobs.refresh_earnings_history
   .venv/bin/python -m jobs.refresh_earnings_history --symbols TCS,RELIANCE

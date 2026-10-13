@@ -381,6 +381,11 @@ def render():
         # Widen the window backward so a result's actual/surprise stays
         # visible for a while after event_date passes, instead of the whole
         # row vanishing the moment "upcoming" no longer applies to it.
+        # This 14 must match jobs/refresh_earnings_history.py's
+        # CALENDAR_LOOKBACK_DAYS, or a just-reported row shows up here
+        # with an un-backfilled, permanently-empty HISTORY 6Q cell (real
+        # bug, 13 Oct 2026 - TCS/DMART/HCLTECH etc all showed "no history"
+        # for exactly this reason).
         calendar_events_df = get_upcoming_events(symbols=symbols, lookback_days=14)
         type_df = calendar_events_df[calendar_events_df["event_type"] == event_type]
     elif subtab == "Past earnings":

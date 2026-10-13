@@ -51,3 +51,38 @@ def test_other_errors_still_retry_with_backoff(tmp_path, monkeypatch):
     result = reh.call_with_retry("test", fails_twice_then_succeeds)
     assert result == "ok"
     assert sleeps == list(reh.RETRY_DELAYS[:2])
+
+
+# --- due_symbols: the lookback window must match the Calendar table's own ---
+
+def test_due_symbols_includes_a_recently_reported_event(tmp_path, monkeypatch):
+    # Real bug, 13 Oct 2026: due_symbols only looked forward (event_date
+    # >= today), but the Calendar subtab shows results back to
+    # lookback_days=14 so a just-reported row's actual/surprise stays
+    # visible for a while. TCS/DMART/HCLTECH etc, all reported in the
+    # last few days and still shown in Calendar, were never backfilled -
+    # permanently "no history" despite being exactly the rows a reader
+    # would want it for.
+    import sqlite3
+    from datetime import date, timedelta
+
+    db_path = str(tmp_path / "events_test.db")
+    monkeypatch.setattr(reh, "DB_PATH", db_path)
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "CREATE TABLE events (symbol TEXT, event_type TEXT, event_date TEXT, purpose TEXT)"
+    )
+    recent = (date.today() - timedelta(days=5)).isoformat()   # within the 14-day window
+    stale = (date.today() - timedelta(days=20)).isoformat()   # outside it
+    upcoming = (date.today() + timedelta(days=3)).isoformat()
+    conn.executemany(
+        "INSERT INTO events VALUES (?, 'board_meeting', ?, 'Financial Results')",
+        [("RECENTCO", recent), ("STALECO", stale), ("UPCOMINGCO", upcoming)],
+    )
+    conn.commit()
+
+    symbols = {row[0] for row in reh.due_symbols(conn)}
+    assert "RECENTCO" in symbols
+    assert "UPCOMINGCO" in symbols
+    assert "STALECO" not in symbols
+    conn.close()
