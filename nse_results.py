@@ -82,16 +82,18 @@ QUARTER_DAYS_MAX = 100
 #: Ordered by preference. The first concept present in the quarter context
 #: wins, and its name is recorded so the choice stays auditable.
 #:
-#: The banking entries are NOT interchangeable with the standard ones.
-#: `Income` is a bank's total income (interest earned + other income),
-#: which is the closest available analogue to "revenue" but is not the
-#: same measure as a non-financial company's RevenueFromOperations -
-#: treat a bank's revenue surprise % as indicative, not strictly
-#: comparable across sectors. This is why the concept name is stored.
+#: The banking entries are NOT interchangeable with the standard ones,
+#: which is why a bank's revenue is DERIVED (_derive_bank_revenue) rather
+#: than read off any single line here.
 CONCEPT_CANDIDATES = {
+    # Banking entries are a LAST RESORT only - a bank's revenue is derived
+    # instead, see _derive_bank_revenue. `Income` is a bank's TOTAL income
+    # (interest earned + other income) and is nothing like the topline the
+    # analyst estimate measures: RBLBANK Sep-2026 filed Income 5,401.65cr
+    # against a 3,291.30cr consensus, a meaningless +64% "surprise".
     "revenue": [
         "RevenueFromOperations",          # standard (non-financial)
-        "Income",                         # banking: total income
+        "Income",                         # banking: total income - see above
         "InterestEarned",                 # banking fallback
     ],
     "pat": [
@@ -199,6 +201,36 @@ def quarter_contexts(root, quarter_end):
     return matching
 
 
+def _derive_bank_revenue(by_concept):
+    """(value, concept_label) for a bank's topline, or (None, None).
+
+    Banks don't file `RevenueFromOperations`. The measure analysts quote -
+    and the one yfinance reports as a bank's "Total Revenue", which is what
+    the stored estimate was taken from - is net interest income plus other
+    income, NOT the `Income` (total income) line the filing leads with.
+
+    Verified exactly, not inferred: HDFCBANK Jun-2025 derives to
+    85,346.46cr here and yfinance reports Total Revenue of 85,346.46cr for
+    the same quarter - equal to the paisa. Its `Income` line for that
+    quarter is 133,054.97cr, 56% higher, which is what made bank revenue
+    surprise % nonsense before this existed.
+    """
+    try:
+        interest_earned = float(by_concept["InterestEarned"])
+        interest_expended = float(by_concept["InterestExpended"])
+    except (KeyError, TypeError, ValueError):
+        return None, None
+    # OtherIncome is genuinely optional; a bank with none still has a
+    # valid topline of just net interest income.
+    try:
+        other_income = float(by_concept.get("OtherIncome", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        other_income = 0.0
+    net_interest_income = interest_earned - interest_expended
+    return (net_interest_income + other_income,
+            "InterestEarned-InterestExpended+OtherIncome")
+
+
 def parse_facts(xbrl_bytes, quarter_end):
     """Pull the quarter's facts out of one XBRL document.
 
@@ -236,14 +268,20 @@ def parse_facts(xbrl_bytes, quarter_end):
     }
     for field, candidates in CONCEPT_CANDIDATES.items():
         value, concept = None, None
-        for candidate in candidates:
-            if candidate in by_concept:
-                try:
-                    value = float(by_concept[candidate])
-                except ValueError:
-                    continue
-                concept = candidate
-                break
+        # A bank's topline is derived, not read off one line. Only when
+        # the filer has no RevenueFromOperations - so a non-financial
+        # company is never rerouted through the banking derivation.
+        if field == "revenue" and "RevenueFromOperations" not in by_concept:
+            value, concept = _derive_bank_revenue(by_concept)
+        if value is None:
+            for candidate in candidates:
+                if candidate in by_concept:
+                    try:
+                        value = float(by_concept[candidate])
+                    except ValueError:
+                        continue
+                    concept = candidate
+                    break
         out[field] = value
         out[f"{field}_concept"] = concept
     return out

@@ -641,10 +641,19 @@ shape, each confirmed against live documents:
   work. Hence ordered `CONCEPT_CANDIDATES` per field, with the resolved concept name
   stored alongside each value so a wrong pick is auditable. Bank EPS lives under
   `Basic/DilutedEarningsPerShareAfterExtraordinaryItems` (preferred over `Before…`, being
-  the bottom-line figure the analyst estimate is measured against). A bank's `Income` is
-  *not* strictly the same measure as a non-financial's `RevenueFromOperations` — its
-  revenue surprise % is indicative, not cross-sector comparable, which is precisely why
-  the concept name is stored rather than discarded.
+  the bottom-line figure the analyst estimate is measured against). Bank REVENUE is derived, not read
+  off a line: `_derive_bank_revenue()` computes net interest income plus other income
+  (`InterestEarned - InterestExpended + OtherIncome`), because that is the measure the
+  analyst estimate is set against. Pinned down exactly rather than inferred — HDFCBANK
+  Jun-2025 derives to ₹85,346.46cr and yfinance reports Total Revenue of ₹85,346.46cr for
+  the same quarter, equal to the paisa, while that filing's own `Income` line is
+  ₹133,054.97cr, 56% higher. Using `Income` made bank revenue surprise % nonsense: RBLBANK
+  Sep-2026 read **+64.12%** against consensus and reads **−2.44%** once derived. The
+  derivation only runs when the filer has no `RevenueFromOperations`, so a non-financial
+  is never rerouted through it; if a bank files `InterestEarned` without
+  `InterestExpended`, NII can't be computed and it falls back to `Income` with the concept
+  recorded as `Income`, so the wrong-measure case stays diagnosable instead of
+  masquerading as a derived topline.
 - **Basis.** Every quarter is filed twice, seconds apart, with genuinely different
   numbers and no consistent direction: DMART Sep-2026 standalone PAT (₹803.60cr)
   *exceeds* consolidated (₹742.98cr) while its revenue is lower. `ACTUALS_BASIS` is

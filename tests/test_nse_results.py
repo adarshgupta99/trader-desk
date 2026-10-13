@@ -173,3 +173,69 @@ def test_quarter_end_is_strictly_before_the_meeting():
     from jobs.fill_actuals import quarter_end_for_event_date as qe
     # A meeting ON a quarter end cannot be reporting that quarter.
     assert qe(date(2026, 9, 30)) == date(2026, 6, 30)
+
+
+# --- bank revenue is derived, not read off the Income line ----------------
+
+def test_bank_revenue_is_nii_plus_other_income_not_total_income():
+    # HDFCBANK Jun-2025, the quarter that pinned this down: the derivation
+    # equals yfinance's reported Total Revenue of 85,346.46cr to the paisa,
+    # while the filing's own `Income` line is 133,054.97cr - 56% higher.
+    # The estimate is set against the former, so using `Income` made bank
+    # revenue surprise % meaningless (RBLBANK showed +64%).
+    doc = """<?xml version="1.0"?>
+<xbrli:xbrl xmlns:xbrli="http://www.xbrl.org/2003/instance"
+            xmlns:in-bse-fin="http://www.bseindia.com/xbrl/fin/2020-03-31/in-bse-fin">
+  <in-bse-fin:DateOfStartOfReportingPeriod contextRef="OneD">2025-04-01</in-bse-fin:DateOfStartOfReportingPeriod>
+  <in-bse-fin:DateOfEndOfReportingPeriod contextRef="OneD">2025-06-30</in-bse-fin:DateOfEndOfReportingPeriod>
+  <in-bse-fin:Income contextRef="OneD">1330549700000</in-bse-fin:Income>
+  <in-bse-fin:InterestEarned contextRef="OneD">873718700000</in-bse-fin:InterestEarned>
+  <in-bse-fin:InterestExpended contextRef="OneD">477085100000</in-bse-fin:InterestExpended>
+  <in-bse-fin:OtherIncome contextRef="OneD">456831000000</in-bse-fin:OtherIncome>
+  <in-bse-fin:ProfitLossForThePeriod contextRef="OneD">100000000</in-bse-fin:ProfitLossForThePeriod>
+</xbrli:xbrl>
+"""
+    facts = parse_facts(doc.encode(), date(2025, 6, 30))
+    assert facts["revenue"] == pytest.approx(853464600000)   # 85,346.46 cr
+    assert facts["revenue"] != pytest.approx(1330549700000)  # NOT the Income line
+    assert facts["revenue_concept"] == "InterestEarned-InterestExpended+OtherIncome"
+
+
+def test_non_bank_never_uses_the_banking_derivation():
+    # A filer with RevenueFromOperations must take it even if banking-ish
+    # concepts also appear, so a normal company is never rerouted.
+    doc = TCS_DOC.replace(
+        "</xbrli:xbrl>",
+        '  <in-bse-fin:InterestEarned contextRef="OneD">500</in-bse-fin:InterestEarned>\n'
+        '  <in-bse-fin:InterestExpended contextRef="OneD">100</in-bse-fin:InterestExpended>\n'
+        "</xbrli:xbrl>",
+    )
+    facts = parse_facts(doc.encode(), date(2026, 9, 30))
+    assert facts["revenue_concept"] == "RevenueFromOperations"
+    assert facts["revenue"] == pytest.approx(731880000000)
+
+
+def test_bank_with_no_other_income_derives_from_nii_alone():
+    doc = """<?xml version="1.0"?>
+<xbrli:xbrl xmlns:xbrli="http://www.xbrl.org/2003/instance"
+            xmlns:in-bse-fin="http://www.bseindia.com/xbrl/fin/2020-03-31/in-bse-fin">
+  <in-bse-fin:DateOfStartOfReportingPeriod contextRef="OneD">2026-04-01</in-bse-fin:DateOfStartOfReportingPeriod>
+  <in-bse-fin:DateOfEndOfReportingPeriod contextRef="OneD">2026-06-30</in-bse-fin:DateOfEndOfReportingPeriod>
+  <in-bse-fin:Income contextRef="OneD">900</in-bse-fin:Income>
+  <in-bse-fin:InterestEarned contextRef="OneD">800</in-bse-fin:InterestEarned>
+  <in-bse-fin:InterestExpended contextRef="OneD">300</in-bse-fin:InterestExpended>
+</xbrli:xbrl>
+"""
+    facts = parse_facts(doc.encode(), date(2026, 6, 30))
+    assert facts["revenue"] == pytest.approx(500)  # 800 - 300, no other income
+    assert facts["revenue_concept"] == "InterestEarned-InterestExpended+OtherIncome"
+
+
+def test_bank_missing_interest_expended_falls_back_and_says_so():
+    # Can't compute NII without both legs. Falling back to the `Income`
+    # line is the wrong MEASURE, so the only acceptable behaviour is that
+    # the row says `Income` and the mismatch stays diagnosable rather than
+    # masquerading as a derived topline. BANK_DOC has no InterestExpended.
+    facts = parse_facts(BANK_DOC.encode(), date(2026, 6, 30))
+    assert facts["revenue"] == pytest.approx(1331103600000)
+    assert facts["revenue_concept"] == "Income"
