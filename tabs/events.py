@@ -510,18 +510,29 @@ def render():
             f"</tr>"
             for r in type_df.itertuples()
         )
+        # table-layout:fixed (set on the <table> below) reads column widths
+        # from THIS row - the five widths below are what actually makes
+        # Board meeting/Symbol/Agenda/Est. Rev/Est. EPS narrower. Padding
+        # alone (tried first, 13 Oct 2026) did nothing visible: with
+        # table-layout's default (auto) and the table at width:100%, the
+        # browser redistributes saved padding space across every column
+        # regardless, since there's no per-column width to hold it to.
+        # History 6Q is left with no explicit width so it absorbs
+        # whatever's left - it needs the most room (7 bars x 2 tracks).
         header = (
             f"<tr style='border-bottom:1px solid {P.BORDER};'>"
             f"<th style='padding:4px 8px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Board meeting</th>"
+            f"text-transform:uppercase;letter-spacing:0.05em;border:none;width:100px;'>"
+            f"Board meeting</th>"
             f"<th style='padding:4px 8px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Symbol</th>"
+            f"text-transform:uppercase;letter-spacing:0.05em;border:none;width:90px;'>Symbol</th>"
             f"<th style='padding:4px 8px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Agenda</th>"
+            f"text-transform:uppercase;letter-spacing:0.05em;border:none;width:160px;'>Agenda</th>"
             f"<th style='padding:4px 8px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Est. Rev (Rs cr)</th>"
+            f"text-transform:uppercase;letter-spacing:0.05em;border:none;width:90px;'>"
+            f"Est. Rev (Rs cr)</th>"
             f"<th style='padding:4px 8px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;' "
+            f"text-transform:uppercase;letter-spacing:0.05em;border:none;width:80px;' "
             f"data-tip='Hover a value for its analyst count'>Est. EPS</th>"
             f"<th style='padding:4px 0 6px 0;color:{P.T3};font-size:12px;text-align:left;"
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;' "
@@ -531,7 +542,8 @@ def render():
         )
         st.markdown(
             f"<div style='overflow-x:auto;'>"
-            f"<table style='border-collapse:collapse;border:none;width:100%;margin-top:10px;'>"
+            f"<table style='border-collapse:collapse;border:none;width:100%;"
+            f"table-layout:fixed;margin-top:10px;'>"
             f"{header}{rows}</table></div>",
             unsafe_allow_html=True,
         )
