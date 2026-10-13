@@ -778,6 +778,31 @@ footnote sentence, not as data. Suite 74/74 (78 before this change: 5 cases remo
 `test_e2_fill_row_with_empty_dict_is_a_no_op`, confirming a quarter with nothing yet filed
 writes no provenance rather than a false "checked, found nothing" stamp).
 
+**Expected move / Worst case columns removed from the Calendar subtab (13 Oct 2026).**
+Adarsh asked to drop them from Calendar specifically - the dedicated **Expected moves**
+subtab (a separate, independent view ranking all 213 F&O symbols) keeps them untouched,
+since it's a different code path with its own `_move_cell` and its own data source
+(`get_all_expected_moves()`, not `get_expected_move_summary`/`get_expected_move_history`).
+Removed from Calendar: the `_expected_move_cells()` helper, its two `<td>`s per row, the
+two `<th>` headers, and the entire trailing block that only existed to annotate those two
+columns - the "Historical earnings reactions..." footnote, the "How expected move is
+calculated" expander, and a per-symbol "expected-move history" expander for every row in
+the table. Left half of that trailing block in place (just the two columns gone) would
+have been an orphaned explanation for data no longer on screen.
+
+Also removed as dead code once nothing called them from this file: the
+`get_expected_move_summary`/`get_expected_move_history` imports, the `json` import (used
+only inside the removed history-expander loop), and the `REASON_CODE_LABELS` dict (used
+only to translate that loop's `reason_codes` into plain language). Both `events_db.py`
+functions themselves are left in place - general-purpose read accessors, not view code,
+and genuinely reusable if a future feature wants per-event move data again; only the
+Calendar tab's use of them is gone.
+
+Verified via `AppTest`: Calendar subtab renders with no exception, no "Expected move" or
+"Worst case" text anywhere, no stray "no data yet"/"How expected move is calculated". The
+Expected moves subtab separately confirmed unaffected - all four of its own columns still
+render. Suite 74/74 (no tests touched this UI path).
+
 **Read side.** `events_db.get_earnings_estimates(symbols=None)` reads `earnings_estimates`
 the same way `get_upcoming_events()` reads `events` — `mode=ro`, empty frame if the table
 or file doesn't exist. One wrinkle: `pandas.read_sql_query` turns a SQL `NULL` numeric

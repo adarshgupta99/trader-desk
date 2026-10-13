@@ -11,11 +11,8 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 import streamlit as st
 
-import json
-
 from events_db import (IST, get_all_expected_moves, get_earnings_estimates,
-                       get_eps_history, get_expected_move_history,
-                       get_expected_move_summary, get_last_success,
+                       get_eps_history, get_last_success,
                        get_live_estimate_preview, get_upcoming_events,
                        match_eps_row)
 from theme import TABULAR, palette
@@ -26,26 +23,6 @@ SUBTYPE_LABELS = {
     "dividend": "Dividend", "split": "Split", "bonus": "Bonus",
     "rights": "Rights", "buyback": "Buyback", "fundraise": "Fundraise",
     "agm": "AGM", "results": "Results", "other": "Other",
-}
-
-#: expected-move row-level quality flags (spec section 10's "row warnings"),
-#: plain-language so the user never has to infer them from a NULL.
-REASON_CODE_LABELS = {
-    "missing_filing_time": "filing time missing",
-    "ambiguous_period": "financial period unclear from the filing text",
-    "archive_coverage_gap": "filing not found in archive coverage",
-    "missing_reference": "no reference price available",
-    "reference_next_bar": "nearest reference bar missing - used next available bar",
-    "boundary_hour_contamination": "filing-hour high/low may include pre-filing trades",
-    "price_depth_limit": "beyond provider's historical depth",
-    "missing_reaction_bars": "reaction-session bars unavailable",
-    "incomplete_session": "incomplete session data",
-    "no_trade_or_halt": "no trade / halted session",
-    "pending_window": "next session hasn't completed yet",
-    "corporate_action_basis_unresolved": "split/dividend adjustment basis unverified",
-    "source_fetch_failed": "a data source fetch failed",
-    "source_conflict": "a later filing exists for this period - see history",
-    "price_basis_daily_fallback": "hourly prices unreliable around a bonus/split/demerger - recomputed from daily bars, less precise",
 }
 
 #: get_live_estimate_preview is a live, synchronous yfinance call - cheap
@@ -237,40 +214,6 @@ def render():
         )
         return rev_cell + eps_cell + analysts_cell + actual_cell + surprise_cell
 
-    def _expected_move_cells(symbol, event_date):
-        """2 <td> cells: Expected move %, Worst case % - absolute-magnitude
-        statistics, so neutral styling only, never green/red or an arrow
-        (spec section 10). 'Unavailable' (not 0.00%) when the summary
-        exists but has zero usable prints; 'no data yet' when the symbol
-        hasn't been backfilled/computed at all."""
-        summary = get_expected_move_summary(symbol, event_date)
-        if summary is None:
-            dash = (
-                f"<td colspan='2' style='padding:6px 0;color:{P.T3};font-size:13px;"
-                f"white-space:nowrap;border:none;'>no data yet</td>"
-            )
-            return dash
-        usable = summary["usable_count"]
-        if usable == 0 or summary["expected_move_pct"] is None:
-            unavailable = (
-                f"<td colspan='2' style='padding:6px 0;color:{P.T3};font-size:13px;"
-                f"white-space:nowrap;border:none;' title='0 usable prints of "
-                f"{summary['selected_count']} selected'>Unavailable</td>"
-            )
-            return unavailable
-        selected_count = summary["selected_count"]
-        expected_cell = (
-            f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;"
-            f"white-space:nowrap;border:none;{TABULAR}' "
-            f"title='Based on {usable} usable print(s) of {selected_count} selected'>"
-            f"{summary['expected_move_pct']:.2f}%</td>"
-        )
-        worst_cell = (
-            f"<td style='padding:6px 0;color:{P.T1};font-size:13px;"
-            f"white-space:nowrap;border:none;{TABULAR}'>{summary['worst_case_pct']:.2f}%</td>"
-        )
-        return expected_cell + worst_cell
-
     def _agenda_link(symbol, text, event_type):
         slug = "corporate-filings-board-meetings" if event_type == "board_meeting" else "corporate-filings-actions"
         url = f"https://www.nseindia.com/companies-listing/{slug}?symbol={symbol}"
@@ -355,7 +298,6 @@ def render():
             f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;border:none;'>"
             f"{_agenda_link(r.symbol, r.purpose, 'board_meeting')}</td>"
             f"{_estimate_cells(r.symbol, r.event_date)}"
-            f"{_expected_move_cells(r.symbol, r.event_date)}"
             f"</tr>"
             for r in type_df.itertuples()
         )
@@ -375,12 +317,8 @@ def render():
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Analysts</th>"
             f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
             f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Actual EPS</th>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Surprise %</th>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Expected move</th>"
             f"<th style='padding:4px 0 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Worst case</th>"
+            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Surprise %</th>"
             f"</tr>"
         )
         st.markdown(
@@ -405,80 +343,6 @@ def render():
                 unsafe_allow_html=True,
             )
 
-        has_any_move_data = any(
-            get_expected_move_summary(r.symbol, r.event_date) is not None
-            for r in type_df.itertuples()
-        )
-        if has_any_move_data:
-            st.markdown(
-                f"<div style='color:{P.T3};font-size:12px;margin-top:10px;'>"
-                f"Historical earnings reactions, using hourly prices. Filing-time "
-                f"references are approximate; the filing-hour high/low may include "
-                f"pre-filing trades. Worst case is the largest observed move, not a "
-                f"limit on future moves.</div>",
-                unsafe_allow_html=True,
-            )
-            with st.expander("How expected move is calculated"):
-                st.markdown(
-                    "For intraday filings, each print uses the larger of the "
-                    "filing-session and next-session extreme moves, both versus "
-                    "the same hourly reference proxy. For after-close filings, "
-                    "the next session is measured versus the filing day's close. "
-                    "Headline expected move is the average across usable prints."
-                )
-
-            for r in type_df.itertuples():
-                history = get_expected_move_history(r.symbol)
-                if not history:
-                    continue
-                with st.expander(f"{r.symbol}: expected-move history ({len(history)} filing(s))"):
-                    hist_rows = []
-                    for h in history:
-                        reasons = json.loads(h["reason_codes"] or "[]")
-                        reason_text = "; ".join(REASON_CODE_LABELS.get(c, c) for c in reasons) or "-"
-                        move_a_text = f"{h['move_a_pct']:.2f}%" if h["move_a_pct"] is not None else (
-                            "-" if h["session_a_date"] is None else "Missing"
-                        )
-                        move_b_text = f"{h['move_b_pct']:.2f}%" if h["move_b_pct"] is not None else (
-                            "Pending" if h["status"] == "pending" else "Missing"
-                        )
-                        print_move_text = f"{h['print_move_pct']:.2f}%" if h["print_move_pct"] is not None else "-"
-                        ref_text = f"{h['reference_price']:.2f}" if h["reference_price"] is not None else "unavailable"
-                        link = (
-                            f"<a href='{h['attachment_url']}' target='_blank' rel='noopener' "
-                            f"style='color:inherit;text-decoration:none;border-bottom:1px dotted {P.T3};'>filing</a>"
-                            if h["attachment_url"] else "-"
-                        )
-                        hist_rows.append(
-                            f"<tr style='border-bottom:1px solid {P.BORDER};'>"
-                            f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;border:none;{TABULAR}'>{h['financial_period']}</td>"
-                            f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;border:none;{TABULAR}'>{h['filing_ts_ist']}</td>"
-                            f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;border:none;{TABULAR}'>{ref_text} (Rs, {h['reference_method']})</td>"
-                            f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;border:none;{TABULAR}'>{move_a_text}</td>"
-                            f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;border:none;{TABULAR}'>{move_b_text}</td>"
-                            f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;border:none;{TABULAR}'>{print_move_text}</td>"
-                            f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;border:none;'>{h['status']}</td>"
-                            f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;border:none;'>{reason_text}</td>"
-                            f"<td style='padding:6px 0;color:{P.T2};font-size:13px;white-space:nowrap;border:none;'>{link}</td>"
-                            f"</tr>"
-                        )
-                    hist_header = (
-                        f"<tr style='border-bottom:1px solid {P.BORDER};'>"
-                        f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;text-transform:uppercase;letter-spacing:0.05em;border:none;'>Period</th>"
-                        f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;text-transform:uppercase;letter-spacing:0.05em;border:none;'>Filing (IST)</th>"
-                        f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;text-transform:uppercase;letter-spacing:0.05em;border:none;'>Reference</th>"
-                        f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;text-transform:uppercase;letter-spacing:0.05em;border:none;'>Same-session move</th>"
-                        f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;text-transform:uppercase;letter-spacing:0.05em;border:none;'>Next-session move</th>"
-                        f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;text-transform:uppercase;letter-spacing:0.05em;border:none;'>Print move</th>"
-                        f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;text-transform:uppercase;letter-spacing:0.05em;border:none;'>Status</th>"
-                        f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;text-transform:uppercase;letter-spacing:0.05em;border:none;'>Flags</th>"
-                        f"<th style='padding:4px 0 6px 0;color:{P.T3};font-size:12px;text-align:left;text-transform:uppercase;letter-spacing:0.05em;border:none;'>Source</th>"
-                        f"</tr>"
-                    )
-                    st.markdown(
-                        f"<table style='border-collapse:collapse;border:none;width:100%;'>{hist_header}{''.join(hist_rows)}</table>",
-                        unsafe_allow_html=True,
-                    )
     elif subtab == "Expected moves":
         def _move_cell(pct, padding_right=16):
             has_value = isinstance(pct, (int, float)) and pd.notna(pct)
