@@ -715,6 +715,69 @@ T-1 freeze constraint, so past quarters *could* be backfilled — but only as ac
 rows, since estimates can never be backfilled. Left for Adarsh to decide rather than
 silently writing history into the table.
 
+**Superseded 13 Oct 2026 — surprise % removed entirely; actuals stored both-basis, NSE
+only.** Comparing the single yfinance-sourced estimate to one NSE actual required knowing
+which basis (standalone/consolidated) and which dilution (basic/diluted) Yahoo's figure
+sat on. `scripts/discover_yahoo_basis.py` tested that live across 10 symbols and up to 4
+completed quarters each, matching Yahoo's reported EPS/revenue against both NSE bases per
+quarter:
+
+- **EPS basis is mostly stable per symbol but not universally.** 9/10 symbols matched the
+  same basis in every quarter checked (TCS/HCLTECH/INFY → consolidated;
+  RBLBANK/HDFCBANK/BAJFINANCE/SBIN/TATAELXSI → standalone). RELIANCE's matching basis
+  *flipped* between quarters (3/4 consolidated, 1/4 standalone). M&M matched **neither**
+  basis in any of 4 quarters — Yahoo's reported EPS for it doesn't correspond to either
+  NSE figure at all.
+- **The fatal finding: EPS basis and revenue basis disagree within the same symbol.**
+  RBLBANK's EPS matches standalone every quarter; its revenue matches consolidated every
+  quarter. Same pattern for SBIN. One stored "basis" per symbol cannot serve both measures
+  — the premise of "detect once per symbol, apply everywhere" doesn't hold for real,
+  liquid F&O names, not edge cases.
+- Diluted (never basic) was separately confirmed as the EPS convention Yahoo reports,
+  checked against 6 symbols where basic and diluted differ enough to discriminate.
+
+Adarsh's call given this: stop comparing sources entirely. "Let's not compare on our own,
+just give the analyst estimate and the NSE numbers." No surprise % of any kind on the Past
+earnings tab now (the Calendar subtab's separate EPS-surprise cell is untouched — it
+compares Yahoo's own estimate to Yahoo's own reported EPS, same source both sides, so it
+was never exposed to this problem).
+
+**New storage shape** (`db/schema_estimates.sql`, migrated via `jobs/snapshot_estimates.py
+get_connection()`'s ALTER TABLE block): the old single `eps_actual` / `revenue_actual` /
+`surprise_pct` / `revenue_surprise_pct` columns are **dropped**, not deprecated in place —
+replaced by six actual columns, standalone and consolidated for each of revenue, PAT and
+diluted EPS (`revenue_actual_cons/std`, `pat_actual_cons/std`, `eps_actual_cons/std`),
+plus `xbrl_url_cons/std` for audit. PAT was already parsed by `nse_results.py`
+(`CONCEPT_CANDIDATES["pat"]`) but never persisted before this; it's a straight read now,
+no new parsing logic. `jobs/fill_actuals.py` is rewritten around this: `find_nse_actuals()`
+fetches both bases unconditionally (`ACTUAL_FIELDS` maps each basis to its three db
+columns), `due_rows()` picks up a row missing *any* of the six, and `fill_row()` takes a
+partial `{column: value}` dict so one basis filing ahead of the other is a normal partial
+state, not an error. The yfinance EPS/revenue-actual fallback functions are removed
+outright — NSE is now the only source for actuals, full stop; a quarter NSE hasn't filed
+yet just stays empty rather than falling back to a number with no comparison to validate
+it against anyway.
+
+Existing rows (TCS, ANANDRATHI, DMART, HCLTECH, RBLBANK) were backfilled under the new
+shape by rerunning `fill_actuals.py` after the migration — all five picked up both bases
+plus PAT in one run; none needed a fresh NSE fetch beyond what the module already does per
+quarter. Spot check: TCS cons/std revenue ₹73,188.00cr / ₹60,441.00cr, PAT ₹13,934.00cr /
+₹14,104.00cr, diluted EPS 38.37 / 38.98 — the std/cons gap itself is the reason this whole
+redesign happened.
+
+**Past earnings tab** (`tabs/events.py`) rewritten to 10 columns: results date, symbol,
+est. revenue, est. EPS, then the six NSE actual columns, revenue/PAT/diluted-EPS ×
+cons/std, wrapped in a horizontal-scroll container since it no longer fits a phone width.
+No surprise % column. Footnote states plainly that no comparison is computed and why.
+
+Verified via `AppTest`: zero exceptions, all values render with correct thousands
+grouping, "no estimate" shown for ANANDRATHI (no analyst EPS coverage), no "Surprise %"
+header anywhere, the lowercase "surprise %" appearing only once — inside the explanatory
+footnote sentence, not as data. Suite 74/74 (78 before this change: 5 cases removed with
+`test_d_surprise_math`, now-dead code testing the removed `compute_surprise`; 1 added,
+`test_e2_fill_row_with_empty_dict_is_a_no_op`, confirming a quarter with nothing yet filed
+writes no provenance rather than a false "checked, found nothing" stamp).
+
 **Read side.** `events_db.get_earnings_estimates(symbols=None)` reads `earnings_estimates`
 the same way `get_upcoming_events()` reads `events` — `mode=ro`, empty frame if the table
 or file doesn't exist. One wrinkle: `pandas.read_sql_query` turns a SQL `NULL` numeric

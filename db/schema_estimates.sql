@@ -7,7 +7,20 @@
 -- compare actuals against a contaminated number. The trigger below blocks
 -- any UPDATE that touches an estimate column; only the post-release
 -- "actual" columns may ever change, and application code should still only
--- set them once (see jobs/fill_actuals.py).
+-- set them once per column (see jobs/fill_actuals.py).
+--
+-- SUPERSEDED 13 Oct 2026 (Adarsh's direction): actuals no longer compute a
+-- surprise % against the estimate at all - "let's not compare on our own,
+-- just give the analyst estimate and the NSE numbers." The single
+-- eps_actual/revenue_actual/surprise_pct/revenue_surprise_pct columns are
+-- replaced by six actual columns, standalone and consolidated for each of
+-- revenue, PAT and EPS (diluted only - see nse_results.py's three traps
+-- for why a single "actual EPS" was never safe to compare against a
+-- Yahoo-sourced estimate: different dilution bases, and for several
+-- symbols different standalone/consolidated bases too - see
+-- scripts/discover_yahoo_basis.py). The estimate stays a single
+-- yfinance-sourced value; it is displayed beside the actuals, not matched
+-- against one of them.
 
 CREATE TABLE IF NOT EXISTS earnings_estimates (
     id                INTEGER PRIMARY KEY,
@@ -23,12 +36,18 @@ CREATE TABLE IF NOT EXISTS earnings_estimates (
     period_label      TEXT NOT NULL,        -- yfinance period used, e.g. "0q"
     source            TEXT NOT NULL,        -- "yfinance"
     fetched_at        TEXT NOT NULL,        -- full ISO timestamp, IST
-    -- post-release, filled once by jobs/fill_actuals.py:
-    eps_actual        REAL,
-    revenue_actual    REAL,
-    surprise_pct      REAL,                 -- EPS surprise only
-    revenue_surprise_pct REAL,              -- same formula, against revenue
-    actual_source     TEXT,                 -- "nselib" or "yfinance"
+    -- post-release, filled once per column by jobs/fill_actuals.py, from
+    -- NSE's own filing XBRL only (nse_results.py). No yfinance fallback,
+    -- no cross-source comparison, no surprise %.
+    revenue_actual_cons REAL,               -- plain INR, consolidated filing
+    revenue_actual_std  REAL,               -- plain INR, standalone filing
+    pat_actual_cons     REAL,               -- ProfitLossForPeriod (or banking equivalent), consolidated
+    pat_actual_std      REAL,               -- same, standalone
+    eps_actual_cons     REAL,               -- diluted EPS, consolidated filing
+    eps_actual_std      REAL,               -- diluted EPS, standalone filing
+    xbrl_url_cons     TEXT,                 -- audit trail: the exact filing parsed
+    xbrl_url_std      TEXT,
+    actual_source     TEXT,                 -- "nse_xbrl" once any actual column is filled
     actual_filled_at  TEXT,
     UNIQUE (symbol, event_date, snapshot_date)
 );

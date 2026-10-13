@@ -62,23 +62,55 @@ def get_connection():
             period_label      TEXT NOT NULL,
             source            TEXT NOT NULL,
             fetched_at        TEXT NOT NULL,
-            eps_actual        REAL,
-            revenue_actual    REAL,
-            surprise_pct      REAL,
-            revenue_surprise_pct REAL,
+            revenue_actual_cons REAL,
+            revenue_actual_std  REAL,
+            pat_actual_cons     REAL,
+            pat_actual_std      REAL,
+            eps_actual_cons     REAL,
+            eps_actual_std      REAL,
+            xbrl_url_cons     TEXT,
+            xbrl_url_std      TEXT,
             actual_source     TEXT,
             actual_filled_at  TEXT,
             UNIQUE (symbol, event_date, snapshot_date)
         )
         """
     )
-    # revenue_surprise_pct added 2026-10-08, after surprise_pct (EPS-only
-    # surprise) was all this table had - CREATE TABLE above only applies to
-    # a brand-new db, so an existing one needs the column added explicitly.
-    try:
-        conn.execute("ALTER TABLE earnings_estimates ADD COLUMN revenue_surprise_pct REAL")
-    except sqlite3.OperationalError:
-        pass
+    # Migrations for an existing db - CREATE TABLE above only applies to a
+    # brand-new one. Each ALTER is independently try/except'd (not one big
+    # block) so a db that already has some of these from a partial prior
+    # run doesn't abort the whole migration on the first duplicate column.
+    #
+    # eps_actual/revenue_actual/surprise_pct/revenue_surprise_pct: DROPPED
+    # 2026-10-13 (Adarsh's direction) - see db/schema_estimates.sql's
+    # header for why a single actual-vs-estimate comparison was never
+    # trustworthy. Replaced by the six *_cons/*_std columns below; old
+    # columns are dropped only after a fresh NSE backfill, never left to
+    # silently go stale.
+    for ddl in (
+        "ALTER TABLE earnings_estimates ADD COLUMN revenue_actual_cons REAL",
+        "ALTER TABLE earnings_estimates ADD COLUMN revenue_actual_std REAL",
+        "ALTER TABLE earnings_estimates ADD COLUMN pat_actual_cons REAL",
+        "ALTER TABLE earnings_estimates ADD COLUMN pat_actual_std REAL",
+        "ALTER TABLE earnings_estimates ADD COLUMN eps_actual_cons REAL",
+        "ALTER TABLE earnings_estimates ADD COLUMN eps_actual_std REAL",
+        "ALTER TABLE earnings_estimates ADD COLUMN xbrl_url_cons TEXT",
+        "ALTER TABLE earnings_estimates ADD COLUMN xbrl_url_std TEXT",
+    ):
+        try:
+            conn.execute(ddl)
+        except sqlite3.OperationalError:
+            pass
+    # Old single-value actual/surprise columns, superseded by the
+    # cons/std pairs above. Dropped (not just ignored) so no code can
+    # accidentally read a stale value from them.
+    existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(earnings_estimates)")}
+    for old_col in ("eps_actual", "revenue_actual", "surprise_pct", "revenue_surprise_pct"):
+        if old_col in existing_cols:
+            try:
+                conn.execute(f"ALTER TABLE earnings_estimates DROP COLUMN {old_col}")
+            except sqlite3.OperationalError:
+                pass
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_earnings_estimates_symbol "
         "ON earnings_estimates (symbol, event_date)"

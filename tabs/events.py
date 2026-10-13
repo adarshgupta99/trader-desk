@@ -306,10 +306,14 @@ def render():
         calendar_events_df = get_upcoming_events(symbols=symbols, lookback_days=14)
         type_df = calendar_events_df[calendar_events_df["event_type"] == event_type]
     elif subtab == "Past earnings":
-        # Results already out - the frozen estimate next to the real actual,
-        # for every quarter where either figure has come in. No events-table
-        # join needed, earnings_estimates alone has both sides.
-        has_actual = estimates_df["eps_actual"].notna() | estimates_df["revenue_actual"].notna()
+        # Results already out - the frozen estimate next to NSE's own
+        # reported numbers, for every quarter where at least one actual
+        # column has come in. No events-table join needed, earnings_estimates
+        # alone has both sides.
+        actual_cols = ["revenue_actual_cons", "revenue_actual_std",
+                       "pat_actual_cons", "pat_actual_std",
+                       "eps_actual_cons", "eps_actual_std"]
+        has_actual = estimates_df[actual_cols].notna().any(axis=1)
         type_df = estimates_df[has_actual].sort_values("event_date", ascending=False)
     else:
         type_df = events_df[events_df["event_type"] == event_type] if len(events_df) else events_df
@@ -526,51 +530,31 @@ def render():
             unsafe_allow_html=True,
         )
     elif subtab == "Past earnings":
-        eps_map = _prefetch_concurrent(get_eps_history, [r.symbol for r in type_df.itertuples()])
+        # No comparison is made between the estimate and any actual here
+        # (Adarsh's direction, 13 Oct 2026, after discovery found no safe
+        # way to match a single yfinance-sourced estimate to one NSE
+        # basis - see scripts/discover_yahoo_basis.py and
+        # jobs/fill_actuals.py's module docstring). The estimate is shown
+        # as context, NSE's own reported numbers are shown as fact, both
+        # bases, and the reader judges - no surprise % column.
+
+        def _cell(val, fmt, color=P.T1, empty="-"):
+            text = fmt(_num(val)) if _num(val) is not None else None
+            return (
+                f"<td style='padding:6px 16px 6px 0;color:{color if text else P.T3};"
+                f"font-size:13px;white-space:nowrap;border:none;{TABULAR}'>{text or empty}</td>"
+            )
 
         def _past_row_cells(r):
-            rev_surprise_text, rev_surprise_color = _surprise_text_color(r.revenue_surprise_pct)
-            est_rev = _fmt_rev_cr(r.revenue_estimate) or "no estimate"
-            actual_rev = _fmt_rev_cr(r.revenue_actual) or "-"
-
-            # EPS estimate comes from OUR frozen T-1 snapshot, never from
-            # Yahoo live. Yahoo's stored "pre-print estimate" was assumed
-            # immutable once a quarter reports; it isn't. DMART's Sep-2026
-            # estimate was 13.93 when we froze it at T-1 and reads 13.42
-            # from Yahoo now, after the print - exactly the post-result
-            # revision the T-1 rule exists to keep out of the comparison.
-            eps_row = match_eps_row(eps_map.get(r.symbol), r.event_date)
-            est_eps_val = _num(r.eps_estimate)
-            # Actual prefers what we stored (NSE filing XBRL, with yfinance
-            # already tried as fallback inside jobs/fill_actuals.py). Yahoo
-            # live is a last resort for a result that landed since the job
-            # last ran - without this the column sat empty for DMART and
-            # ANANDRATHI even though both actuals were stored.
-            actual_eps_val = _num(r.eps_actual)
-            if actual_eps_val is None and eps_row is not None:
-                actual_eps_val = _num(eps_row["eps_actual"])
-            # Recomputed from the two values actually on screen, so the
-            # surprise can never disagree with the columns beside it.
-            if est_eps_val is not None and actual_eps_val is not None and est_eps_val != 0:
-                eps_surprise_val = (actual_eps_val - est_eps_val) / abs(est_eps_val) * 100
-            else:
-                eps_surprise_val = None
-            eps_surprise_text, eps_surprise_color = _surprise_text_color(eps_surprise_val)
-            est_eps = _fmt_eps(est_eps_val) or "no estimate"
-            actual_eps = _fmt_eps(actual_eps_val) or "-"
             return (
-                f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;"
-                f"border:none;{TABULAR}'>{est_rev}</td>"
-                f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;"
-                f"border:none;{TABULAR}'>{actual_rev}</td>"
-                f"<td style='padding:6px 16px 6px 0;color:{rev_surprise_color};font-size:13px;"
-                f"white-space:nowrap;border:none;{TABULAR}'>{rev_surprise_text}</td>"
-                f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;"
-                f"border:none;{TABULAR}'>{est_eps}</td>"
-                f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;"
-                f"border:none;{TABULAR}'>{actual_eps}</td>"
-                f"<td style='padding:6px 0;color:{eps_surprise_color};font-size:13px;"
-                f"white-space:nowrap;border:none;{TABULAR}'>{eps_surprise_text}</td>"
+                _cell(r.revenue_estimate, _fmt_rev_cr, color=P.T2, empty="no estimate")
+                + _cell(r.eps_estimate, _fmt_eps, color=P.T2, empty="no estimate")
+                + _cell(r.revenue_actual_cons, _fmt_rev_cr)
+                + _cell(r.revenue_actual_std, _fmt_rev_cr)
+                + _cell(r.pat_actual_cons, _fmt_rev_cr)
+                + _cell(r.pat_actual_std, _fmt_rev_cr)
+                + _cell(r.eps_actual_cons, _fmt_eps)
+                + _cell(r.eps_actual_std, _fmt_eps)
             )
 
         rows = "".join(
@@ -583,36 +567,34 @@ def render():
             f"</tr>"
             for r in type_df.itertuples()
         )
+
+        def _th(label, last=False):
+            pad = "4px 0 6px 0" if last else "4px 16px 6px 0"
+            return (f"<th style='padding:{pad};color:{P.T3};font-size:12px;text-align:left;"
+                    f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>{label}</th>")
+
         header = (
             f"<tr style='border-bottom:1px solid {P.BORDER};'>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Results date</th>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Symbol</th>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Est. Rev (Rs cr)</th>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Actual Rev (Rs cr)</th>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Rev surprise %</th>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Est. EPS</th>"
-            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Actual EPS</th>"
-            f"<th style='padding:4px 0 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>EPS surprise %</th>"
-            f"</tr>"
+            + _th("Results date") + _th("Symbol")
+            + _th("Est. Rev (Rs cr)") + _th("Est. EPS")
+            + _th("Revenue cons. (Rs cr)") + _th("Revenue stand. (Rs cr)")
+            + _th("PAT cons. (Rs cr)") + _th("PAT stand. (Rs cr)")
+            + _th("EPS dil. cons.") + _th("EPS dil. stand.", last=True)
+            + "</tr>"
         )
         st.markdown(
-            f"<table style='border-collapse:collapse;border:none;width:100%;margin-top:10px;'>{header}{rows}</table>",
+            f"<div style='overflow-x:auto;'>"
+            f"<table style='border-collapse:collapse;border:none;width:100%;margin-top:10px;'>"
+            f"{header}{rows}</table></div>",
             unsafe_allow_html=True,
         )
         st.markdown(
             f"<div style='color:{P.T3};font-size:12px;margin-top:8px;'>"
-            f"Estimates are the frozen T-1 consensus (Yahoo Finance), captured the day "
-            f"before the result and never re-fetched. Actuals and surprise % come from "
-            f"the company's own filed result (NSE filing XBRL, consolidated), falling "
-            f"back to Yahoo where a filing hasn't been parsed yet.</div>",
+            f"Estimate is the frozen T-1 consensus (Yahoo Finance), captured the day before "
+            f"the result and never re-fetched. Revenue, PAT and diluted EPS are the company's "
+            f"own filed result (NSE filing XBRL), standalone and consolidated as separately "
+            f"filed - no surprise % is computed, since the estimate's basis cannot be reliably "
+            f"matched to one of these.</div>",
             unsafe_allow_html=True,
         )
     elif subtab == "Corporate actions":

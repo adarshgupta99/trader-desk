@@ -83,8 +83,10 @@ def get_earnings_estimates(symbols=None):
     """
     columns = [
         "symbol", "event_date", "snapshot_date", "eps_estimate",
-        "revenue_estimate", "n_analysts_eps", "eps_actual", "revenue_actual",
-        "surprise_pct", "revenue_surprise_pct",
+        "revenue_estimate", "n_analysts_eps",
+        "revenue_actual_cons", "revenue_actual_std",
+        "pat_actual_cons", "pat_actual_std",
+        "eps_actual_cons", "eps_actual_std",
     ]
     if not os.path.exists(DB_PATH):
         return pd.DataFrame(columns=columns)

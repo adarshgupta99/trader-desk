@@ -46,23 +46,20 @@ analyst count), then the actual and surprise % once the result is out.
 - **T-1 rule:** estimates are snapshotted once, the day before the earnings
   date, and frozen forever after - never re-fetched or updated. Analysts
   revise estimates after the print, so a late snapshot would compare
-  actuals against a contaminated number. Only `eps_actual`,
-  `revenue_actual`, and `surprise_pct` may ever be filled in later, enforced
-  by a SQLite trigger on `earnings_estimates` (see `db/schema_estimates.sql`).
+  actuals against a contaminated number. Only the actual-value columns
+  (see below) may ever be filled in later, enforced by a SQLite trigger
+  on `earnings_estimates` (see `db/schema_estimates.sql`).
 - **Estimates** come from yfinance only, and are frozen (see the T-1 rule
-  above).
-- **Actuals come from NSE's own filing XBRL first** (12 October 2026),
-  with yfinance as the fallback - `nse_results.py` reads
-  `/api/integrated-filing-results`, picks the filing for the right quarter
-  and basis, and parses the figures out of the filing's own XBRL. This
-  supersedes the 8 October "yfinance only" decision. The earlier finding
-  still stands and is a different endpoint:
-  `nselib.financial_results_for_equity` reads
-  `/api/corporates-financial-results`, which surfaces a narrow NSE filing
-  category and returned zero mainstream F&O names across a full year
-  (see `docs/estimates_discovery.txt`); re-verified live on 12 October,
-  still zero rows for a window containing TCS's real result. It is not
-  used. Do not confuse the two endpoints.
+  above): `eps_estimate`, `revenue_estimate`.
+- **Actuals come from NSE's own filing XBRL only** (12-13 October 2026) -
+  `nse_results.py` reads `/api/integrated-filing-results`, picks the
+  filing for the right quarter and basis, and parses the figures out of
+  the filing's own XBRL. This is a different endpoint from
+  `nselib.financial_results_for_equity`'s `/api/corporates-financial-results`,
+  which surfaces a narrow NSE filing category and returned zero mainstream
+  F&O names across a full year (see `docs/estimates_discovery.txt`);
+  re-verified live on 12 October, still zero rows for a window containing
+  TCS's real result. It is not used. Do not confuse the two endpoints.
 - Three things `nse_results.py` exists to get right, each a real trap
   confirmed against live filings - do not "simplify" past them:
   **(1)** one document holds the quarter *and* the year-to-date figure
@@ -72,19 +69,35 @@ analyst count), then the actual and surprise % once the result is out.
   quarter end; **(2)** banks use a different taxonomy, subtly - HDFCBANK's
   profit concept is `ProfitLossForThePeriod`, one word off the standard
   `ProfitLossForPeriod`, and a single-concept parser returns NULL for
-  every bank and NBFC while appearing to work; **(3)** every quarter is
-  filed twice, standalone and consolidated, with different numbers in an
-  unpredictable direction (DMART Sep-2026 standalone PAT *exceeds*
-  consolidated while its revenue is lower). **Consolidated** is the
-  stored basis, since that is what headlines and analyst consensus quote.
-- yfinance is kept as fallback, not deleted: it is the only cover for a
-  symbol whose XBRL concepts aren't mapped, and a disagreement between
-  the two sources is how a bad mapping gets noticed. Every row records
-  which source filled it (`actual_source`).
+  every bank and NBFC while appearing to work, and a bank's revenue is
+  **derived** (`InterestEarned - InterestExpended + OtherIncome`), not
+  read off the `Income` line, which is a different measure entirely -
+  verified exact to the paisa against HDFCBANK's yfinance-reported Total
+  Revenue; **(3)** every quarter is filed twice, standalone and
+  consolidated, as two separate XBRL documents with different numbers in
+  an unpredictable direction (DMART Sep-2026 standalone PAT *exceeds*
+  consolidated while its revenue is lower).
+- **No surprise % is computed anywhere on the Past earnings tab, by
+  design (13 October 2026).** `scripts/discover_yahoo_basis.py` found no
+  safe way to match the single yfinance-sourced estimate to one NSE
+  basis: most symbols' EPS basis is stable across quarters, but
+  RELIANCE's flips between quarters, M&M matches neither NSE basis at
+  all, and - the finding that killed the whole approach - RBLBANK and
+  SBIN each have EPS matching one basis and revenue matching the
+  *other*, so a single stored "basis per symbol" cannot serve both
+  measures. Adarsh's call: stop comparing sources. The estimate
+  (`eps_estimate`/`revenue_estimate`) and NSE's own actuals are shown
+  side by side with no derived comparison between them. **Store BOTH
+  bases for every actual measure** - `revenue_actual_cons/std`,
+  `pat_actual_cons/std`, `eps_actual_cons/std` (diluted only, never
+  basic - confirmed against yfinance's reported EPS in 6/6 discriminating
+  cases) - plus `xbrl_url_cons/std` for audit. No yfinance fallback for
+  actuals: a quarter NSE hasn't filed yet just stays empty.
 - Scheduled jobs: `jobs/snapshot_estimates.py` (T-1 snapshot) then
-  `jobs/fill_actuals.py` (actual + surprise, retries daily for up to 7 days)
-  - both read-write `events.db`, same as `scripts/fetch_events.py`. The app
-  only reads it (`events_db.get_earnings_estimates`), never writes.
+  `jobs/fill_actuals.py` (NSE actuals, both bases, retries daily for up
+  to 7 days) - both read-write `events.db`, same as
+  `scripts/fetch_events.py`. The app only reads it
+  (`events_db.get_earnings_estimates`), never writes.
 - A row with no estimate is kept and shown as "no estimate", never dropped.
 
 ## Expected move tracker (side build, 9 October 2026)

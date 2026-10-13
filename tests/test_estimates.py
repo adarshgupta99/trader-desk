@@ -118,20 +118,6 @@ def test_c_no_estimate_row_is_returned(db_path):
     assert df.iloc[0]["symbol"] == "PIIND"
 
 
-@pytest.mark.parametrize("estimate,actual,expected", [
-    (10, 12, 20.0),
-    (10, 8, -20.0),
-    (-5, -4, 20.0),
-    (0, 5, None),
-    (None, 5, None),
-])
-def test_d_surprise_math(estimate, actual, expected):
-    got = fa.compute_surprise(estimate, actual)
-    if expected is None:
-        assert got is None
-    else:
-        assert got == pytest.approx(expected)
-
 
 def test_e_actuals_fill_only_touches_actual_columns(db_path):
     conn = se.get_connection()
@@ -148,8 +134,13 @@ def test_e_actuals_fill_only_touches_actual_columns(db_path):
     ))
 
     row_id = conn.execute("SELECT id FROM earnings_estimates WHERE symbol='TCS'").fetchone()[0]
-    fa.fill_row(conn, row_id, eps_actual=40.0, revenue_actual=7.2e11, surprise_pct=5.26,
-                revenue_surprise_pct=2.86, source="nse_xbrl:Consolidated")
+    # fill_row takes a partial {column: value} dict now - no surprise % is
+    # computed or stored at all (13 Oct 2026: no safe way to match a single
+    # yfinance estimate to one NSE basis - see
+    # scripts/discover_yahoo_basis.py and jobs/fill_actuals.py's docstring).
+    fa.fill_row(conn, row_id, {
+        "revenue_actual_cons": 7.2e11, "eps_actual_cons": 40.0,
+    })
 
     after = dict(zip(
         before.keys(),
@@ -162,14 +153,34 @@ def test_e_actuals_fill_only_touches_actual_columns(db_path):
     assert before == after
 
     actual_row = conn.execute(
-        "SELECT eps_actual, revenue_actual, surprise_pct FROM earnings_estimates WHERE symbol='TCS'"
+        "SELECT revenue_actual_cons, eps_actual_cons, revenue_actual_std, eps_actual_std "
+        "FROM earnings_estimates WHERE symbol='TCS'"
     ).fetchone()
-    assert actual_row == (40.0, 7.2e11, 5.26)
-    # Provenance is stored, not assumed: actuals can come from NSE's own
-    # filing XBRL or from yfinance as fallback, and a row must say which.
+    assert actual_row == (7.2e11, 40.0, None, None)
+    # Provenance is stored: any filled row says where its actuals came from.
     assert conn.execute(
         "SELECT actual_source FROM earnings_estimates WHERE symbol='TCS'"
-    ).fetchone()[0] == "nse_xbrl:Consolidated"
+    ).fetchone()[0] == "nse_xbrl"
+    conn.close()
+
+
+def test_e2_fill_row_with_empty_dict_is_a_no_op(db_path):
+    # A quarter not yet filed on NSE for either basis - find_nse_actuals
+    # returns {}, and fill_row must not write actual_source/actual_filled_at
+    # on the strength of nothing, or a later real fill couldn't be told
+    # apart from "we checked and found nothing".
+    conn = se.get_connection()
+    est = _fake_estimate(eps=38.0, rev=7e11, n_eps=20, n_rev=15)
+    se.insert_snapshot(conn, "TCS", "2026-10-05", "2026-10-04", est)
+    row_id = conn.execute("SELECT id FROM earnings_estimates WHERE symbol='TCS'").fetchone()[0]
+
+    fa.fill_row(conn, row_id, {})
+
+    row = conn.execute(
+        "SELECT actual_source, actual_filled_at, eps_actual_cons "
+        "FROM earnings_estimates WHERE symbol='TCS'"
+    ).fetchone()
+    assert row == (None, None, None)
     conn.close()
 
 
