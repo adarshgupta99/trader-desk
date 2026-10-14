@@ -67,19 +67,10 @@ def render():
     # mode: series 1 (management) solid P.T1, series 2 (Q&A) dashed P.T2 -
     # never direction-coloured (P.UP/P.DOWN), since tone isn't a change
     # value the way a price is.
-    #
-    # The Q&A line plots qa_tone_proxy, not a Gemini-assigned score - the
-    # richer extraction schema judges analyst_tone as a category
-    # (skeptical/neutral/constructive), not a continuous number, so
-    # qa_tone_proxy is a fixed mapping onto the same -2..+2 scale purely
-    # so this chart still has a second series (see
-    # db/schema_sentiment.sql's header note). The real Q&A signal -
-    # evasiveness count and the prepared-vs-Q&A divergence flag - is in
-    # the table below, not this line.
     C1, C2 = P.T1, P.T2
     x = [_fmt_quarter(r["quarter_end"]) for r in rows]
     mgmt_y = [r["management_confidence"] for r in rows]
-    qa_y = [r["qa_tone_proxy"] for r in rows]
+    qa_y = [r["qa_tone"] for r in rows]
 
     summary = (
         f"<div style='display:flex;gap:24px;margin:4px 0 10px 0;align-items:center;"
@@ -140,6 +131,8 @@ def render():
         f"border:none;{TABULAR}'>{_tone_text(r['management_confidence'])}</td>"
         f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;"
         f"border:none;{TABULAR}'>{_tone_text(r['overall_tone'])}</td>"
+        f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;"
+        f"border:none;{TABULAR}'>{_tone_text(r['qa_tone'])}</td>"
         f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;"
         f"border:none;'>{r['guidance'] or '-'}</td>"
         f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;"
@@ -162,7 +155,7 @@ def render():
         f"</tr>"
         for r in reversed(rows)  # most recent quarter first in the table
     )
-    _cols = ["Quarter", "Mgmt confidence", "Overall tone", "Guidance",
+    _cols = ["Quarter", "Mgmt confidence", "Overall tone", "Q&A tone", "Guidance",
              "Analyst tone", "Evasive Qs", "QA divergence",
              "LM +", "LM -", "LM uncertain", "Source"]
     header = "<tr style='border-bottom:1px solid {b};'>{cells}</tr>".format(
@@ -181,12 +174,12 @@ def render():
     )
     st.markdown(
         f"<div style='color:{P.T3};font-size:12px;margin-top:8px;'>"
-        f"Mgmt confidence and overall tone: -2 (very negative) to +2 (very positive), "
-        f"Gemini-extracted with a quoted line backing every judgment. The Q&amp;A line on "
-        f"the chart above is a fixed display mapping from analyst tone (constructive/"
-        f"neutral/skeptical), not a model-assigned score - evasive questions and a "
-        f"prepared-vs-Q&amp;A divergence flag are the real Q&amp;A signal, shown as separate "
-        f"columns here. LM columns are Loughran-McDonald word counts per 1000 words - "
-        f"deterministic, no model involved.</div>",
+        f"Mgmt confidence, overall tone, and Q&amp;A tone: -2 (very negative) to +2 (very "
+        f"positive), each Gemini-extracted separately with a quoted line backing the "
+        f"judgment. Analyst tone is a separate category (constructive/neutral/skeptical) "
+        f"covering the same Q&amp;A session; evasive questions and a prepared-vs-Q&amp;A "
+        f"divergence flag are the other Q&amp;A signals, shown as their own columns. LM "
+        f"columns are Loughran-McDonald word counts per 1000 words - deterministic, no "
+        f"model involved.</div>",
         unsafe_allow_html=True,
     )

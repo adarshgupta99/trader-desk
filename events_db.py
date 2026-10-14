@@ -350,7 +350,7 @@ def get_earnings_call_sentiment(ticker):
     columns = ["quarter_end", "call_date", "transcript_source_url",
                "lm_positive", "lm_negative", "lm_uncertainty", "lm_litigious",
                "lm_total_words", "management_confidence", "overall_tone",
-               "qa_tone_proxy", "guidance", "analyst_tone",
+               "qa_tone", "guidance", "analyst_tone",
                "evasiveness_count", "qa_divergence_flag"]
     try:
         with _read_connection() as conn:

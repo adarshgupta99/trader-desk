@@ -26,6 +26,30 @@ images), via pypdf:
   handles all four conventions seen already, let alone the rest of the
   F&O universe. This module does NOT attempt to split management from
   Q&A - it only finds and extracts the raw transcript text.
+
+A SECOND REAL BUG (15 Oct 2026), found running the job against the IT
+sector: INFY filed zero rows for every one of its 7 checked quarters,
+which looked like a genuine data gap until checked live. INFY's
+transcripts are real, PDF, and NSE-filed - they just sit under
+desc == "Updates", not the con-call category every other company
+checked used. The hard desc == TRANSCRIPT_DESC filter silently excluded
+every one of them even though "transcript" appeared right there in
+attchmntText ("Infosys Limited has informed the Exchange regarding
+'Earnings Call Transcript'."). Fixed by accepting desc in
+ACCEPTED_DESC rather than a single exact match - "not standardised
+across companies" strikes again, same lesson as the speaker-label
+formatting above.
+
+Widening the desc filter reintroduces a risk the narrower one avoided
+for free: INFY's "Updates" category also carries AGM and Investor/AI
+Day transcripts, which are real PDFs with "transcript" in their text
+but are not a quarter's earnings call. `_NON_EARNINGS_TERMS` excludes
+those by name. In practice `process_quarter`'s narrow per-quarter fetch
+window (results date to +30 days) already keeps these out for INFY,
+since its AGM/AI-Day filings land 60+ days after results - but the
+keyword exclusion is kept as a second, independent safety net rather
+than relying on window timing alone, since a different company's
+calendar might not space them out the same way.
 """
 
 import io
@@ -36,6 +60,24 @@ from pypdf import PdfReader
 from nselib.libutil import nse_urlfetch
 
 TRANSCRIPT_DESC = "Analysts/Institutional Investor Meet/Con. Call Updates"
+
+#: desc categories seen carrying a real earnings-call transcript PDF.
+#: "Updates" was added for INFY (see module docstring) - most companies
+#: checked file transcripts under TRANSCRIPT_DESC only, but not all.
+ACCEPTED_DESC = {TRANSCRIPT_DESC, "Updates"}
+
+#: Phrases that mean a filing's "transcript" is for something other
+#: than a quarterly earnings call (AGM, an investor/analyst day) - only
+#: relevant once ACCEPTED_DESC includes broader categories like
+#: "Updates" that also carry these. Checked lowercase, substring match.
+_NON_EARNINGS_TERMS = (
+    "annual general meeting", " agm", "investor day", "ai day", "analyst day",
+)
+
+
+def _is_earnings_transcript(text):
+    text = text.lower()
+    return "transcript" in text and not any(term in text for term in _NON_EARNINGS_TERMS)
 
 
 def select_transcript(rows):
@@ -53,8 +95,8 @@ def select_transcript(rows):
     """
     candidates = [
         r for r in rows
-        if r.get("desc") == TRANSCRIPT_DESC
-        and "transcript" in (r.get("attchmntText") or "").lower()
+        if r.get("desc") in ACCEPTED_DESC
+        and _is_earnings_transcript(r.get("attchmntText") or "")
     ]
     if not candidates:
         return None

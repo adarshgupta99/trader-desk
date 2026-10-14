@@ -23,6 +23,21 @@ Verified live 14 Oct 2026: response_schema + response_mime_type=
 "application/json" (google-genai 2.27.0) reliably returns a dict
 matching the schema, including nested objects/arrays and nullable
 leaf fields.
+
+ONE DELIBERATE ADDITION BEYOND THE PASTED SPEC: `analyst_tone.score`
+(15 Oct 2026, Adarsh's direction). The spec only asked for `overall`
+as a 3-value category (skeptical/neutral/constructive), which the
+Sentiment tab's chart needs a number to plot alongside
+`management_confidence`. The first version of this derived a number
+from the category after the fact (a fixed constructive=+2/neutral=0/
+skeptical=-2 lookup, see jobs/refresh_earnings_sentiment.py's git
+history) - which looked wrong in practice, since every quarter that
+came back "constructive" plotted as the exact same +2.0, flattening
+what should have been a varying line into a flat one regardless of how
+mildly or strongly constructive the session actually was. Asking
+Gemini for the number directly, same -2..+2 scale as
+management_confidence, fixes this at the source instead of patching a
+derived number after the fact.
 """
 
 import json
@@ -121,6 +136,17 @@ CALL_ANALYSIS_SCHEMA = {
             "type": "object",
             "properties": {
                 "overall": {"type": "string", "enum": ["skeptical", "neutral", "constructive"]},
+                "score": {
+                    "type": "number",
+                    "description": "-2 to +2, same scale as management_confidence - "
+                                   "how the Q&A session itself came across (not management's "
+                                   "answers, the exchange as a whole: how pointed the "
+                                   "questions were and how comfortably they were handled). "
+                                   "Must be directionally consistent with 'overall' "
+                                   "(skeptical <= 0, constructive >= 0) but should use the "
+                                   "full range to distinguish mildly vs strongly skeptical/"
+                                   "constructive sessions, not just the category's sign.",
+                },
                 "sharpest_challenge": {
                     "type": "object",
                     "properties": {
@@ -135,7 +161,7 @@ CALL_ANALYSIS_SCHEMA = {
                     "required": ["question_summary", "management_answered", "evidence"],
                 },
             },
-            "required": ["overall", "sharpest_challenge"],
+            "required": ["overall", "score", "sharpest_challenge"],
         },
         "evasiveness": {
             "type": "object",

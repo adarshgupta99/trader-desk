@@ -156,14 +156,6 @@ def due_quarters(conn, symbol):
     return out
 
 
-#: analyst_tone.overall has no numeric score of its own in the new
-#: schema - this maps it onto the same -2..+2 scale purely so the
-#: Sentiment tab's chart still has a second line to plot alongside
-#: management_confidence. It is a fixed display convenience, not a
-#: model judgment - see db/schema_sentiment.sql's header note.
-_QA_TONE_PROXY = {"constructive": 2.0, "neutral": 0.0, "skeptical": -2.0}
-
-
 def process_quarter(conn, api_key, symbol, filing_dt, quarter_end):
     window_end = filing_dt.date() + timedelta(days=TRANSCRIPT_WINDOW_DAYS)
 
@@ -199,7 +191,7 @@ def process_quarter(conn, api_key, symbol, filing_dt, quarter_end):
         INSERT INTO earnings_call_sentiment
             (ticker, quarter_end, call_date, transcript_source_url,
              lm_positive, lm_negative, lm_uncertainty, lm_litigious, lm_total_words,
-             management_confidence, overall_tone, qa_tone_proxy,
+             management_confidence, overall_tone, qa_tone,
              guidance, analyst_tone, evasiveness_count, qa_divergence_flag,
              extraction_json, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -213,7 +205,7 @@ def process_quarter(conn, api_key, symbol, filing_dt, quarter_end):
             lm_total_words = excluded.lm_total_words,
             management_confidence = excluded.management_confidence,
             overall_tone = excluded.overall_tone,
-            qa_tone_proxy = excluded.qa_tone_proxy,
+            qa_tone = excluded.qa_tone,
             guidance = excluded.guidance,
             analyst_tone = excluded.analyst_tone,
             evasiveness_count = excluded.evasiveness_count,
@@ -227,7 +219,7 @@ def process_quarter(conn, api_key, symbol, filing_dt, quarter_end):
             lm_counts["total_words"],
             analysis["management_confidence"]["score"],
             analysis["overall_tone"]["score"],
-            _QA_TONE_PROXY[analyst_tone],
+            analysis["analyst_tone"]["score"],
             analysis["guidance"]["direction"],
             analyst_tone,
             analysis["evasiveness"]["count"],

@@ -260,6 +260,18 @@ verified against real data - the UI piece (Chart-tab trend line) is not.
   against RELIANCE, TCS, HDFCBANK, HINDUNILVR, all real extractable PDF text. Speaker-label
   formatting is NOT standardised across companies (block headers vs inline labels), which is
   exactly why the management-vs-Q&A split is Gemini's job (Track B), not a regex.
+- **A second real discovery bug (15 October 2026), found running the IT sector:** INFY
+  reported zero transcripts across all 7 checked quarters, which looked like a genuine data
+  gap. It wasn't - INFY's transcripts are real NSE PDFs, just filed under
+  `desc == "Updates"` instead of the con-call category every other company checked used, so
+  the hard desc filter silently excluded all of them. Fixed by accepting `desc` in
+  `ACCEPTED_DESC` (both categories) - but that category also carries AGM/Investor-Day
+  transcripts, which are real PDFs mentioning "transcript" but aren't a quarterly earnings
+  call, so `_NON_EARNINGS_TERMS` excludes those by name as a second safety net alongside the
+  narrow per-quarter fetch window. COFORGE and OFSS's zero-transcript results were re-checked
+  and are genuine gaps, not this bug: COFORGE's filed PDFs extract to ~1,600 characters
+  (scanned images `pypdf` can't read), and OFSS has no transcript filing at all for most of
+  its checked quarters.
 - Track A (`analytics/lm_sentiment.py`): pure Loughran-McDonald word counts, no network,
   fully reproducible. Wordlists in `data/lm_dictionary.json`, from the Notre Dame SRAF Master
   Dictionary (free for academic/research use).
@@ -271,20 +283,29 @@ verified against real data - the UI piece (Chart-tab trend line) is not.
   prompt text. Fields: guidance (now `raised|maintained|lowered|withheld|not_given`, with
   which metrics were touched and how the language shifted), margin commentary, demand
   outlook, hedging phrases, capital allocation, one-offs, management confidence (-2..+2),
-  analyst tone (`skeptical|neutral|constructive` plus the single sharpest challenge and
-  whether it was dodged), evasiveness (every dodged question, not just the sharpest),
-  prepared-vs-Q&A divergence (an explicit flag + note), and an overall tone score with
-  supporting quotes. One call, not two, because fields like the divergence flag and the
-  sharpest-challenge outcome need the model to compare prepared remarks against Q&A within
-  the same pass - a role-scoped call literally can't see both halves.
+  analyst tone (`skeptical|neutral|constructive` **plus a -2..+2 `score`**, added 15 October
+  - see below - and the single sharpest challenge and whether it was dodged), evasiveness
+  (every dodged question, not just the sharpest), prepared-vs-Q&A divergence (an explicit
+  flag + note), and an overall tone score with supporting quotes. One call, not two, because
+  fields like the divergence flag and the sharpest-challenge outcome need the model to
+  compare prepared remarks against Q&A within the same pass - a role-scoped call literally
+  can't see both halves.
 - Storage: `earnings_call_sentiment` (`db/schema_sentiment.sql`), one row per (ticker,
   quarter_end - an ISO date, not a free-text label, so it joins against the other tables).
-  `qa_tone_proxy` is a fixed display mapping (constructive=+2, neutral=0, skeptical=-2) from
-  `analyst_tone`, not a Gemini score - the new schema has no single continuous Q&A number to
-  replace the old two-call `qa_tone`, so this exists purely so the chart keeps a second line;
-  the real Q&A signal is `evasiveness_count` and `qa_divergence_flag`, stored separately.
-  The table was dropped and rebuilt rather than migrated - only 8 RELIANCE rows existed, all
-  test data from the first live run under the old shape.
+  `qa_tone` is Track B's own -2..+2 score for the Q&A session, straight from Gemini - **not**
+  derived. The table has been dropped and rebuilt twice rather than migrated (14 and
+  15 October), since each time only a handful of real quarters existed under the prior shape
+  and nothing downstream depends on them.
+- **A design mistake caught by Adarsh looking at a real chart (15 October 2026):** the first
+  version of this rebuild had no Gemini-assigned Q&A score to plot - the spec only asks for
+  `analyst_tone` as a 3-value category - so `qa_tone_proxy` was added as a fixed lookup
+  (constructive=+2/neutral=0/skeptical=-2). It looked wrong on a real chart: every quarter
+  that came back "constructive" plotted at the *identical* +2.0, flattening what should have
+  been a varying line regardless of how mildly or strongly constructive the session actually
+  was. Fixed at the source instead of patching the derived number: `analyst_tone.score` is
+  now a field Gemini fills directly, same -2..+2 scale as `management_confidence`, instructed
+  to stay directionally consistent with the category but use the full range. Verified live on
+  RELIANCE: qa_tone now reads 0.0-1.0 across quarters instead of a flat 2.0.
 - Job: `jobs/refresh_earnings_sentiment.py`, scoped to the 4 custom watchlists (not the 5
   read-only index-preset views):
   ```
@@ -308,10 +329,18 @@ verified against real data - the UI piece (Chart-tab trend line) is not.
 - **UI, built 14 October 2026: a standalone `Sentiment` tab**, not the Chart tab's price
   chart the original spec called for - Adarsh's explicit direction. `tabs/sentiment.py`:
   a symbol picker over whichever tickers have stored rows, a tone-over-quarters line chart
-  (management solid / Q&A dashed, same comparison-colour convention the Chart tab's own
-  two-series mode uses - never direction-coloured, since tone isn't a change value), and a
-  per-quarter table (guidance, LM counts, a link to the real transcript). Two new read-only
-  `events_db.py` functions feed it; the app never writes this table.
+  (management confidence solid / Q&A tone dashed, same comparison-colour convention the Chart
+  tab's own two-series mode uses - never direction-coloured, since tone isn't a change
+  value), and a per-quarter table (mgmt confidence, overall tone, Q&A tone, guidance, analyst
+  tone, evasive-question count, QA-divergence flag, LM counts, a link to the real
+  transcript). Two new read-only `events_db.py` functions feed it; the app never writes this
+  table.
+- **First sector-scale run (15 October 2026):** run against all 13 IT-sector F&O stocks
+  (`fno_sectors.json`'s `IT` list), not just RELIANCE. 10 of 13 stored cleanly (64+ quarters);
+  COFORGE and OFSS are genuine data gaps (see above), and INFY needed the transcript-discovery
+  fix above before it stored anything. This was also the run that surfaced the qa_tone_proxy
+  flaw - seeing a real multi-quarter chart with a perfectly flat Q&A line is what made the
+  problem visible; it wasn't obvious from a single company's numbers in isolation.
 
 ## Starting state (handoff: 3 October 2026)
 

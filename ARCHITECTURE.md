@@ -1324,16 +1324,23 @@ despite the spec's storage section omitting it, since its own Method section req
 computing all four LM categories and dropping the fourth from storage would silently throw
 away a number the spec asked for.
 
-`qa_tone_proxy` is a third, newer deviation worth flagging on its own: the richer Track B
-schema judges analyst tone as a category (`skeptical`/`neutral`/`constructive`), not a
-continuous score, so there is no Gemini-assigned number to put next to
-`management_confidence` the way the old two-call version's `qa_tone` was. `qa_tone_proxy` is
-a fixed mapping (constructive=+2, neutral=0, skeptical=-2) computed in
-`jobs/refresh_earnings_sentiment.py`, kept purely so the Sentiment tab's existing two-line
-chart still has a second series to plot. It is a display convenience, not a model judgment -
-the real Q&A signal is `evasiveness_count` and `qa_divergence_flag`, both read from the
-actual extraction and shown as their own table columns in `tabs/sentiment.py`, not folded
-into this number.
+**`qa_tone` went through a wrong turn worth recording, not just the final answer.** The
+richer Track B schema originally only judged analyst tone as a category
+(`skeptical`/`neutral`/`constructive`), with no continuous number to put next to
+`management_confidence`. The first fix was `qa_tone_proxy`: a fixed mapping
+(constructive=+2, neutral=0, skeptical=-2) computed in `jobs/refresh_earnings_sentiment.py`,
+purely so the Sentiment tab's chart had a second series. It looked fine in isolation on
+RELIANCE's 8 quarters (mostly `constructive`, so mostly a flat +2 line, easy to miss as a
+problem) but broke down visibly once the IT-sector run (15 Oct 2026) produced a chart where
+*every* quarter read "constructive" and the Q&A line was therefore dead flat regardless of
+how the session actually went - Adarsh caught this by looking at a real rendered chart, not
+by reading the schema. The real fix: `analyst_tone.score` is now a field Gemini fills
+directly in the same call (same -2..+2 scale as `management_confidence`), instructed to stay
+directionally consistent with the category but use the full range rather than collapsing to
+its sign. `qa_tone_proxy` is gone; the column is `qa_tone`, a real model judgment. Verified
+live by re-running RELIANCE: qa_tone now reads 0.0-1.0 across quarters that previously all
+proxied to the same +2.0. `evasiveness_count` and `qa_divergence_flag` remain the other, more
+granular Q&A signals, each read from the extraction into their own table columns.
 
 **Track B (`earnings_sentiment.py`), Gemini structured extraction.** `response_schema` +
 `response_mime_type="application/json"` (google-genai 2.27.0, verified live) constrains
@@ -1432,15 +1439,14 @@ verbatim rather than inventing new styling: management solid `P.T1`, analyst Q&A
 comparison mode. Deliberately NOT direction-coloured (`P.UP`/`P.DOWN`) - tone is a score, not
 a change value, so the design language's signed-change convention doesn't apply here.
 
-**Updated 14 Oct 2026 for the Track B rebuild above.** The chart now plots
-`management_confidence` (solid) against `qa_tone_proxy` (dashed) - the latter a fixed display
-mapping from the category `analyst_tone`, documented inline as not a model score (see the
-storage section above). The per-quarter table grew to carry the new fields: mgmt confidence,
-overall tone, guidance, analyst tone, evasive-question count, and a QA-divergence Yes/No
-column (bold `P.T1` on Yes, plain `P.T2` on No - deliberately not `P.UP`/`P.DOWN`, since a
-prepared-vs-Q&A contradiction isn't a price-style "change" either), alongside the three LM
-word-count columns and the transcript link. A footnote under the chart spells out the
-qa_tone_proxy caveat so the chart isn't read as a second Gemini score.
+**Updated 14 Oct 2026 for the Track B rebuild, then again 15 Oct 2026 for the qa_tone fix
+above.** The chart now plots `management_confidence` (solid) against `qa_tone` (dashed) -
+both real Gemini judgments on the same -2..+2 scale, not a derived number. The per-quarter
+table carries: mgmt confidence, overall tone, Q&A tone, guidance, analyst tone (the
+category), evasive-question count, and a QA-divergence Yes/No column (bold `P.T1` on Yes,
+plain `P.T2` on No - deliberately not `P.UP`/`P.DOWN`, since a prepared-vs-Q&A contradiction
+isn't a price-style "change" either), alongside the three LM word-count columns and the
+transcript link.
 
 Verified via `AppTest` both before and after the rebuild: the tab renders with real RELIANCE
 data, no exceptions, and the full app still boots cleanly with the `NAV` entry. The rebuild

@@ -58,3 +58,25 @@ def test_multiple_transcripts_in_window_picks_most_recent():
              url="http://x/new.pdf"),
     ]
     assert select_transcript(rows)["attchmntFile"] == "http://x/new.pdf"
+
+
+def test_updates_desc_category_matches_too():
+    # Real INFY shape (found 15 Oct 2026 running the IT sector): its
+    # earnings-call transcripts sit under desc == "Updates", not
+    # TRANSCRIPT_DESC - every other company checked used TRANSCRIPT_DESC
+    # only, so this desc wasn't accepted until this bug was found live.
+    rows = [_row("19-Jan-2026", "2026-01-19", "Updates",
+                 "Infosys Limited has informed the Exchange regarding "
+                 "'Earnings Call Transcript'.", url="http://x/infy.pdf")]
+    assert select_transcript(rows)["attchmntFile"] == "http://x/infy.pdf"
+
+
+def test_agm_transcript_under_updates_desc_is_excluded():
+    # Also real INFY shape: the same "Updates" category carries AGM and
+    # Investor/AI Day transcripts, which mention "transcript" but are
+    # not a quarter's earnings call - these must not be picked instead
+    # of (or in the absence of) the real quarterly one.
+    rows = [_row("30-Jun-2026", "2026-06-30", "Updates",
+                 "Infosys Limited has informed the Exchange regarding "
+                 "'Transcript of the 45th Annual General Meeting'.")]
+    assert select_transcript(rows) is None
