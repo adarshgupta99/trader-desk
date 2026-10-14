@@ -286,8 +286,13 @@ verified against real data - the UI piece (Chart-tab trend line) is not.
   transcript URL. See ARCHITECTURE.md for the full numbers.
 - `pypdf` and `google-genai` added to `requirements.txt` - both were already in active use
   but had never actually been declared.
-- **Not yet built:** the Chart tab's sentiment trend line (mgmt tone / QA tone over
-  quarters). This session stopped at a verified, working backend.
+- **UI, built 14 October 2026: a standalone `Sentiment` tab**, not the Chart tab's price
+  chart the original spec called for - Adarsh's explicit direction. `tabs/sentiment.py`:
+  a symbol picker over whichever tickers have stored rows, a tone-over-quarters line chart
+  (management solid / Q&A dashed, same comparison-colour convention the Chart tab's own
+  two-series mode uses - never direction-coloured, since tone isn't a change value), and a
+  per-quarter table (guidance, LM counts, a link to the real transcript). Two new read-only
+  `events_db.py` functions feed it; the app never writes this table.
 
 ## Starting state (handoff: 3 October 2026)
 

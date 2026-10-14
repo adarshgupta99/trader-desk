@@ -1364,10 +1364,36 @@ Also fixed in passing: `pypdf` and `google-genai` were both in active use in thi
 (`test_key.py` already imported `google.genai`) but neither had ever been added to
 `requirements.txt`.
 
-**Not yet built:** the spec's UI piece (a sentiment trend line under the Chart tab's price
-chart). This session's work stopped at a verified, working data pipeline - storage schema,
+This session's backend work stopped at a verified, working data pipeline - storage schema,
 discovery, both tracks, the orchestrating job, 13 new fixture/regression tests, all run
 against real transcripts and a real Gemini key, not mocked. Suite 113/113.
+
+**UI, built immediately after (14 Oct 2026): a standalone `Sentiment` tab, overriding the
+spec's original "under the Chart tab's price chart" placement - Adarsh's explicit
+direction** ("don't put this thing in the Events tab. Create a new tab for this"). New file
+`tabs/sentiment.py`, wired into `app.py`'s `NAV` the same way every other tab is (the file's
+own header docstring literally documents this exact extension point - "write tabs/<name>.py
+with a render(), import it below, and add its name to NAV").
+
+Two new read-only accessors in `events_db.py`: `get_earnings_call_sentiment_symbols()` (which
+tickers have any stored data - the symbol picker only ever offers those, never a ticker with
+nothing to show) and `get_earnings_call_sentiment(ticker)` (every stored quarter, oldest
+first). Both follow the established read-side convention exactly - `@st.cache_data`, return
+empty rather than raise if the table or ticker has nothing yet.
+
+The tone-over-quarters chart reuses the Chart tab's own two-series comparison convention
+verbatim rather than inventing new styling: management solid `P.T1`, analyst Q&A dashed
+`P.T2`, the same colour-swatch legend markup `tabs/chart.py` already uses for its own
+comparison mode. Deliberately NOT direction-coloured (`P.UP`/`P.DOWN`) - tone is a score, not
+a change value, so the design language's signed-change convention doesn't apply here. Below
+the chart, a per-quarter table: management/Q&A tone, guidance, the three LM word-count
+columns, and a link to the real transcript PDF for that row.
+
+Verified via `AppTest`: the tab renders with real RELIANCE data (all 8 quarters from the
+first live backfill), the chart and both comparison-series labels render, guidance values
+show correctly ("maintained" across all stored quarters), and the full app still boots
+cleanly with the new `NAV` entry. Suite 113/113 (no existing test touched - this is new UI
+code over an already-tested read path, same pattern as every other tab in this app).
 
 ---
 

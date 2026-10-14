@@ -321,6 +321,48 @@ def get_all_expected_moves():
 
 
 @st.cache_data(ttl=3600)
+def get_earnings_call_sentiment_symbols():
+    """Distinct tickers with at least one stored row in
+    earnings_call_sentiment, alphabetical - the Sentiment tab's symbol
+    picker only ever offers symbols that actually have something to show.
+    Empty list if the table doesn't exist yet or has no rows - never
+    raises."""
+    if not os.path.exists(DB_PATH):
+        return []
+    try:
+        with _read_connection() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT ticker FROM earnings_call_sentiment ORDER BY ticker"
+            ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    return [r[0] for r in rows]
+
+
+@st.cache_data(ttl=3600)
+def get_earnings_call_sentiment(ticker):
+    """Every stored quarter for `ticker`, oldest first - written by
+    jobs/refresh_earnings_sentiment.py, read-only here. Returns an empty
+    list if the table doesn't exist yet or the ticker has no rows -
+    never raises."""
+    if not os.path.exists(DB_PATH):
+        return []
+    columns = ["quarter_end", "call_date", "transcript_source_url",
+               "lm_positive", "lm_negative", "lm_uncertainty", "lm_litigious",
+               "lm_total_words", "mgmt_tone", "qa_tone", "guidance"]
+    try:
+        with _read_connection() as conn:
+            rows = conn.execute(
+                f"SELECT {', '.join(columns)} FROM earnings_call_sentiment "
+                "WHERE ticker = ? ORDER BY quarter_end ASC",
+                (ticker,),
+            ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    return [dict(zip(columns, r)) for r in rows]
+
+
+@st.cache_data(ttl=3600)
 def get_earnings_history_quarters(symbol):
     """The last 6 reported quarters stored for `symbol` (one row per
     quarter_end, oldest first) for the Calendar subtab's HISTORY 6Q
