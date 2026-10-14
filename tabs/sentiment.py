@@ -67,10 +67,19 @@ def render():
     # mode: series 1 (management) solid P.T1, series 2 (Q&A) dashed P.T2 -
     # never direction-coloured (P.UP/P.DOWN), since tone isn't a change
     # value the way a price is.
+    #
+    # The Q&A line plots qa_tone_proxy, not a Gemini-assigned score - the
+    # richer extraction schema judges analyst_tone as a category
+    # (skeptical/neutral/constructive), not a continuous number, so
+    # qa_tone_proxy is a fixed mapping onto the same -2..+2 scale purely
+    # so this chart still has a second series (see
+    # db/schema_sentiment.sql's header note). The real Q&A signal -
+    # evasiveness count and the prepared-vs-Q&A divergence flag - is in
+    # the table below, not this line.
     C1, C2 = P.T1, P.T2
     x = [_fmt_quarter(r["quarter_end"]) for r in rows]
-    mgmt_y = [r["mgmt_tone"] for r in rows]
-    qa_y = [r["qa_tone"] for r in rows]
+    mgmt_y = [r["management_confidence"] for r in rows]
+    qa_y = [r["qa_tone_proxy"] for r in rows]
 
     summary = (
         f"<div style='display:flex;gap:24px;margin:4px 0 10px 0;align-items:center;"
@@ -128,11 +137,18 @@ def render():
         f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;"
         f"border:none;{TABULAR}'>{_fmt_quarter(r['quarter_end'])}</td>"
         f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;"
-        f"border:none;{TABULAR}'>{_tone_text(r['mgmt_tone'])}</td>"
+        f"border:none;{TABULAR}'>{_tone_text(r['management_confidence'])}</td>"
         f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;"
-        f"border:none;{TABULAR}'>{_tone_text(r['qa_tone'])}</td>"
+        f"border:none;{TABULAR}'>{_tone_text(r['overall_tone'])}</td>"
         f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;"
         f"border:none;'>{r['guidance'] or '-'}</td>"
+        f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;"
+        f"border:none;'>{r['analyst_tone'] or '-'}</td>"
+        f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;"
+        f"border:none;{TABULAR}'>{r['evasiveness_count'] if r['evasiveness_count'] is not None else '-'}</td>"
+        f"<td style='padding:6px 16px 6px 0;color:{P.T1 if r['qa_divergence_flag'] else P.T2};"
+        f"font-weight:{600 if r['qa_divergence_flag'] else 400};"
+        f"font-size:13px;white-space:nowrap;border:none;'>{'Yes' if r['qa_divergence_flag'] else 'No'}</td>"
         f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;"
         f"border:none;{TABULAR}'>{r['lm_positive']:.1f}</td>"
         f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;"
@@ -146,25 +162,16 @@ def render():
         f"</tr>"
         for r in reversed(rows)  # most recent quarter first in the table
     )
-    header = (
-        f"<tr style='border-bottom:1px solid {P.BORDER};'>"
-        f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-        f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Quarter</th>"
-        f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-        f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Mgmt tone</th>"
-        f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-        f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Q&amp;A tone</th>"
-        f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-        f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Guidance</th>"
-        f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-        f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>LM +</th>"
-        f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-        f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>LM -</th>"
-        f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-        f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>LM uncertain</th>"
-        f"<th style='padding:4px 0 6px 0;color:{P.T3};font-size:12px;text-align:left;"
-        f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>Source</th>"
-        f"</tr>"
+    _cols = ["Quarter", "Mgmt confidence", "Overall tone", "Guidance",
+             "Analyst tone", "Evasive Qs", "QA divergence",
+             "LM +", "LM -", "LM uncertain", "Source"]
+    header = "<tr style='border-bottom:1px solid {b};'>{cells}</tr>".format(
+        b=P.BORDER,
+        cells="".join(
+            f"<th style='padding:4px 16px 6px 0;color:{P.T3};font-size:12px;text-align:left;"
+            f"text-transform:uppercase;letter-spacing:0.05em;border:none;'>{c}</th>"
+            for c in _cols
+        ),
     )
     st.markdown(
         f"<div style='overflow-x:auto;'>"
@@ -174,8 +181,12 @@ def render():
     )
     st.markdown(
         f"<div style='color:{P.T3};font-size:12px;margin-top:8px;'>"
-        f"Tone: -2 (very negative) to +2 (very positive), Gemini-extracted separately for "
-        f"management's prepared remarks and the analyst Q&amp;A. LM columns are Loughran-"
-        f"McDonald word counts per 1000 words - deterministic, no model involved.</div>",
+        f"Mgmt confidence and overall tone: -2 (very negative) to +2 (very positive), "
+        f"Gemini-extracted with a quoted line backing every judgment. The Q&amp;A line on "
+        f"the chart above is a fixed display mapping from analyst tone (constructive/"
+        f"neutral/skeptical), not a model-assigned score - evasive questions and a "
+        f"prepared-vs-Q&amp;A divergence flag are the real Q&amp;A signal, shown as separate "
+        f"columns here. LM columns are Loughran-McDonald word counts per 1000 words - "
+        f"deterministic, no model involved.</div>",
         unsafe_allow_html=True,
     )

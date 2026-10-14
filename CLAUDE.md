@@ -263,12 +263,28 @@ verified against real data - the UI piece (Chart-tab trend line) is not.
 - Track A (`analytics/lm_sentiment.py`): pure Loughran-McDonald word counts, no network,
   fully reproducible. Wordlists in `data/lm_dictionary.json`, from the Notre Dame SRAF Master
   Dictionary (free for academic/research use).
-- Track B (`earnings_sentiment.py`): Gemini structured-output extraction (`response_schema`),
-  2 calls per transcript (management, then Q&A), well under the spec's 20-call budget. Both
-  calls get the full transcript text; Gemini resolves speaker roles from context rather than
-  a pre-split.
+- **Track B rebuilt (14 October 2026) to Adarsh's own richer spec**, replacing the original
+  two-call management/Q&A split with a single Gemini call per transcript
+  (`earnings_sentiment.py::extract_call_analysis`). Every judgment field is paired with a
+  verbatim "evidence" quote or `null` if the transcript doesn't support one - nothing is
+  invented to fill a gap, enforced by the JSON schema's own nullable fields, not just the
+  prompt text. Fields: guidance (now `raised|maintained|lowered|withheld|not_given`, with
+  which metrics were touched and how the language shifted), margin commentary, demand
+  outlook, hedging phrases, capital allocation, one-offs, management confidence (-2..+2),
+  analyst tone (`skeptical|neutral|constructive` plus the single sharpest challenge and
+  whether it was dodged), evasiveness (every dodged question, not just the sharpest),
+  prepared-vs-Q&A divergence (an explicit flag + note), and an overall tone score with
+  supporting quotes. One call, not two, because fields like the divergence flag and the
+  sharpest-challenge outcome need the model to compare prepared remarks against Q&A within
+  the same pass - a role-scoped call literally can't see both halves.
 - Storage: `earnings_call_sentiment` (`db/schema_sentiment.sql`), one row per (ticker,
   quarter_end - an ISO date, not a free-text label, so it joins against the other tables).
+  `qa_tone_proxy` is a fixed display mapping (constructive=+2, neutral=0, skeptical=-2) from
+  `analyst_tone`, not a Gemini score - the new schema has no single continuous Q&A number to
+  replace the old two-call `qa_tone`, so this exists purely so the chart keeps a second line;
+  the real Q&A signal is `evasiveness_count` and `qa_divergence_flag`, stored separately.
+  The table was dropped and rebuilt rather than migrated - only 8 RELIANCE rows existed, all
+  test data from the first live run under the old shape.
 - Job: `jobs/refresh_earnings_sentiment.py`, scoped to the 4 custom watchlists (not the 5
   read-only index-preset views):
   ```
@@ -283,7 +299,10 @@ verified against real data - the UI piece (Chart-tab trend line) is not.
   tracker), which gives real historical results dates going back years.
 - First live run (RELIANCE): found and processed 8 real completed quarters in one run,
   genuinely differentiated tone scores across them, every row linked to its real NSE
-  transcript URL. See ARCHITECTURE.md for the full numbers.
+  transcript URL. Re-run after the Track B rebuild: all 8 quarters came back
+  `guidance: not_given` with `evidence: null` - RELIANCE's calls genuinely don't discuss
+  forward guidance the way the schema asks, and the model correctly declined to invent it
+  rather than defaulting to a guess. See ARCHITECTURE.md for the full numbers.
 - `pypdf` and `google-genai` added to `requirements.txt` - both were already in active use
   but had never actually been declared.
 - **UI, built 14 October 2026: a standalone `Sentiment` tab**, not the Chart tab's price

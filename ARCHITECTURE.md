@@ -1324,16 +1324,48 @@ despite the spec's storage section omitting it, since its own Method section req
 computing all four LM categories and dropping the fourth from storage would silently throw
 away a number the spec asked for.
 
-**Track B (`earnings_sentiment.py`), Gemini structured extraction, 2 calls per transcript
-(management, then Q&A) - comfortably inside the spec's "max ~20 calls" budget.** Both calls
-receive the FULL transcript text, with a role-specific instruction telling Gemini which
-portion to attend to and which to ignore, relying on it to resolve speaker roles from context
-(job titles, a participants roster most transcripts open with, analyst firm names) exactly
-the way a human reader would - this is the direct consequence of the speaker-format discovery
-above. `response_schema` + `response_mime_type="application/json"` (google-genai 2.27.0,
-verified live) constrains output to the spec's exact shape, `guidance`'s
-raised/maintained/lowered/none as a real enum constraint, not a string validated after the
-fact. Token usage (`response.usage_metadata`) is logged per call, per the spec's cost guard.
+`qa_tone_proxy` is a third, newer deviation worth flagging on its own: the richer Track B
+schema judges analyst tone as a category (`skeptical`/`neutral`/`constructive`), not a
+continuous score, so there is no Gemini-assigned number to put next to
+`management_confidence` the way the old two-call version's `qa_tone` was. `qa_tone_proxy` is
+a fixed mapping (constructive=+2, neutral=0, skeptical=-2) computed in
+`jobs/refresh_earnings_sentiment.py`, kept purely so the Sentiment tab's existing two-line
+chart still has a second series to plot. It is a display convenience, not a model judgment -
+the real Q&A signal is `evasiveness_count` and `qa_divergence_flag`, both read from the
+actual extraction and shown as their own table columns in `tabs/sentiment.py`, not folded
+into this number.
+
+**Track B (`earnings_sentiment.py`), Gemini structured extraction.** `response_schema` +
+`response_mime_type="application/json"` (google-genai 2.27.0, verified live) constrains
+output to a strict JSON shape, with enum fields (e.g. `guidance.direction`,
+`analyst_tone.overall`) as real schema constraints, not strings validated after the fact.
+Token usage (`response.usage_metadata`) is logged per call, per the spec's cost guard.
+
+**Rebuilt 14 Oct 2026 to a richer spec Adarsh supplied, replacing the original two-call
+management/Q&A split with a single call per transcript
+(`extract_call_analysis`).** The original version ran two calls with a role-specific
+instruction telling Gemini which half of the transcript to attend to, relying on it to
+resolve speaker roles from context the way a human would - that discovery (speaker-label
+formatting isn't standardised across companies) still holds and is why the new version
+*also* leaves the prepared-remarks/Q&A split to Gemini rather than a Python regex. What
+changed is the call count: the new schema's cross-cutting fields -
+`qa_vs_prepared_divergence` and `analyst_tone.sharpest_challenge.management_answered` - need
+to compare what management said earlier in prepared remarks against how Q&A actually went,
+which a role-scoped call literally can't see since it's told to ignore the other half. One
+call reading the whole transcript at once is the only way to answer those fields honestly.
+
+**Evidence-or-null is enforced by the schema, not just the prompt.** Every judgment field
+(`guidance.evidence`, `margin_commentary.evidence`, `management_confidence.evidence`, etc.)
+is a nullable string in the JSON schema itself - Gemini can't satisfy the schema by inventing
+a quote where none exists, it has to return `null`. Verified live: RELIANCE's calls don't
+discuss forward guidance the way the schema asks, and every one of 8 quarters correctly came
+back `{"direction": "not_given", "evidence": null}` rather than a guessed value. Full field
+list: `guidance` (direction + which metrics were touched + how language shifted),
+`margin_commentary`, `demand_outlook`, `hedging` (phrases + count), `capital_allocation`,
+`one_offs`, `management_confidence` (-2..+2), `analyst_tone` (category + the single sharpest
+challenge and whether it was dodged), `evasiveness` (every dodged question, with what wasn't
+answered), `qa_vs_prepared_divergence` (flag + note), and `overall_tone` (-2..+2 with
+supporting quotes).
 
 **`jobs/refresh_earnings_sentiment.py` orchestrates it, scoped to the 4 custom watchlists**
 (`watchlists.get_custom_lists()`), not the 5 read-only index-preset views - those are 50+
@@ -1354,11 +1386,24 @@ inferring it from a calendar date).
 **First live run, RELIANCE, exceeded the acceptance test rather than just meeting it:** found
 and processed **8 real completed quarters** (Sep-2024 through Jun-2026) in one run, not the
 minimum 2 the spec's acceptance test asks for. Every row's `transcript_source_url` is the
-actual NSE filing parsed. Tone scores are genuinely differentiated across quarters, not a
-static model output - Sep-2024 (mgmt_tone 0.5, qa_tone 0.0) reads distinctly flatter than the
-1.2-1.5 range every quarter since, and LM word counts vary plausibly by quarter (9,042 to
-22,365 total words). `guidance` read "maintained" for all 8 quarters checked - plausible for
-a company that, per its own transcripts, explicitly avoids giving formal forward guidance.
+actual NSE filing parsed, and LM word counts vary plausibly by quarter (9,042 to 22,365 total
+words).
+
+**Re-run after the Track B rebuild, same 8 quarters, new schema:** `management_confidence`
+ranged 1.0-2.0 and `overall_tone` 1.0-2.0 across the 8 quarters - consistently confident
+rather than flat, plausible for a company whose own transcripts read as upbeat throughout.
+`analyst_tone` was `constructive` in 7 of 8 quarters and `neutral` in the oldest (Sep-2024) -
+directionally consistent with the original run's finding that Sep-2024 read flatter than
+later quarters. `guidance` came back `not_given` with `evidence: null` for all 8 - not a
+failure, a correct finding: RELIANCE's calls don't give the kind of formal forward guidance
+the schema asks about, and the evidence-or-null design means the model said so rather than
+inventing a "maintained" to fill the field (the ORIGINAL two-call version's run had reported
+"maintained" for all 8 - the richer schema's stricter evidence requirement is a real
+behavioural difference, not just a relabeling). `evasiveness_count` ranged 0-2 per quarter
+with specific, concrete dodged questions (e.g. "Details on LEO satellite investments... -
+specific investment amounts and future outlook not answered"), and
+`qa_vs_prepared_divergence.flag` was `false` for all 8 - no quarter showed Q&A contradicting
+prepared remarks, which the table's new "QA divergence" column would surface if one ever did.
 
 Also fixed in passing: `pypdf` and `google-genai` were both in active use in this repo
 (`test_key.py` already imported `google.genai`) but neither had ever been added to
@@ -1385,15 +1430,25 @@ The tone-over-quarters chart reuses the Chart tab's own two-series comparison co
 verbatim rather than inventing new styling: management solid `P.T1`, analyst Q&A dashed
 `P.T2`, the same colour-swatch legend markup `tabs/chart.py` already uses for its own
 comparison mode. Deliberately NOT direction-coloured (`P.UP`/`P.DOWN`) - tone is a score, not
-a change value, so the design language's signed-change convention doesn't apply here. Below
-the chart, a per-quarter table: management/Q&A tone, guidance, the three LM word-count
-columns, and a link to the real transcript PDF for that row.
+a change value, so the design language's signed-change convention doesn't apply here.
 
-Verified via `AppTest`: the tab renders with real RELIANCE data (all 8 quarters from the
-first live backfill), the chart and both comparison-series labels render, guidance values
-show correctly ("maintained" across all stored quarters), and the full app still boots
-cleanly with the new `NAV` entry. Suite 113/113 (no existing test touched - this is new UI
-code over an already-tested read path, same pattern as every other tab in this app).
+**Updated 14 Oct 2026 for the Track B rebuild above.** The chart now plots
+`management_confidence` (solid) against `qa_tone_proxy` (dashed) - the latter a fixed display
+mapping from the category `analyst_tone`, documented inline as not a model score (see the
+storage section above). The per-quarter table grew to carry the new fields: mgmt confidence,
+overall tone, guidance, analyst tone, evasive-question count, and a QA-divergence Yes/No
+column (bold `P.T1` on Yes, plain `P.T2` on No - deliberately not `P.UP`/`P.DOWN`, since a
+prepared-vs-Q&A contradiction isn't a price-style "change" either), alongside the three LM
+word-count columns and the transcript link. A footnote under the chart spells out the
+qa_tone_proxy caveat so the chart isn't read as a second Gemini score.
+
+Verified via `AppTest` both before and after the rebuild: the tab renders with real RELIANCE
+data, no exceptions, and the full app still boots cleanly with the `NAV` entry. The rebuild
+was also verified against a real Gemini key - the job was re-run live for all 8 RELIANCE
+quarters under the new schema (not mocked), and the results (consistently confident tone,
+correctly-null guidance, concrete dodged-question text) are discussed above. Suite 113/113
+throughout (no existing test touched - this is new UI/extraction code over an already-tested
+read path and dedup logic, same pattern as every other tab and job in this app).
 
 ---
 

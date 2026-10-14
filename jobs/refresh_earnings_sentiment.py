@@ -2,8 +2,11 @@
 Week 5-6 task: Earnings call sentiment tracker (see CLAUDE.md). For each
 watchlist symbol's completed results quarters, finds the NSE-filed
 transcript, runs Track A (Loughran-McDonald word counts, deterministic)
-and Track B (Gemini structured extraction, management + Q&A scored
-separately), and stores one row per (symbol, quarter).
+and Track B (Gemini structured extraction - guidance, margin/demand
+commentary, hedging, capital allocation, one-offs, management
+confidence, analyst tone, evasiveness, and prepared-vs-Q&A divergence,
+every judgment quote-evidenced or null), and stores one row per
+(symbol, quarter).
 
 Run manually: python -m jobs.refresh_earnings_sentiment [--symbols A,B]
 Not yet on a schedule - this is new, unverified-at-scale work; run by
@@ -17,11 +20,10 @@ transcripts every quarter would be well outside a personal-desk feature's
 intended scope). --symbols overrides this for manual testing against
 specific names regardless of what's in a watchlist.
 
-COST GUARD: 2 Gemini calls per transcript (management, then Q&A) -
+COST GUARD: 1 Gemini call per transcript (see earnings_sentiment.py for
+why a single call replaced the earlier two-call management/Q&A split) -
 comfortably inside the spec's "max ~20 calls per transcript" budget.
-Both calls receive the full transcript text (no Python-side pre-split -
-see nse_transcripts.py and earnings_sentiment.py for why) and token usage
-from each call is logged, per the spec.
+Token usage from the call is logged, per the spec.
 
 INSERT-ONLY: this job only ever writes earnings_call_sentiment, a new
 additive table - it does not touch events, earnings_estimates, or
@@ -154,6 +156,14 @@ def due_quarters(conn, symbol):
     return out
 
 
+#: analyst_tone.overall has no numeric score of its own in the new
+#: schema - this maps it onto the same -2..+2 scale purely so the
+#: Sentiment tab's chart still has a second line to plot alongside
+#: management_confidence. It is a fixed display convenience, not a
+#: model judgment - see db/schema_sentiment.sql's header note.
+_QA_TONE_PROXY = {"constructive": 2.0, "neutral": 0.0, "skeptical": -2.0}
+
+
 def process_quarter(conn, api_key, symbol, filing_dt, quarter_end):
     window_end = filing_dt.date() + timedelta(days=TRANSCRIPT_WINDOW_DAYS)
 
@@ -173,29 +183,26 @@ def process_quarter(conn, api_key, symbol, filing_dt, quarter_end):
     lm_counts = count_words(text)
     lm_norm = per_1000_words(lm_counts)
 
-    mgmt, mgmt_usage = call_with_retry(
-        f"gemini_mgmt({symbol})", earnings_sentiment.extract_track_b, api_key, text, "management",
+    analysis, usage = call_with_retry(
+        f"gemini_call_analysis({symbol})", earnings_sentiment.extract_call_analysis, api_key, text,
     )
-    log(f"  {symbol} {quarter_end}: management extraction, tokens={mgmt_usage['total_tokens']}")
-    time.sleep(INTER_CALL_SLEEP)
-
-    qa, qa_usage = call_with_retry(
-        f"gemini_qa({symbol})", earnings_sentiment.extract_track_b, api_key, text, "qa",
-    )
-    log(f"  {symbol} {quarter_end}: qa extraction, tokens={qa_usage['total_tokens']}")
+    log(f"  {symbol} {quarter_end}: call analysis, tokens={usage['total_tokens']}")
 
     # filing["an_dt"] is NSE's own "19-Jul-2026 18:06:37" format - parsed
     # to ISO so call_date matches the schema's stated format and every
     # other date column in this app.
     call_date = datetime.strptime(filing["an_dt"], "%d-%b-%Y %H:%M:%S").date().isoformat()
     now = datetime.now(IST).isoformat()
+    analyst_tone = analysis["analyst_tone"]["overall"]
     conn.execute(
         """
         INSERT INTO earnings_call_sentiment
             (ticker, quarter_end, call_date, transcript_source_url,
              lm_positive, lm_negative, lm_uncertainty, lm_litigious, lm_total_words,
-             mgmt_tone, qa_tone, guidance, extraction_json, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             management_confidence, overall_tone, qa_tone_proxy,
+             guidance, analyst_tone, evasiveness_count, qa_divergence_flag,
+             extraction_json, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(ticker, quarter_end) DO UPDATE SET
             call_date = excluded.call_date,
             transcript_source_url = excluded.transcript_source_url,
@@ -204,9 +211,13 @@ def process_quarter(conn, api_key, symbol, filing_dt, quarter_end):
             lm_uncertainty = excluded.lm_uncertainty,
             lm_litigious = excluded.lm_litigious,
             lm_total_words = excluded.lm_total_words,
-            mgmt_tone = excluded.mgmt_tone,
-            qa_tone = excluded.qa_tone,
+            management_confidence = excluded.management_confidence,
+            overall_tone = excluded.overall_tone,
+            qa_tone_proxy = excluded.qa_tone_proxy,
             guidance = excluded.guidance,
+            analyst_tone = excluded.analyst_tone,
+            evasiveness_count = excluded.evasiveness_count,
+            qa_divergence_flag = excluded.qa_divergence_flag,
             extraction_json = excluded.extraction_json,
             created_at = excluded.created_at
         """,
@@ -214,14 +225,21 @@ def process_quarter(conn, api_key, symbol, filing_dt, quarter_end):
             symbol, quarter_end.isoformat(), call_date, filing["attchmntFile"],
             lm_norm["positive"], lm_norm["negative"], lm_norm["uncertainty"], lm_norm["litigious"],
             lm_counts["total_words"],
-            mgmt["tone_score"], qa["tone_score"], mgmt["guidance"],
-            json.dumps({"management": mgmt, "qa": qa}),
+            analysis["management_confidence"]["score"],
+            analysis["overall_tone"]["score"],
+            _QA_TONE_PROXY[analyst_tone],
+            analysis["guidance"]["direction"],
+            analyst_tone,
+            analysis["evasiveness"]["count"],
+            int(analysis["qa_vs_prepared_divergence"]["flag"]),
+            json.dumps(analysis),
             now,
         ),
     )
     conn.commit()
-    log(f"  {symbol} {quarter_end}: stored - mgmt_tone={mgmt['tone_score']} "
-        f"qa_tone={qa['tone_score']} guidance={mgmt['guidance']}")
+    log(f"  {symbol} {quarter_end}: stored - mgmt_confidence={analysis['management_confidence']['score']} "
+        f"overall_tone={analysis['overall_tone']['score']} guidance={analysis['guidance']['direction']} "
+        f"analyst_tone={analyst_tone}")
     return "stored"
 
 

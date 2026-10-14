@@ -1,36 +1,45 @@
 -- Schema for the Week 5-6 Earnings call sentiment tracker (see
--- CLAUDE.md). One row per (ticker, quarter): Track A's deterministic
--- Loughran-McDonald word counts plus Track B's Gemini-extracted
--- management/Q&A tone, both computed from the same NSE-filed transcript
--- (see nse_transcripts.py).
+-- CLAUDE.md and earnings_sentiment.py). One row per (ticker, quarter):
+-- Track A's deterministic Loughran-McDonald word counts plus Track B's
+-- Gemini-extracted call analysis, both computed from the same
+-- NSE-filed transcript (see nse_transcripts.py).
 --
--- TWO DEVIATIONS FROM THE SPEC'S LITERAL STORAGE LIST, both deliberate:
+-- REBUILT 14 Oct 2026 for Adarsh's richer Track B spec (evidence-quoted
+-- extraction: guidance/margin/demand/hedging/capital-allocation/
+-- one-offs/confidence/analyst-tone/evasiveness/divergence/overall-tone,
+-- all from ONE Gemini call per transcript instead of two role-scoped
+-- calls). Only 8 RELIANCE rows existed under the old shape and were
+-- test data from the first live run, not anything downstream depends
+-- on, so the table is redefined rather than migrated in place.
 --
--- 1. `quarter_end` (ISO date), not a free-text "quarter" label. Every
---    other table this app writes (earnings_estimates, earnings_history_
---    quarters) keys on an ISO quarter-end date, not a human label like
---    "Q1 FY2027" - using the same convention here keeps this table
---    joinable against those without a label-parsing step. If a display
---    label is wanted later, it is one `strftime` away from this value;
---    going the other direction (parsing "Q1 FY2027" back into a date)
---    is the harder, lossier conversion, so the date is the right thing
---    to store.
+-- DEVIATIONS FROM THE SPEC'S LITERAL STORAGE LIST, both deliberate:
 --
--- 2. `lm_litigious` is added despite the spec's storage section listing
---    only lm_positive/negative/uncertainty - its own Method section
---    requires computing all four LM categories ("positive, negative,
---    uncertainty, litigious wordlists"), so dropping litigious from
---    storage would silently throw away a number the spec itself asked
---    for.
+-- 1. `quarter_end` (ISO date), not a free-text "quarter" label - same
+--    reasoning as before: every other table this app writes keys on an
+--    ISO quarter-end date, so this stays joinable against them.
 --
--- mgmt_tone/qa_tone are Track B's separately-scored tone_score
--- (-2..+2) for management commentary and the analyst Q&A - the spec's
--- explicit point that "Q&A tone divergence from management tone is
--- itself a signal worth storing" is exactly why these are two columns,
--- not one. guidance is a single column (raised/maintained/lowered/none)
--- sourced from the management-commentary extraction, where guidance
--- language actually lives in these transcripts (see nse_transcripts.py's
--- Q&A-format discovery notes) - not duplicated per track.
+-- 2. `lm_litigious` is added despite the earlier spec's storage section
+--    listing only lm_positive/negative/uncertainty - the Method section
+--    requires computing all four LM categories, so dropping litigious
+--    from storage would silently throw away a number already computed.
+--
+-- `management_confidence` and `overall_tone` are Track B's own -2..+2
+-- scores (whole-call and management-confidence respectively - see
+-- earnings_sentiment.py's schema). `qa_tone_proxy` is NOT a Gemini
+-- score: the new spec has no single Q&A numeric score to replace the
+-- old two-call mgmt_tone/qa_tone pair, so this column is a derived
+-- mapping (constructive=+2, neutral=0, skeptical=-2) from
+-- analyst_tone.overall, computed in jobs/refresh_earnings_sentiment.py,
+-- purely so the Sentiment tab's existing two-line chart still has a
+-- second series to plot. The real Q&A signal - evasiveness, the
+-- sharpest-challenge outcome, and the prepared-vs-Q&A divergence flag -
+-- lives in dedicated columns below and in extraction_json, not in this
+-- proxy number. Treat qa_tone_proxy as a chart convenience, not a
+-- model judgment.
+--
+-- `guidance` and `analyst_tone` are single columns pulled from the
+-- extraction for the table/filtering; dodged-question detail and every
+-- quote/evidence/rationale field lives only in extraction_json.
 
 CREATE TABLE IF NOT EXISTS earnings_call_sentiment (
     id                     INTEGER PRIMARY KEY,
@@ -43,10 +52,14 @@ CREATE TABLE IF NOT EXISTS earnings_call_sentiment (
     lm_uncertainty         REAL,
     lm_litigious           REAL,
     lm_total_words         INTEGER,               -- the word count the per-1000 figures are normalized against
-    mgmt_tone              REAL,                  -- Track B, -2..+2, management commentary
-    qa_tone                REAL,                  -- Track B, -2..+2, analyst Q&A
-    guidance               TEXT,                  -- "raised" | "maintained" | "lowered" | "none"
-    extraction_json        TEXT NOT NULL,          -- full Track B structured output, both tracks, for audit
+    management_confidence  REAL,                  -- Track B, -2..+2
+    overall_tone           REAL,                  -- Track B, -2..+2, whole call
+    qa_tone_proxy          REAL,                  -- derived from analyst_tone.overall, see header note - NOT a model score
+    guidance               TEXT,                  -- "raised" | "maintained" | "lowered" | "withheld" | "not_given"
+    analyst_tone           TEXT,                  -- "skeptical" | "neutral" | "constructive"
+    evasiveness_count      INTEGER,               -- number of dodged questions Gemini identified
+    qa_divergence_flag     INTEGER,               -- 0/1, prepared-remarks vs Q&A contradiction flagged
+    extraction_json        TEXT NOT NULL,         -- full Track B structured output, for audit
     created_at             TEXT NOT NULL,         -- full ISO timestamp, IST
     UNIQUE (ticker, quarter_end)
 );
