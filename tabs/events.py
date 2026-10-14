@@ -218,7 +218,7 @@ def render():
             rev_text = f"{'~' if is_preview else ''}{_fmt_rev_cr(rev_val)}"
             rev_cell = (
                 f"<td style='padding:6px 16px 6px 0;color:{val_color};font-size:13px;"
-                f"white-space:nowrap;border:none;cursor:help;{TABULAR}'"
+                f"white-space:nowrap;border:none;{TABULAR}'"
                 f"{_analysts_title(n_rev_val)}>{rev_text}</td>"
             )
 
@@ -232,7 +232,7 @@ def render():
             eps_text = f"{'~' if eps_is_preview else ''}{_fmt_eps(eps_est_val)}"
             eps_cell = (
                 f"<td style='padding:6px 0;color:{eps_val_color};font-size:13px;"
-                f"white-space:nowrap;border:none;cursor:help;{TABULAR}'"
+                f"white-space:nowrap;border:none;{TABULAR}'"
                 f"{_analysts_title(n_eps_val)}>{eps_text}</td>"
             )
 
@@ -378,7 +378,7 @@ def render():
                     f"{neg}<span data-tip='{title}' style='display:inline-flex;"
                     f"flex-direction:column;justify-content:flex-end;"
                     f"width:{BAR_W}px;height:{TRACK_H}px;"
-                    f"margin-right:{BAR_GAP}px;cursor:help;'>{inner}</span>"
+                    f"margin-right:{BAR_GAP}px;'>{inner}</span>"
                 )
             bars_html = (
                 f"<span style='display:inline-flex;align-items:flex-end;"
