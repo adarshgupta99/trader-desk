@@ -1278,6 +1278,60 @@ snapshot-then-fill-actuals pair (both scripts' docstrings describe ~6pm IST, aft
 
 ---
 
+### Calendar subtab: full F&O universe (15 Oct 2026)
+
+Adarsh's direction: the Calendar subtab should list all 213 F&O stocks, including ones with
+no announced board meeting yet - not just symbols that already have an `events` row. Same
+root-cause gap the "Expected moves" subtab already solved for itself
+(`get_all_expected_moves()`, full-universe + left-join rather than events-table-driven), now
+applied to Calendar too.
+
+`tabs/events.py`'s Calendar branch: `board_meetings_df` is the existing `events`-sourced
+query, deduplicated to one row per symbol (nearest date, for the rare case of two
+board-meeting rows in the lookback window - e.g. a dividend-only meeting alongside a results
+one). The row set itself is now `fno.symbols()` (213, "All F&O" scope) or the watchlist's own
+ticker set ("My watchlist", unchanged - `symbols is None` is the actual All-F&O signal, not
+"falsy", since an empty watchlist set must stay empty rather than silently falling back to
+the full universe), left-joined against `board_meetings_df` on `symbol`.
+
+Every downstream helper that takes `event_date` (`_estimate_cells`, `_history_sparkline_cell`,
+the live-preview prefetch filter) needed a `None`-tolerant guard added - previously `event_date`
+always came from a real `events` row and was never missing. `_estimate_cells` naturally
+produces "no estimate" when `event_date` is `None` (nothing to key a frozen snapshot or a
+live preview off of - correct, since an estimate is tied to a specific announced event).
+`_history_sparkline_cell`'s existing purpose-text gate (`"result" not in purpose.lower()`,
+itself a real bug fix from 13 Oct 2026) is now conditioned on `event_date` being present too -
+a "not yet announced" row has no purpose to gate on, but the 6-quarter history has nothing to
+do with whether a next meeting is scheduled, so it renders normally rather than going empty.
+
+**A real pandas bug found while building this, not hypothetical:** the left-join leaves
+`event_date`/`purpose`/etc. as float `NaN` for a non-matching symbol. Converting that back to
+Python `None` (so the new `if event_date`/`purpose or ...` guards behave, rather than hitting
+a literal `"nan"` string in the UI or `AttributeError` on `nan.lower()`) looked like a
+one-line fix - `series.where(series.notna(), None)` - but verified live on pandas 3.0.6 that
+this does NOT work on an already-string-dtyped column: assigning `None` back into a `str`
+(not `object`) dtype Series silently reintroduces `NaN`, because `NaN` is that dtype's own
+internal missing-value sentinel and it can't hold `None` instead. Confirmed via a 3-line
+repro (`pd.Series(['x', None], dtype='str').where(...)` round-trips to `NaN`, not `None`) before
+trusting the fix. The actual fix casts to `object` dtype first:
+`series.astype(object).where(series.notna(), None)`. This is the same "`None` becomes a
+truthy `nan`" family of bug this repo has hit before (the Expected-move tracker's fourth bug,
+documented above) - that one was on the read side (reading a NULL out of SQLite into a mixed
+pandas column), this one is on the write/normalize side (writing `None` into an already-typed
+pandas column) - different mechanism, same underlying trap, worth recognizing on sight now.
+
+Sort order: rows with a real `event_date` first (ascending, nearest first), then every
+"not yet announced" row, alphabetical by symbol - so the un-scheduled tail isn't left in
+arbitrary left-join order.
+
+Verified via `AppTest`: 214 `<tr>` elements (213 symbols + 1 header) with no exception - 118
+rows read "not scheduled"/"Not yet announced", 95 carry a real date (matching what the
+existing 14-day-lookback query already found). The IT-sector filter chip correctly narrows to
+exactly 13 rows (`fno.symbols_in_display_group("IT")`'s own count). "My watchlist" scope still
+renders without exception. No real-browser check done, same caveat as the rest of this tab.
+
+---
+
 ### Earnings call sentiment tracker (Week 5-6 task, built 14 Oct 2026)
 
 The CLAUDE.md-specced feature: for each watchlist symbol's completed results quarters, find

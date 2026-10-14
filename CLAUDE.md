@@ -261,6 +261,43 @@ heights are never comparable across rows or between the REV/PAT tracks.
 - **Not yet verified:** checked via `AppTest` only, same caveat as the rest of the Events
   tab - no real-browser check has been done.
 
+## Calendar subtab: full F&O universe, including unannounced earnings (15 October 2026)
+
+Adarsh's explicit direction: the Calendar subtab should show all 213 F&O stocks, including
+ones whose next board meeting hasn't been announced yet - not just symbols with a known
+upcoming event.
+
+- **The gap:** the row set came straight from the `events` table (`event_date >= today -
+  14 days`), so a stock with no announced board meeting had no row at all - exactly the same
+  root cause already fixed for the separate "Expected moves" subtab
+  (`events_db.get_all_expected_moves()`, which builds from the full F&O universe and
+  left-joins each symbol's data, rather than from whichever symbols happen to have an
+  events-table row).
+- **Fix, same pattern:** `tabs/events.py`'s Calendar branch now starts from `fno.symbols()`
+  (213 stocks, "All F&O" scope) or the user's own watchlist tickers ("My watchlist" scope,
+  unchanged), and left-joins the actual board-meeting row for whichever symbols have one.
+  A symbol with none gets a row with `event_date`/`purpose` as `None` - "not scheduled" in
+  the Board meeting column, "Not yet announced" (still a clickable link to NSE's own
+  board-meetings page for that symbol) in Agenda, "no estimate" for Est. Rev/EPS (an
+  estimate snapshot is tied to a specific announced event, so there is genuinely nothing to
+  show), and the HISTORY 6Q sparkline still renders normally - that column is about past
+  reported quarters, which has nothing to do with whether a NEXT meeting is scheduled.
+  Rows with a known date sort first (nearest first), then every "not yet announced" row,
+  alphabetical.
+- **A real pandas bug found while building this:** converting a left-join miss's `NaN` back
+  to Python `None` (needed so `if event_date`/`purpose or ...` checks downstream behave
+  correctly, not a stray `"nan"` string or `AttributeError` on `nan.lower()`) silently didn't
+  work at first - `series.where(series.notna(), None)` on a plain string-dtype column just
+  turns right back into `NaN`, confirmed live on pandas 3.0.6, since `NaN` is that dtype's own
+  missing-value marker and it can't hold `None` instead. Fixed by casting to `object` dtype
+  first (`series.astype(object).where(...)`) - a new variant of the "`None` becomes a truthy
+  `nan`" trap this repo has hit before (see the Expected-move tracker's fourth bug), this time
+  on the write/normalize side rather than the read side.
+- Verified via `AppTest`: 213 rows render (118 "not scheduled" + 95 with a real date,
+  matching the Calendar's existing 14-day-lookback events), the IT-sector filter correctly
+  narrows to exactly 13 rows, and "My watchlist" scope still works. No real-browser check
+  done, same caveat as the rest of this tab.
+
 ## Earnings call sentiment tracker - backend built (14 October 2026)
 
 The Week 5-6 task's data pipeline (schema, discovery, both tracks, the job) is built and

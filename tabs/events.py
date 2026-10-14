@@ -169,7 +169,7 @@ def render():
         is_preview = False
         if has_frozen:
             rev_val, n_rev_val = est.revenue_estimate, est.n_analysts_rev
-        elif event_date >= today_str:
+        elif event_date and event_date >= today_str:
             preview = preview_map.get(symbol)
             if preview and preview.get("revenue_estimate") is not None:
                 rev_val = preview.get("revenue_estimate")
@@ -189,7 +189,7 @@ def render():
         # split as revenue above, just the EPS-specific field from each.
         if has_frozen:
             n_eps_val = est.n_analysts_eps
-        elif event_date >= today_str:
+        elif event_date and event_date >= today_str:
             preview = preview_map.get(symbol)
             n_eps_val = preview.get("n_analysts_eps") if preview else None
         else:
@@ -272,8 +272,16 @@ def render():
 
         Scaling, colour and the gap/negative rules all live in
         analytics.sparkline.build_blocks - this function only turns that
-        into HTML."""
-        if "result" not in (purpose or "").lower():
+        into HTML.
+
+        event_date is None for a "not yet announced" universe row (added
+        15 Oct 2026 - see render()'s Calendar-universe comment): there is
+        no purpose text to gate on in that case, but the 6-quarter history
+        itself has nothing to do with whether a NEXT meeting is scheduled,
+        so it's shown anyway rather than gated empty. The purpose gate
+        still applies exactly as before for an actually-scheduled meeting
+        that isn't about results (e.g. a dividend-only board meeting)."""
+        if event_date and "result" not in (purpose or "").lower():
             return "<td style='border:none;'></td>"
 
         history = get_earnings_history_quarters(symbol)
@@ -437,7 +445,53 @@ def render():
         # bug, 13 Oct 2026 - TCS/DMART/HCLTECH etc all showed "no history"
         # for exactly this reason).
         calendar_events_df = get_upcoming_events(symbols=symbols, lookback_days=14)
-        type_df = calendar_events_df[calendar_events_df["event_type"] == event_type]
+        board_meetings_df = calendar_events_df[calendar_events_df["event_type"] == "board_meeting"]
+        # One row per symbol: if more than one board-meeting row falls in
+        # the lookback window (e.g. a dividend-only meeting plus a
+        # separate results meeting), the nearest one wins.
+        board_meetings_df = (
+            board_meetings_df.sort_values("event_date")
+            .drop_duplicates(subset="symbol", keep="first")
+        )
+
+        # Universe fix, 15 Oct 2026 (Adarsh's explicit direction): the row
+        # set used to come straight from `events`, so a stock whose next
+        # board meeting hasn't been announced yet had NO row here at all -
+        # the exact gap get_all_expected_moves() already solved for the
+        # Expected-moves subtab by building from the full F&O universe and
+        # left-joining, rather than from whichever symbols happen to have
+        # an events-table row. Same fix here: universe is every F&O stock
+        # (fno.symbols()) in "All F&O" scope, or the watchlist's own
+        # tickers in "My watchlist" scope (unchanged - a watchlist can
+        # hold a non-F&O name, which simply shows "not scheduled"/"no
+        # estimate", same as it always could for an F&O name with nothing
+        # upcoming).
+        universe = fno.symbols() if symbols is None else sorted(symbols)
+        type_df = pd.DataFrame({"symbol": universe}).merge(
+            board_meetings_df, on="symbol", how="left",
+        )
+        # A left-join miss leaves these as float NaN, not Python None - the
+        # same "None becomes a truthy nan" trap _num() above already
+        # guards against for a different table. astype(object) first is
+        # required here, not optional: pandas' own "str" column dtype
+        # (confirmed live, pandas 3.0.6) silently coerces a plain
+        # `.where(col.notna(), None)` back into float nan if the column
+        # stays string-dtyped, since nan is that dtype's own missing-value
+        # marker - the object cast is what lets None actually stick. Fixed
+        # here at the source so every downstream `if event_date`/`purpose
+        # or ...` check below behaves correctly instead of hitting a stray
+        # "nan" string or an AttributeError on nan.lower().
+        for col in ("event_date", "purpose", "event_type", "subtype", "record_date", "source"):
+            type_df[col] = type_df[col].astype(object).where(type_df[col].notna(), None)
+
+        # Known schedule first (nearest date first), then every "not yet
+        # announced" row, alphabetical - so that tail isn't left in
+        # arbitrary join order.
+        has_date = type_df["event_date"].notna()
+        type_df = pd.concat([
+            type_df[has_date].sort_values("event_date"),
+            type_df[~has_date].sort_values("symbol"),
+        ])
     elif subtab == "Past earnings":
         # Results already out - the frozen estimate next to NSE's own
         # reported numbers, for every quarter where at least one actual
@@ -490,21 +544,23 @@ def render():
         # before building any row - see PREVIEW_MAX_WORKERS above.
         preview_symbols = [
             r.symbol for r in type_df.itertuples()
-            if r.event_date >= today_str and not _has_frozen_estimate(r.symbol, r.event_date)
+            if r.event_date and r.event_date >= today_str
+            and not _has_frozen_estimate(r.symbol, r.event_date)
         ]
         preview_map = _prefetch_concurrent(get_live_estimate_preview, preview_symbols)
         eps_map = _prefetch_concurrent(get_eps_history, [r.symbol for r in type_df.itertuples()])
 
         rows = "".join(
             f"<tr style='border-bottom:1px solid {P.BORDER};'>"
-            f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;"
-            f"border:none;{TABULAR}'>{_fmt_date(r.event_date)}</td>"
+            f"<td style='padding:6px 16px 6px 0;color:{P.T2 if r.event_date else P.T3};"
+            f"font-size:13px;white-space:nowrap;border:none;{TABULAR}'>"
+            f"{_fmt_date(r.event_date) if r.event_date else 'not scheduled'}</td>"
             f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;"
             f"border:none;'>{r.symbol}</td>"
-            f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;border:none;"
-            f"max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-            f"cursor:help;' data-tip='{r.purpose}'>"
-            f"{_agenda_link(r.symbol, r.purpose, 'board_meeting')}</td>"
+            f"<td style='padding:6px 16px 6px 0;color:{P.T2 if r.purpose else P.T3};font-size:13px;"
+            f"border:none;max-width:160px;overflow:hidden;text-overflow:ellipsis;"
+            f"white-space:nowrap;cursor:help;' data-tip='{r.purpose or ''}'>"
+            f"{_agenda_link(r.symbol, r.purpose or 'Not yet announced', 'board_meeting')}</td>"
             f"{_estimate_cells(r.symbol, r.event_date)}"
             f"{_history_sparkline_cell(r.symbol, r.event_date, r.purpose)}"
             f"</tr>"
