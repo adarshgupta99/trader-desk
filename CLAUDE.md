@@ -154,6 +154,17 @@ in the table as a normal row showing "Unavailable", never silently dropped.
   event's cohort rollup). A SQLite trigger freezes only the filing-identity
   columns on `earnings_move_prints`; calculation columns stay mutable so a
   rerun can correct a row. See `db/schema_expected_move.sql`.
+- **`signed_move_pct` added 15 October 2026**, for the Sentiment tab (Adarsh's request: pair
+  each quarter's sentiment score with the actual signed market reaction, explicitly NOT the
+  magnitude already used above for "Expected move"/"Worst case"). `move_a_pct`/`move_b_pct`
+  are high/low-extrema based and deliberately sign-less - a session can spike up then close
+  down, so "which extreme moved further" has no honest sign. `signed_move_pct` is a separate,
+  plain close-to-close calculation instead: the latest daily close before the filing versus
+  the close at the end of the same reaction window already chosen for the magnitude figure
+  (`analytics/expected_move.py::signed_move_pct`). Migrated into the existing table via
+  `ALTER TABLE` (same idempotent per-column try/except pattern as
+  `jobs/snapshot_estimates.py`), not a rebuild - this table already held the real 213-symbol
+  backfill and nothing justified discarding it.
 - Job: `jobs/refresh_expected_moves.py`, run by hand (no cron/launchd entry
   yet):
   ```
@@ -341,6 +352,13 @@ verified against real data - the UI piece (Chart-tab trend line) is not.
   fix above before it stored anything. This was also the run that surfaced the qa_tone_proxy
   flaw - seeing a real multi-quarter chart with a perfectly flat Q&A line is what made the
   problem visible; it wasn't obvious from a single company's numbers in isolation.
+- **Price move joined in (15 October 2026):** the per-quarter table carries a "Price move"
+  column - the Expected-move tracker's new `signed_move_pct` (see above), joined on
+  `(ticker, quarter_end) = (symbol, financial_period)`, both the same ISO quarter-end date so
+  no conversion is needed. Lets Adarsh eyeball tone against the actual signed market reaction
+  without leaving the tab. A quarter the Expected-move job hasn't reached, or whose reaction
+  window isn't usable, shows "-", never a fabricated 0%. This is a read-only join inside
+  `tabs/sentiment.py` - no new table, and earnings_call_sentiment itself is untouched.
 
 ## Starting state (handoff: 3 October 2026)
 

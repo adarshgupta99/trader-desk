@@ -221,6 +221,28 @@ def move_pct(reference, high, low):
     return 100 * max(abs(high / reference - 1), abs(low / reference - 1))
 
 
+def signed_move_pct(before_close, after_close):
+    """Directional counterpart to move_pct, added 15 Oct 2026 for the
+    Sentiment tab (Adarsh's request: pair each quarter's sentiment score
+    with the SIGNED market reaction, not the magnitude already used for
+    the expected-move/worst-case cohort stats above).
+
+    100 * (after_close/before_close - 1) - plain close-to-close, not
+    high/low based. move_pct's high/low extrema are deliberately
+    sign-less (a session can spike up then close down, so "which extreme
+    moved further" has no honest sign); a signed figure needs an actual
+    settled price on each side instead.
+
+    Returns None (not 0.0) unless both prices are finite and positive -
+    same missing-data discipline as move_pct.
+    """
+    if before_close is None or after_close is None:
+        return None
+    if before_close <= 0 or after_close <= 0:
+        return None
+    return 100 * (after_close / before_close - 1)
+
+
 def window_extrema(bars):
     """bars: list of {"high": .., "low": ..} dicts already filtered to the
     eligible set for one window. Returns (high, low), or (None, None) for

@@ -44,7 +44,12 @@ CREATE INDEX IF NOT EXISTS idx_earnings_move_prices_symbol_bar
 CREATE TABLE IF NOT EXISTS earnings_move_prints (
     id                       INTEGER PRIMARY KEY,
     symbol                   TEXT NOT NULL,        -- NSE symbol, no .NS suffix
-    financial_period         TEXT NOT NULL,        -- e.g. '2024-Q2', from filing text, never inferred from calendar date
+    financial_period         TEXT NOT NULL,        -- ISO quarter-end date (e.g. '2024-06-30'), from filing text via
+                                                     -- extract_period_end - never inferred from calendar date. Comment
+                                                     -- corrected 15 Oct 2026: previously said 'e.g. 2024-Q2', which was
+                                                     -- never what this column actually stored - caught while wiring the
+                                                     -- Sentiment tab's join against earnings_call_sentiment.quarter_end,
+                                                     -- which uses the same ISO-date convention.
     event_date               TEXT,                 -- loose link to events.event_date (planned board-meeting date), NULL if no match found
     filing_ts_raw            TEXT NOT NULL,         -- exact string as returned by NSE (an_dt)
     filing_ts_utc            TEXT NOT NULL,         -- normalized UTC instant
@@ -67,6 +72,9 @@ CREATE TABLE IF NOT EXISTS earnings_move_prints (
     move_a_pct               REAL,
     move_b_pct               REAL,
     print_move_pct           REAL,                  -- NULL unless all required windows are complete and usable
+    signed_move_pct          REAL,                  -- added 15 Oct 2026: signed close-to-close reaction (not high/low
+                                                     -- based like the magnitude columns above, which have no honest
+                                                     -- sign) - see analytics/expected_move.py's signed_move_pct()
     status                   TEXT NOT NULL,         -- 'usable' | 'partial' | 'excluded' | 'pending'
     reason_codes             TEXT,                  -- JSON array, spec section 7 vocabulary (e.g. ["boundary_hour_contamination"])
     results_cluster          TEXT,                  -- JSON array of every results-evening announcement row for this event

@@ -9,7 +9,14 @@ from datetime import date, datetime
 
 import pytest
 
-from jobs.refresh_expected_moves import IST, compute_print_daily_fallback, extract_period_end, identify_filings
+from jobs.refresh_expected_moves import (
+    IST,
+    compute_print_daily_fallback,
+    extract_period_end,
+    get_connection,
+    identify_filings,
+    upsert_print,
+)
 
 
 # --- extract_period_end: abbreviated vs full month names --------------------
@@ -131,3 +138,49 @@ def test_daily_fallback_excluded_when_reaction_bar_missing():
     result = compute_print_daily_fallback(filing_dt, daily_bars, today=date(2024, 6, 1))
     assert result["status"] == "excluded"
     assert result["print_move_pct"] is None
+
+
+# --- upsert_print: every calc field must actually reach storage -------------
+
+def test_upsert_print_persists_signed_move_pct(tmp_path, monkeypatch):
+    # A real bug (15 Oct 2026): signed_move_pct was added to compute_print's
+    # and compute_print_daily_fallback's return dicts, but upsert_print's
+    # own `row` dict (built by naming each calc[...] key explicitly, not by
+    # copying the whole dict) was never updated to include it - so every
+    # print silently stored NULL despite the calculation itself being
+    # correct. No existing test caught this because the other tests here
+    # only check compute_print_daily_fallback's return value, never that a
+    # field actually makes it through upsert_print into the database -
+    # this test closes that gap generally, not just for this one field.
+    db_path = str(tmp_path / "events_test.db")
+    monkeypatch.setattr("jobs.refresh_expected_moves.DB_PATH", db_path)
+    conn = get_connection()
+
+    filing = {
+        "financial_period": "2026-06-30",
+        "filing_dt": datetime(2026, 7, 17, 19, 7, 44, tzinfo=IST),
+        "timestamp_source_field": "an_dt",
+        "announcement_id": "123",
+        "attachment_url": "http://x/result.pdf",
+        "cluster": [],
+        "source_conflict": False,
+    }
+    calc = {
+        "release_mode": "post_close", "reference_price": 1327.2,
+        "reference_bar_ts": None, "reference_offset_minutes": None,
+        "reference_method": "daily_close",
+        "session_a_date": None, "session_b_date": "2026-07-20",
+        "high_a": None, "low_a": None, "high_b": 1345.8, "low_b": 1316.8,
+        "move_a_pct": None, "move_b_pct": 1.4, "print_move_pct": 1.4,
+        "signed_move_pct": -0.309,
+        "status": "usable", "reason_codes": [],
+    }
+    upsert_print(conn, "RELIANCE", filing, calc, "2026-07-20T00:00:00")
+    conn.commit()
+
+    row = conn.execute(
+        "SELECT signed_move_pct FROM earnings_move_prints "
+        "WHERE symbol='RELIANCE' AND financial_period='2026-06-30'"
+    ).fetchone()
+    conn.close()
+    assert row[0] == pytest.approx(-0.309)

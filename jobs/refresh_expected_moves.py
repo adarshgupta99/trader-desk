@@ -148,6 +148,13 @@ def get_connection():
     conn = sqlite3.connect(DB_PATH)
     with open(SCHEMA_PATH) as f:
         conn.executescript(f.read())
+    # Migration for an existing db - the CREATE TABLE above only applies
+    # to a brand-new one. Same try/except-per-ALTER pattern as
+    # jobs/snapshot_estimates.py's get_connection().
+    try:
+        conn.execute("ALTER TABLE earnings_move_prints ADD COLUMN signed_move_pct REAL")
+    except sqlite3.OperationalError:
+        pass
     return conn
 
 
@@ -350,6 +357,23 @@ def compute_print(filing_dt, hourly_by_date, daily_closes, today=None):
         else:
             status = "excluded"
 
+    # Signed close-to-close reaction, added 15 Oct 2026 for the Sentiment
+    # tab - independent of the magnitude/status logic above, since a
+    # closing price is available even on a day whose intraday high/low
+    # window is 'partial' or 'excluded'. For intraday filings the prior
+    # trading day's close is the honest "before" price (the filing day's
+    # own close is partly a reaction to the news, not a baseline); for
+    # every other mode the daily-close reference already selected above
+    # IS that baseline, so it's reused as-is rather than re-derived.
+    before_close = (
+        _prior_daily_close(filing_date, daily_closes) if mode == "intraday"
+        else reference.get("reference_price")
+    )
+    after_close = None
+    if not is_pending and window_b_date is not None:
+        after_close = daily_closes.get(window_b_date)
+    signed_move_pct = em.signed_move_pct(before_close, after_close)
+
     return {
         "release_mode": mode,
         "reference_price": reference.get("reference_price"),
@@ -361,6 +385,7 @@ def compute_print(filing_dt, hourly_by_date, daily_closes, today=None):
         "high_a": high_a, "low_a": low_a, "high_b": high_b, "low_b": low_b,
         "move_a_pct": move_a, "move_b_pct": move_b,
         "print_move_pct": print_move_pct,
+        "signed_move_pct": signed_move_pct,
         "status": status,
         "reason_codes": sorted(reason_codes),
     }
@@ -378,6 +403,16 @@ def _safe_next_trading_day_on_or_after(d):
         return tc.next_trading_day_on_or_after(d)
     except ValueError:
         return None
+
+
+def _prior_daily_close(filing_date, daily_closes):
+    """The latest daily close strictly BEFORE filing_date - the honest
+    pre-event baseline for an intraday filing, same reasoning
+    compute_print_daily_fallback already uses for its own intraday
+    reference (excluding the filing day itself, since by end of day it's
+    partly a reaction, not a baseline). None if no earlier close exists."""
+    eligible = [d for d in daily_closes if d < filing_date]
+    return daily_closes[max(eligible)] if eligible else None
 
 
 def compute_print_daily_fallback(filing_dt, daily_bars, today=None):
@@ -450,6 +485,16 @@ def compute_print_daily_fallback(filing_dt, daily_bars, today=None):
         print_move_pct = em.print_move(mode, move_a, move_b)
         status = "usable" if print_move_pct is not None else "excluded"
 
+    # See compute_print's matching comment - ref_price here is already a
+    # daily close for every mode (unlike compute_print's intraday branch,
+    # which uses an hourly open), so it doubles as the signed baseline
+    # directly with no separate lookup.
+    after_close = None
+    if not is_pending and window_b_date is not None:
+        bar_b = daily_bars.get(window_b_date)
+        after_close = bar_b["close"] if bar_b is not None else None
+    signed_move_pct = em.signed_move_pct(ref_price, after_close)
+
     return {
         "release_mode": mode,
         "reference_price": ref_price,
@@ -458,6 +503,7 @@ def compute_print_daily_fallback(filing_dt, daily_bars, today=None):
         "reference_method": "daily_close_fallback",
         "session_a_date": filing_date.isoformat() if mode == "intraday" else None,
         "session_b_date": window_b_date.isoformat() if window_b_date else None,
+        "signed_move_pct": signed_move_pct,
         "high_a": None, "low_a": None, "high_b": None, "low_b": None,
         "move_a_pct": move_a, "move_b_pct": move_b,
         "print_move_pct": print_move_pct,
@@ -502,6 +548,7 @@ def upsert_print(conn, symbol, filing, calc, inputs_cutoff):
         "high_b": calc["high_b"], "low_b": calc["low_b"],
         "move_a_pct": calc["move_a_pct"], "move_b_pct": calc["move_b_pct"],
         "print_move_pct": calc["print_move_pct"],
+        "signed_move_pct": calc["signed_move_pct"],
         "status": calc["status"],
         "reason_codes": json.dumps(reason_codes),
         "results_cluster": json.dumps(filing["cluster"]),

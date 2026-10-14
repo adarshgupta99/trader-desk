@@ -183,6 +183,24 @@ def test_window_extrema_empty_is_none_not_zero():
     assert em.window_extrema([]) == (None, None)
 
 
+# --- signed_move_pct (added 15 Oct 2026 for the Sentiment tab) --------------
+
+def test_signed_move_pct_up():
+    assert em.signed_move_pct(100, 106) == pytest.approx(6.0)
+
+
+def test_signed_move_pct_down_keeps_negative_sign():
+    # Unlike move_pct, this must NOT collapse to a positive magnitude.
+    assert em.signed_move_pct(100, 92) == pytest.approx(-8.0)
+
+
+def test_signed_move_pct_invalid_inputs_return_none():
+    assert em.signed_move_pct(None, 106) is None
+    assert em.signed_move_pct(100, None) is None
+    assert em.signed_move_pct(0, 106) is None
+    assert em.signed_move_pct(100, -5) is None
+
+
 def test_print_move_intraday_is_max_of_a_and_b():
     # Spec's own synthetic example: R=100; A=4%; B H=102 L=93 -> B=7%;
     # print = max(4,7) = 7.

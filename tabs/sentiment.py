@@ -13,7 +13,11 @@ from datetime import datetime
 import plotly.graph_objects as go
 import streamlit as st
 
-from events_db import get_earnings_call_sentiment, get_earnings_call_sentiment_symbols
+from events_db import (
+    get_earnings_call_sentiment,
+    get_earnings_call_sentiment_symbols,
+    get_expected_move_history,
+)
 from theme import TABULAR, palette
 
 
@@ -24,6 +28,37 @@ def _fmt_quarter(iso_date):
 
 def _tone_text(v):
     return f"{v:+.1f}" if v is not None else "-"
+
+
+def _move_text(v):
+    if v is None:
+        return "-"
+    v = round(v, 1)
+    if v == 0:
+        v = 0.0  # suppress negative zero after rounding, per the design language
+    return f"{v:+.1f}%"
+
+
+def _move_color(v, P):
+    if v is None:
+        return P.T2
+    return P.UP if v >= 0 else P.DOWN
+
+
+def _moves_by_quarter(symbol):
+    """{quarter_end (ISO date): signed_move_pct} from the Expected-move
+    tracker's own print history (events_db.get_expected_move_history),
+    keyed by financial_period - which is the same ISO quarter-end date
+    earnings_call_sentiment.quarter_end uses, so the two line up with no
+    conversion. Read-only, same table jobs/refresh_expected_moves.py
+    owns; a quarter with no stored print (job hasn't reached this symbol
+    yet) or a signed_move_pct of None (status != 'usable') is simply
+    absent here - the caller shows '-', never a fabricated 0%."""
+    return {
+        m["financial_period"]: m["signed_move_pct"]
+        for m in get_expected_move_history(symbol)
+        if m["signed_move_pct"] is not None
+    }
 
 
 def render():
@@ -55,6 +90,7 @@ def render():
     symbol = symbol or symbols[0]
 
     rows = get_earnings_call_sentiment(symbol)
+    moves = _moves_by_quarter(symbol)
     if not rows:
         st.markdown(
             f"<div style='color:{P.T2};font-size:13px;margin-top:10px;'>"
@@ -127,6 +163,9 @@ def render():
         f"<tr style='border-bottom:1px solid {P.BORDER};'>"
         f"<td style='padding:6px 16px 6px 0;color:{P.T2};font-size:13px;white-space:nowrap;"
         f"border:none;{TABULAR}'>{_fmt_quarter(r['quarter_end'])}</td>"
+        f"<td style='padding:6px 16px 6px 0;color:{_move_color(moves.get(r['quarter_end']), P)};"
+        f"font-size:13px;white-space:nowrap;border:none;{TABULAR}'>"
+        f"{_move_text(moves.get(r['quarter_end']))}</td>"
         f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;"
         f"border:none;{TABULAR}'>{_tone_text(r['management_confidence'])}</td>"
         f"<td style='padding:6px 16px 6px 0;color:{P.T1};font-size:13px;white-space:nowrap;"
@@ -155,8 +194,8 @@ def render():
         f"</tr>"
         for r in reversed(rows)  # most recent quarter first in the table
     )
-    _cols = ["Quarter", "Mgmt confidence", "Overall tone", "Q&A tone", "Guidance",
-             "Analyst tone", "Evasive Qs", "QA divergence",
+    _cols = ["Quarter", "Price move", "Mgmt confidence", "Overall tone", "Q&A tone",
+             "Guidance", "Analyst tone", "Evasive Qs", "QA divergence",
              "LM +", "LM -", "LM uncertain", "Source"]
     header = "<tr style='border-bottom:1px solid {b};'>{cells}</tr>".format(
         b=P.BORDER,
@@ -174,6 +213,11 @@ def render():
     )
     st.markdown(
         f"<div style='color:{P.T3};font-size:12px;margin-top:8px;'>"
+        f"Price move is the signed close-to-close market reaction around that quarter's "
+        f"result, from the Expected-move tracker's own stored prints (Events tab) - a "
+        f"settled, directional change, not the magnitude figure that tracker's cohort stats "
+        f"use. Shown as – for a quarter the Expected-move job hasn't reached yet, or one "
+        f"whose reaction window isn't usable (never a fabricated 0%). "
         f"Mgmt confidence, overall tone, and Q&amp;A tone: -2 (very negative) to +2 (very "
         f"positive), each Gemini-extracted separately with a quoted line backing the "
         f"judgment. Analyst tone is a separate category (constructive/neutral/skeptical) "

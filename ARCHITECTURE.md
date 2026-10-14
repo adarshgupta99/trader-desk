@@ -1456,6 +1456,21 @@ correctly-null guidance, concrete dodged-question text) are discussed above. Sui
 throughout (no existing test touched - this is new UI/extraction code over an already-tested
 read path and dedup logic, same pattern as every other tab and job in this app).
 
+**"Price move" column added 15 Oct 2026**, joining in the Expected-move tracker's new
+`signed_move_pct` (see that section below) so a quarter's sentiment score sits next to its
+actual signed market reaction without leaving the tab. The join is read-only and lives
+entirely in `tabs/sentiment.py` (`_moves_by_quarter()`, calling the already-existing
+`events_db.get_expected_move_history(symbol)`) - no new table, no write path, and
+`earnings_call_sentiment` itself is untouched. The join key is
+`(ticker, quarter_end) = (symbol, financial_period)`; both sides already use the same ISO
+quarter-end date (confirmed by inspecting real stored rows, not assumed from either schema's
+comment - `earnings_move_prints.financial_period`'s own column comment still says "e.g.
+'2024-Q2'", which is stale documentation, not what the column actually holds). This IS a
+genuine price "change" value, unlike every other column in this table, so it's the one
+column here that follows the design language's direction-colour convention
+(`P.UP`/`P.DOWN`, signed, negative-zero suppressed) rather than the neutral styling the rest
+of the tab deliberately uses for tone/category columns.
+
 ---
 
 ### `analytics/expected_move.py`, `trading_calendar.py`, `db/schema_expected_move.sql`, `jobs/refresh_expected_moves.py`, and the Events tab expected-move columns
@@ -1485,6 +1500,24 @@ windows that mode implies, and computes a single print's move % and a cohort's
 expected/worst-case % from a list of prints. `trading_calendar.py` wraps NSE's real
 trading-day calendar (`is_trading_day`, `next_trading_day`, `next_trading_day_on_or_after`,
 `session_bounds_ist`) so the window logic never assumes every weekday is a session.
+
+**`signed_move_pct`, added 15 Oct 2026** (`analytics/expected_move.py::signed_move_pct`),
+for the Sentiment tab - Adarsh explicitly wanted the SIGNED market reaction next to each
+quarter's sentiment score, not the magnitude this feature was built around. `move_pct`
+(above) is deliberately sign-less by construction - `100 * max(abs(H/R-1), abs(L/R-1))`
+picks whichever extreme deviated further from the reference, and a session that spikes up
+then closes down has no honest single sign to report. `signed_move_pct` is a separate, much
+simpler calculation: plain close-to-close, `100 * (after_close/before_close - 1)`, reusing
+the same reaction window `compute_print()` already resolved for the magnitude figure (same
+`window_b_date`/`session_b_date`) rather than introducing a second window-selection path.
+For an intraday filing, "before" is deliberately the PRIOR trading day's close, not the
+hourly reference price `move_pct` uses - the filing day's own close is partly a reaction to
+the news by end of day, so it would contaminate the baseline; every other release mode's
+existing daily-close reference already IS a clean pre-event close and is reused as-is.
+Migrated into the live table via `ALTER TABLE ... ADD COLUMN` inside `get_connection()`
+(same idempotent try/except-per-column pattern `jobs/snapshot_estimates.py` already uses),
+not a schema rebuild - `earnings_move_prints` already held the real 213-symbol backfill and
+there was no reason to discard it. 4 new fixture tests in `tests/test_expected_move.py`.
 
 **`jobs/refresh_expected_moves.py`** is the orchestration job, run by hand (not yet on a
 schedule): for each symbol, it discovers historical results filings from NSE's corporate-

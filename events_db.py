@@ -404,7 +404,8 @@ def get_expected_move_history(symbol):
         "financial_period", "filing_ts_raw", "filing_ts_ist", "release_mode",
         "reference_price", "reference_method", "reference_offset_minutes",
         "session_a_date", "session_b_date", "move_a_pct", "move_b_pct",
-        "print_move_pct", "status", "reason_codes", "price_basis", "attachment_url",
+        "print_move_pct", "signed_move_pct", "status", "reason_codes",
+        "price_basis", "attachment_url",
     ]
     try:
         with _read_connection() as conn:
