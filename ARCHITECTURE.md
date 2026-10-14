@@ -64,18 +64,24 @@ trader-desk/
 │   ├── snapshot_estimates.py    # Daily T-1 snapshot of analyst consensus (earnings_estimates)
 │   ├── fill_actuals.py          # Fills actual EPS/revenue + surprise % once results are out
 │   ├── refresh_expected_moves.py # Discovers results filings via the NSE archive, fetches price bars, computes and stores expected-move prints/summaries
-│   └── refresh_earnings_history.py # Backfills 6 reported quarters of revenue/PAT per symbol for the Calendar subtab's HISTORY 6Q sparkline
+│   ├── refresh_earnings_history.py # Backfills 6 reported quarters of revenue/PAT per symbol for the Calendar subtab's HISTORY 6Q sparkline
+│   └── refresh_earnings_sentiment.py # Week 5-6 task: per-watchlist-symbol transcript fetch + LM word counts + Gemini tone/guidance extraction
 ├── db/
 │   ├── schema_estimates.sql     # earnings_estimates table + the immutability trigger
 │   ├── schema_expected_move.sql # earnings_move_prices/prints/summaries tables + the identity-freeze trigger
-│   └── schema_earnings_history.sql # earnings_history_quarters table - one row per (symbol, quarter_end), gaps stored not dropped
+│   ├── schema_earnings_history.sql # earnings_history_quarters table - one row per (symbol, quarter_end), gaps stored not dropped
+│   └── schema_sentiment.sql     # earnings_call_sentiment table - Track A (LM) + Track B (Gemini) per (ticker, quarter_end)
 ├── docs/
 │   ├── intraday_discovery.txt   # Output of discover_intraday.py — the numbers the correlation feature is sized against
 │   ├── estimates_discovery.txt  # Output of discover_estimates.py, plus the nselib-actuals discovery note
 │   └── expected_move_discovery.txt # NSE archive filing-clustering rules the refresh job's identify_filings() encodes
 ├── data/bars_daily_500d.db  # Committed daily-bars subset (~10MB) so the DEPLOYED app's Correlation tab has data; read-only fallback when no local store exists
+├── data/lm_dictionary.json  # Loughran-McDonald positive/negative/uncertainty/litigious wordlists (Notre Dame SRAF, March 2026 edition), extracted down from the ~86,500-word master CSV
 ├── nse_results.py       # NSE integrated-filing XBRL -> quarterly actuals (EPS/revenue/PAT); handles YTD-context, bank-taxonomy and standalone-vs-consolidated traps; also quarter_window/previous_quarter_end for rolling N-quarter windows
+├── nse_transcripts.py    # Finds and extracts NSE-filed earnings-call transcript PDFs from the corporate-announcements archive (same archive as refresh_expected_moves.py)
+├── earnings_sentiment.py # Track B: Gemini structured-output extraction (tone/guidance/risks/hedging), management and Q&A scored separately
 ├── analytics/sparkline.py # Pure scaling/QoQ/colour logic for the HISTORY 6Q column - min-max blocks, gap handling, no HTML
+├── analytics/lm_sentiment.py # Track A: pure Loughran-McDonald word counting, no network, fully reproducible
 ├── trading_calendar.py  # NSE trading-day wrapper (is_trading_day, next_trading_day, session_bounds_ist) for the expected-move window logic
 ├── tests/
 │   ├── test_correlation.py      # Acceptance checks A-K for the correlation feature
@@ -83,6 +89,9 @@ trader-desk/
 │   ├── test_nse_results.py      # Fixture tests for nse_results.py: YTD-context trap, bank taxonomy, filing selection, quarter_window
 │   ├── test_sparkline.py        # 16 fixture tests for analytics/sparkline.py: scaling, gaps, QoQ direction, negative values
 │   ├── test_refresh_earnings_history.py # Regression test: a ValueError (deterministic parse failure) must fail fast, not burn the retry schedule
+│   ├── test_lm_sentiment.py     # Fixture tests for analytics/lm_sentiment.py: tokenization, normalization, zero-division, category overlap
+│   ├── test_nse_transcripts.py  # Fixture tests for nse_transcripts.select_transcript: picks the real transcript over the recording/schedule rows in the same category
+│   ├── test_refresh_earnings_sentiment.py # Regression test: a quarter already stored in earnings_call_sentiment is never reprocessed
 │   ├── test_expected_move.py    # 26 fixture tests for analytics/expected_move.py's pure calc engine
 │   └── test_refresh_expected_moves.py # Regression tests for 2 real bugs caught during the live backfill (abbreviated month parsing, same-day-sibling vs. genuine revision)
 ├── fno_sectors.json    # 213 F&O stocks with sector labels (hand-supplied, 5 Oct 2026)
@@ -1266,6 +1275,99 @@ frozen estimates were last committed, instead of an empty table.
 `events.db`/live yfinance. No cron/launchd entry exists yet for the daily
 snapshot-then-fill-actuals pair (both scripts' docstrings describe ~6pm IST, after
 `fetch_events.py`), same as the still-missing cron for `jobs/fetch_intraday.py` below.
+
+---
+
+### Earnings call sentiment tracker (Week 5-6 task, built 14 Oct 2026)
+
+The CLAUDE.md-specced feature: for each watchlist symbol's completed results quarters, find
+the NSE-filed transcript, run two independent tracks over it, and store one row per
+(ticker, quarter) in a new additive table - `earnings_call_sentiment`
+(`db/schema_sentiment.sql`). Built and verified live against real transcripts before any
+job code was written, same discipline as every other NSE-sourced feature this session.
+
+**Discovery first (`nse_transcripts.py`'s module docstring has the full notes), checked
+against 4 real companies - RELIANCE, TCS, HDFCBANK, HINDUNILVR:**
+- Transcripts sit in the same NSE corporate-announcements archive `refresh_expected_moves.py`
+  already knows how to query (`desc == "Analysts/Institutional Investor Meet/Con. Call
+  Updates"`), alongside the audio-recording filing and the advance meeting-schedule notice
+  for the same call - same category, different documents. The word "transcript"
+  (case-insensitive) in the filing's own `attchmntText` reliably picks out the real one across
+  all 4 companies, despite each wording the sentence differently (RELIANCE: "Transcript of
+  the discussion on the Unaudited Financial Results..."; TCS: "...has informed the Exchange
+  about Transcript"; HINDUNILVR: yet a third phrasing).
+- All 4 PDFs are real extractable text via `pypdf`, not scanned images - 17-26 pages, 8,400
+  to 17,000 words each.
+- **Speaker-label formatting is not standardised across companies** - RELIANCE uses block
+  headers (`"Questioner (Name, Firm)"` / `"Company Speaker (Name)"`), TCS/HDFCBANK/HINDUNILVR
+  use inline `"Name: text"` labels with a `"Moderator:"` role. This is the concrete reason
+  the spec's management-vs-Q&A split is Gemini's job, not a Python regex: no single pattern
+  handles all four conventions seen already, and the next new company would just break it
+  again. `nse_transcripts.py` only finds and extracts the raw transcript text; it never
+  attempts to split it.
+
+**Track A (`analytics/lm_sentiment.py`), pure, no network, fully reproducible.**
+`data/lm_dictionary.json` holds the Loughran-McDonald positive/negative/uncertainty/litigious
+wordlists (2,355 / 354 / 297 / 905 words), extracted from the published ~86,500-word Master
+Dictionary CSV (Notre Dame SRAF, March 2026 edition, "free for use in academic research" -
+this is a solo learning-focused build, see CLAUDE.md's Vision section). Counting is plain
+tokenize-uppercase-lookup; `per_1000_words` normalizes so a short Q&A exchange and a long
+prepared-remarks monologue are comparable. Sanity-checked against the real RELIANCE
+transcript before trusting it: positive 13.67/1000, negative 6.92/1000, litigious 1.0/1000 -
+plausible for a confident, non-legal earnings call.
+
+**Storage deviates from the spec's literal list in two places, both documented in
+`db/schema_sentiment.sql`'s header and both deliberate:** `quarter_end` (an ISO date) instead
+of a free-text "quarter" label, so this table joins against `earnings_estimates` and
+`earnings_history_quarters` without a label-parsing step; and `lm_litigious` is stored
+despite the spec's storage section omitting it, since its own Method section requires
+computing all four LM categories and dropping the fourth from storage would silently throw
+away a number the spec asked for.
+
+**Track B (`earnings_sentiment.py`), Gemini structured extraction, 2 calls per transcript
+(management, then Q&A) - comfortably inside the spec's "max ~20 calls" budget.** Both calls
+receive the FULL transcript text, with a role-specific instruction telling Gemini which
+portion to attend to and which to ignore, relying on it to resolve speaker roles from context
+(job titles, a participants roster most transcripts open with, analyst firm names) exactly
+the way a human reader would - this is the direct consequence of the speaker-format discovery
+above. `response_schema` + `response_mime_type="application/json"` (google-genai 2.27.0,
+verified live) constrains output to the spec's exact shape, `guidance`'s
+raised/maintained/lowered/none as a real enum constraint, not a string validated after the
+fact. Token usage (`response.usage_metadata`) is logged per call, per the spec's cost guard.
+
+**`jobs/refresh_earnings_sentiment.py` orchestrates it, scoped to the 4 custom watchlists**
+(`watchlists.get_custom_lists()`), not the 5 read-only index-preset views - those are 50+
+constituents each by design and reference data, not "the user's watchlist" in the sense this
+spec means. `--symbols` overrides this for manual testing.
+
+**A real design problem found and fixed before the first live run:** `due_quarters` was
+first written against the `events` table (same as every other job this session), but
+`events` turned out to be the wrong source here - it's a narrow rolling window (upcoming +
+very recent, ~1 month wide in practice, built for the Calendar tab's own purpose), not a
+historical archive. Found live: RELIANCE's 17 Jul 2026 results don't appear in `events` at
+all, three months later. Fixed by querying NSE's own corporate-announcements archive directly
+via `identify_filings()` - already built and proven for the Expected-move tracker's
+multi-year backfill - which gives real historical results dates (and the exact quarter each
+one covers, read from the filing's own "for the period ended ..." text, more precise than
+inferring it from a calendar date).
+
+**First live run, RELIANCE, exceeded the acceptance test rather than just meeting it:** found
+and processed **8 real completed quarters** (Sep-2024 through Jun-2026) in one run, not the
+minimum 2 the spec's acceptance test asks for. Every row's `transcript_source_url` is the
+actual NSE filing parsed. Tone scores are genuinely differentiated across quarters, not a
+static model output - Sep-2024 (mgmt_tone 0.5, qa_tone 0.0) reads distinctly flatter than the
+1.2-1.5 range every quarter since, and LM word counts vary plausibly by quarter (9,042 to
+22,365 total words). `guidance` read "maintained" for all 8 quarters checked - plausible for
+a company that, per its own transcripts, explicitly avoids giving formal forward guidance.
+
+Also fixed in passing: `pypdf` and `google-genai` were both in active use in this repo
+(`test_key.py` already imported `google.genai`) but neither had ever been added to
+`requirements.txt`.
+
+**Not yet built:** the spec's UI piece (a sentiment trend line under the Chart tab's price
+chart). This session's work stopped at a verified, working data pipeline - storage schema,
+discovery, both tracks, the orchestrating job, 13 new fixture/regression tests, all run
+against real transcripts and a real Gemini key, not mocked. Suite 113/113.
 
 ---
 

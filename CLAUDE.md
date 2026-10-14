@@ -250,6 +250,45 @@ heights are never comparable across rows or between the REV/PAT tracks.
 - **Not yet verified:** checked via `AppTest` only, same caveat as the rest of the Events
   tab - no real-browser check has been done.
 
+## Earnings call sentiment tracker - backend built (14 October 2026)
+
+The Week 5-6 task's data pipeline (schema, discovery, both tracks, the job) is built and
+verified against real data - the UI piece (Chart-tab trend line) is not.
+
+- Transcripts come from NSE's corporate-announcements archive (`nse_transcripts.py`),
+  identified by `"transcript"` appearing in the filing's own description text - checked
+  against RELIANCE, TCS, HDFCBANK, HINDUNILVR, all real extractable PDF text. Speaker-label
+  formatting is NOT standardised across companies (block headers vs inline labels), which is
+  exactly why the management-vs-Q&A split is Gemini's job (Track B), not a regex.
+- Track A (`analytics/lm_sentiment.py`): pure Loughran-McDonald word counts, no network,
+  fully reproducible. Wordlists in `data/lm_dictionary.json`, from the Notre Dame SRAF Master
+  Dictionary (free for academic/research use).
+- Track B (`earnings_sentiment.py`): Gemini structured-output extraction (`response_schema`),
+  2 calls per transcript (management, then Q&A), well under the spec's 20-call budget. Both
+  calls get the full transcript text; Gemini resolves speaker roles from context rather than
+  a pre-split.
+- Storage: `earnings_call_sentiment` (`db/schema_sentiment.sql`), one row per (ticker,
+  quarter_end - an ISO date, not a free-text label, so it joins against the other tables).
+- Job: `jobs/refresh_earnings_sentiment.py`, scoped to the 4 custom watchlists (not the 5
+  read-only index-preset views):
+  ```
+  .venv/bin/python -m jobs.refresh_earnings_sentiment
+  .venv/bin/python -m jobs.refresh_earnings_sentiment --symbols RELIANCE
+  ```
+- A real bug found before the first live run: `due_quarters` first used the `events` table
+  (the pattern every other job this session follows), but `events` is a narrow rolling
+  window (~1 month, upcoming + very recent) built for the Calendar tab, not a historical
+  archive - RELIANCE's own July 2026 results had already aged out of it by October. Fixed to
+  query NSE's archive directly via `identify_filings()` (already built for the Expected-move
+  tracker), which gives real historical results dates going back years.
+- First live run (RELIANCE): found and processed 8 real completed quarters in one run,
+  genuinely differentiated tone scores across them, every row linked to its real NSE
+  transcript URL. See ARCHITECTURE.md for the full numbers.
+- `pypdf` and `google-genai` added to `requirements.txt` - both were already in active use
+  but had never actually been declared.
+- **Not yet built:** the Chart tab's sentiment trend line (mgmt tone / QA tone over
+  quarters). This session stopped at a verified, working backend.
+
 ## Starting state (handoff: 3 October 2026)
 
 - Repo: `adarshgupta99/trader-desk`; intended to remain private.

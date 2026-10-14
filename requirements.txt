@@ -13,3 +13,8 @@ scipy
 numpy
 requests
 pandas_market_calendars
+# Week 5-6 earnings-call sentiment tracker: PDF transcript extraction and
+# the Gemini client. google-genai was already in use (test_key.py) but
+# had never actually been declared here either.
+pypdf
+google-genai
