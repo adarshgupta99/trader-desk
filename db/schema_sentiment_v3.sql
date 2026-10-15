@@ -47,8 +47,13 @@ CREATE TABLE IF NOT EXISTS earnings_transcript_sources (
     symbol                  TEXT NOT NULL,          -- bare NSE symbol, no .NS
     quarter_end             TEXT NOT NULL,          -- YYYY-MM-DD, the quarter the call discusses
     fiscal_quarter          TEXT,                   -- e.g. 'Q2 FY27', as stated in the filing (spec 7.5)
-    pdf_url                 TEXT NOT NULL,          -- the NSE attachment URL actually fetched
-    pdf_sha256              TEXT NOT NULL,          -- of the original bytes, untouched
+    -- Both nullable: a quarter with no transcript filed, or one whose PDF
+    -- could not be read, is recorded here as a GAP (transcript_available=0 /
+    -- pdf_unreadable=1) and has no usable document to hash. Storing the gap
+    -- is the point - spec 7.5 wants it recorded, never filled from a mirror -
+    -- so requiring a hash would reject exactly the rows worth keeping.
+    pdf_url                 TEXT,                   -- the NSE attachment URL actually fetched
+    pdf_sha256              TEXT,                   -- of the original bytes, untouched
     cleaned_text_sha256     TEXT,                   -- of the cover-stripped text the LLM saw
     pdf_archive_path        TEXT,                   -- local archive path (gitignored), not a repo path
     cleaned_text_path       TEXT,

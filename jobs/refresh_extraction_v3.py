@@ -202,7 +202,12 @@ def process_quarter(conn, api_key, symbol, filing_dt, quarter_end, force=False):
         log(f"  {label}: no transcript filed - recorded as unavailable")
         timestamps = _timestamps(filing_dt, None)
         with conn:
-            store.write_source(conn, symbol, qe, {}, timestamps,
+            # A gap row still records WHEN we looked - that is the fact being
+            # stored, and it is what stops a later run mistaking "checked,
+            # nothing filed" for "never checked".
+            store.write_source(conn, symbol, qe,
+                               {"fetched_at": timestamps["extracted_at"]},
+                               timestamps,
                                fiscal_quarter=_fiscal_quarter(quarter_end),
                                transcript_available=0)
         return "no_transcript"
@@ -221,7 +226,9 @@ def process_quarter(conn, api_key, symbol, filing_dt, quarter_end, force=False):
         log(f"  {label}: unreadable PDF - {e}")
         with conn:
             store.write_source(conn, symbol, qe,
-                               {"url": filing["attchmntFile"]}, timestamps,
+                               {"url": filing["attchmntFile"],
+                                "fetched_at": timestamps["extracted_at"]},
+                               timestamps,
                                fiscal_quarter=_fiscal_quarter(quarter_end),
                                pdf_unreadable=1)
             store.write_failed_row(

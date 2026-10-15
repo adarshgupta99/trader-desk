@@ -77,6 +77,15 @@ def _ts(timestamps):
 
 def write_source(conn, symbol, quarter_end, prepared, timestamps,
                  fiscal_quarter=None, transcript_available=1, pdf_unreadable=0):
+    # A gap row (no transcript filed, or a PDF that could not be read) has no
+    # document to hash, so the UNIQUE(symbol, quarter_end, pdf_sha256) key
+    # cannot dedupe it - SQLite treats every NULL as distinct. Clear any prior
+    # gap row for this quarter first so a re-run updates it instead of
+    # stacking duplicates.
+    if not prepared.get("pdf_sha256"):
+        conn.execute(
+            "DELETE FROM earnings_transcript_sources WHERE symbol=? AND "
+            "quarter_end=? AND pdf_sha256 IS NULL", (symbol, quarter_end))
     conn.execute(
         """
         INSERT OR REPLACE INTO earnings_transcript_sources
