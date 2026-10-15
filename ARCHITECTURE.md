@@ -1419,6 +1419,112 @@ via `AppTest`: IT sector now renders all 13 rows, with "not scheduled" present a
 
 ---
 
+### Sector-aware extraction v3: `extraction_v3.py`, `transcript_source.py`, `sector_cards.py`, `sentiment_store_v3.py`, `tabs/guidance.py` (16 Oct 2026)
+
+Built on branch `SentimentLLM` against the sector-aware spec. Runs alongside
+the v2 tracker below rather than replacing it, so the live Sentiment tab keeps
+working off `earnings_call_sentiment` while this is proven.
+
+**Pipeline.** `transcript_source.prepare()` fetches the NSE PDF, hashes the
+original bytes, archives them outside the repo and strips the cover letter
+with PyMuPDF. `extraction_v3.segment()` splits the transcript into numbered
+exchanges; `extraction_v3.extract()` fills the 10-column sheet, the universal
+frame block and the sector slots in one pass, citing those exchanges;
+`verify_and_locate()` checks every quote; `sentiment_store_v3.write_all()`
+writes eight tables in one transaction.
+
+**Offsets are computed, not model-reported.** The spec wants character offsets
+on every cite. Models cannot count characters, and a confidently wrong offset
+is worse than none because it looks verified. So stage 1 reads a line-numbered
+transcript and returns LINE ranges (which it can read rather than count), and
+stage 2 returns the verbatim quote, which is then located in the text. The
+spec's real requirement - a cite provably pointing at real text - comes out
+stronger, because locating the quote IS the substring check.
+
+**Quote matching is whitespace-insensitive but otherwise exact.**
+`normalise_with_map()` builds the collapsed text and an index map in one pass,
+so a match maps back to true offsets. PDF text wraps mid-sentence constantly;
+without this, correct quotes would fail on line breaks. Wording, punctuation
+and numbers must still match exactly - a paraphrase fails, which is the point.
+
+**Cite failure granularity, changed after the first live run.** Spec 2.3 says
+a bad quote "fails the row", and the first implementation voided the whole
+quarter. On TCS Q2 FY27 that discarded verified tones, a correct divergence
+grade, guidance and nine good sector slots because ONE soft-outlook quote was
+paraphrased. Now the affected field is demoted to NOT_VERIFIED with its quote
+stripped, unverifiable soft items are dropped (a soft item IS its quote, so
+nothing remains to store), and the divergence grade survives losing its
+supporting quote because the grade rests on exchange cites. Nothing unverified
+is stored as GIVEN either way - the property QA 8.2 actually asks for - while
+a 213x6 backfill no longer voids quarters wholesale. Failures are counted on
+the row so it stays auditable.
+
+**Two capability claims I made and had to retract.** Worth recording because
+both were the same mistake in different clothes:
+
+1. I reported flash-lite could not do the evasiveness rubric - 0 evasive found
+   against a reference 8. It could. Asking for a global "list the evasive
+   ones" let a weak model return an empty array without doing the work;
+   forcing a verdict on EVERY exchange (`qa_assessments`) produced 7 of 8 on
+   the same model. The gap was my prompt.
+2. I then reported a slot-extraction gap, flash filling 5 of 9 against lite's
+   3. Checking the transcript, `book_to_bill` is never mentioned (NOT_GIVEN
+   correct), the FY guidance band is TCS explicitly declining to guide
+   (NOT_GIVEN correct), and the headcount figure was spoken by an ANALYST. A
+   higher fill count is not better if the extras are inferred or
+   analyst-sourced. I had no per-slot ground truth and should not have
+   presented a count as a quality measure; spec QA 8.4's human spot-check is
+   what settles it.
+
+**Analyst-stated figures now count** (Adarsh, 16 Oct 2026, overriding spec
+3.6). A number an analyst quotes back uncontested is still stated on the call;
+`speaker_role` records management vs analyst, management explicitly
+correcting or restating wins, and the UI tags analyst-sourced values inline.
+
+**Model handling.** Stage 2 walks a chain rather than being pinned to one
+model: pinning meant one model's capacity decided whether a backfill
+completed, which is exactly what happened when gemini-3.5-flash hit 429
+mid-run while 3.7-flash was 503. Adarsh's call is flash-lite first with the
+heavier tiers behind it. Every row records `stage2_model`, so a quarter
+extracted by a weaker model is identifiable rather than silently mixed in.
+Note a probe lesson: a trivial "reply OK" health check passes on models that
+then fail a real 15k-token structured-output call, so availability must be
+probed with a representative payload.
+
+**Gap rows are first-class.** A quarter with no transcript filed, or a PDF
+with no text layer, is recorded with `transcript_available=0` /
+`pdf_unreadable=1`. `pdf_sha256` and `pdf_url` are nullable precisely so these
+rows can exist - requiring a hash rejected exactly the rows spec 7.5 asks to
+be kept. `fetched_at` stayed NOT NULL and is supplied for real, since we do
+know when the attempt happened. A NULL hash cannot dedupe against the UNIQUE
+key (SQLite treats every NULL as distinct), so gap rows are cleared before
+rewrite.
+
+**Sectors reuse the app's existing taxonomy.** `sector_cards.py` maps
+`fno.DISPLAY_GROUPS` onto the cheat sheet's nine cards via
+`data/sector_cards.json`, rather than building the separate LLM-classified
+`sector_map` the spec proposed - Adarsh's call, so there stays exactly one
+sector truth in this app. Seven groups map cleanly, two are flagged
+approximations (Financial Services -> NBFC card, Consumer Services -> value
+retail), six have no card and run universal-only. 158 of 213 symbols get
+slots. PSU banks use the private-bank card with `bank_type` metadata.
+
+**Timestamps** (spec section 5) are on every feature row and never derived at
+read time. `feature_available_at` for a transcript feature is the transcript's
+own NSE publish time, NOT the results announcement - a transcript appears days
+after the print, so a later analysis can filter on what was actually knowable
+at the moment of the results move. A transcript whose publish time cannot be
+established gets `timestamp_quality='UNKNOWN'` rather than a defaulted value.
+
+**TCS regression** (`scripts/tcs_v3_regression.py`): 53% field agreement over
+six quarters, formal guidance NOT GIVEN 6/6 as required, evasive precision
+good (no false positives in 3 of 6 quarters). Tones read ~1 point low after I
+overcorrected the calibration anchors. The number is confounded: those six
+quarters were extracted by four different models as the fallback chain fired,
+so it measures a mixture. Pin one model and re-run for a clean baseline.
+
+---
+
 ### Earnings call sentiment tracker (Week 5-6 task, built 14 Oct 2026)
 
 The CLAUDE.md-specced feature: for each watchlist symbol's completed results quarters, find

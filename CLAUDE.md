@@ -329,6 +329,81 @@ upcoming event.
   not the narrowed default" exception Search already gets. Verified: IT sector now shows all
   13 stocks, including "not scheduled" ones.
 
+## Sector-aware extraction, Guidance tab, surprise (v3 build, 16 October 2026)
+
+Built on branch `SentimentLLM` against
+`trader-desk-sector-aware-extraction-guidance-backfill-surprise-spec-eab6d23b-4185d9b7.md`.
+Runs ALONGSIDE the v2 sentiment tracker above - the Sentiment tab keeps
+reading `earnings_call_sentiment` (44 symbols, 265 quarters) while this is
+proven. The v2 path is retired only once v3 has backfill coverage.
+
+- **Two-stage extraction** (`extraction_v3.py`): stage 1 segments the
+  transcript into numbered exchanges, stage 2 extracts the 10-column sheet
+  plus a universal frame block and sector slots, every judgement citing those
+  exchange numbers. PyMuPDF replaces pypdf for this path; the cover letter is
+  stripped before anything else.
+- **Offsets are computed, not asked for.** Models cannot count characters, and
+  a confidently wrong offset looks verified. Stage 1 reads a line-numbered
+  transcript and returns line ranges it can see; stage 2 returns the verbatim
+  quote which is then located in the text. Locating the quote IS the spec's
+  substring check, so the requirement comes out stronger, not weaker.
+- **A failed cite demotes its FIELD, not the quarter.** The first live run
+  threw away verified tones, guidance and nine good sector slots because one
+  soft-outlook quote was paraphrased. Now the affected field becomes
+  NOT_VERIFIED with its quote stripped, unverifiable soft items are dropped,
+  and the divergence grade survives losing its supporting quote. Nothing
+  unverified is ever stored as GIVEN, which is the property QA 8.2 wants.
+- **Analyst-stated figures count** (Adarsh, 16 Oct 2026, overriding spec 3.6's
+  "management actually said"): a number an analyst quotes back uncontested is
+  still stated on the call. `speaker_role` records who said it, and management
+  explicitly correcting or restating takes precedence. The Guidance tab tags
+  an analyst-sourced value inline.
+- **Sectors reuse `fno.DISPLAY_GROUPS`**, not a new taxonomy (Adarsh's call),
+  via `data/sector_cards.json`. Nine cheat-sheet cards cover 158 of 213
+  symbols; the other 55 run universal-only, which is a first-class outcome,
+  not a failure. No slots were added beyond the cheat sheet.
+- **Models: flash-lite for everything** (Adarsh, 16 Oct 2026), with heavier
+  flash tiers behind it in a fallback chain. It was the only tier that
+  answered reliably - the others returned 429/503 in bursts costing ~6 minutes
+  of backoff per quarter. Each row records the model that produced it.
+- **A capability claim I got wrong, twice.** I first reported flash-lite could
+  not do the evasiveness rubric (0 found against a reference 8). It could -
+  asking for a global list let it return an empty array; forcing a verdict on
+  every exchange fixed it. I then reported a slot-fill gap (5 of 9 vs 3 of 9)
+  as a model difference; checking the transcript, several "missing" slots were
+  correctly NOT_GIVEN and others were analyst-spoken. A higher fill count is
+  not better if the extras are inferred. Per-slot ground truth, via the spec's
+  QA 8.4 human spot-check, is what settles this - not a count.
+- **Timestamps** (spec section 5) are on every feature row:
+  `announcement_at`, `source_published_at`, `feature_available_at` plus
+  `extracted_at`. A transcript publishes days after the print, so nothing in
+  these tables was knowable at the moment of the results move - the whole
+  point of storing all three.
+- **Storage**: eight additive tables in `events.db` (`db/schema_sentiment_v3.sql`).
+  Raw PDFs and cleaned text go to `~/.trader_desk/transcript_archive`, OUTSIDE
+  the repo - measured 4.9MB for six transcripts, so a 213x6 backfill would add
+  ~175MB to a git-tracked binary.
+- **Surprise** (`jobs/import_estimates_sheet.py`): imports the uploaded sheet
+  only, no fetching. Uses the sheet's own `spread_pct` rather than recomputing
+  against XBRL (Adarsh's call), so the source's caveats travel with every row -
+  all PROVISIONAL, basis unconfirmed, snapshot unverified. 688 rows / 25
+  symbols imported. The source prohibits redistribution: this data must never
+  travel with the repo if it is ever made public.
+- **Guidance tab** (`tabs/guidance.py`): formal guidance 2x2 with prior-quarter
+  continuity, sector metrics, soft outlook kept strictly separate, promised-vs-
+  delivered, estimate-vs-actual, and a history strip. NOT GIVEN is a designed
+  state at full value weight; NOT VERIFIED renders distinctly from it, because
+  a silent call and failed evidence are different facts.
+- **TCS regression** (`scripts/tcs_v3_regression.py`, spec QA 8.1): 53% field
+  agreement across six quarters, formal guidance NOT GIVEN 6/6 as the reference
+  requires, evasive precision good (zero false positives in 3 of 6 quarters).
+  Tones currently read ~1 point LOW - I overcorrected the calibration anchors
+  after they read high. **Caveat: those six quarters were extracted by four
+  different models** because the fallback chain fired, so this is a mixture,
+  not a clean baseline. Pin one model and re-run before trusting the number.
+- **Not yet done**: the backfill driver's batching/resume (spec 7.4) beyond the
+  per-symbol loop, and the QA 8.4 nine-sector spot-check.
+
 ## Earnings call sentiment tracker - backend built (14 October 2026)
 
 The Week 5-6 task's data pipeline (schema, discovery, both tracks, the job) is built and
