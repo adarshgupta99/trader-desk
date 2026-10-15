@@ -13,6 +13,7 @@ from datetime import datetime
 import plotly.graph_objects as go
 import streamlit as st
 
+import fno
 from events_db import (
     get_earnings_call_sentiment,
     get_earnings_call_sentiment_symbols,
@@ -43,6 +44,25 @@ def _move_color(v, P):
     if v is None:
         return P.T2
     return P.UP if v >= 0 else P.DOWN
+
+
+def _symbols_by_sector(symbols):
+    """{sector display group: [symbols with sentiment data in it]}, each
+    list sorted, keyed by each symbol's PRIMARY display group only (the
+    first entry of fno.display_groups_of - a stock spanning two merged
+    groups appears under one sector tile here, not both, since this is a
+    navigation aid, not the Correlation tab's sector matrix). A symbol
+    fno doesn't recognise (shouldn't happen for an F&O name, but no
+    assumption worth crashing on) falls into an 'Other' bucket rather
+    than being dropped."""
+    by_sector = {}
+    for sym in symbols:
+        groups = fno.display_groups_of(sym)
+        sector = groups[0] if groups else "Other"
+        by_sector.setdefault(sector, []).append(sym)
+    for sector in by_sector:
+        by_sector[sector].sort()
+    return by_sector
 
 
 def _moves_by_quarter(symbol):
@@ -84,10 +104,63 @@ def render():
         )
         return
 
-    st.markdown("<div class='chip-label'>Symbol</div>", unsafe_allow_html=True)
-    symbol = st.pills("sentiment_symbol", symbols, key="sentiment_symbol",
-                      label_visibility="collapsed", default=symbols[0])
-    symbol = symbol or symbols[0]
+    st.markdown("<div class='chip-label'>Search</div>", unsafe_allow_html=True)
+    search_text = st.text_input(
+        "sentiment_search", placeholder="Search by symbol", key="sentiment_search",
+        label_visibility="collapsed",
+    )
+
+    by_sector = _symbols_by_sector(symbols)
+    sector_options = [g for g in fno.DISPLAY_GROUPS if g in by_sector]
+    if "Other" in by_sector:
+        sector_options.append("Other")
+
+    searching = bool(search_text.strip())
+    if not searching:
+        # Sector tiles, then stock tiles within the picked sector - never
+        # all stocks flattened into one row (Adarsh's explicit direction,
+        # 15 Oct 2026). The sector row stays visible even once a sector is
+        # picked, so switching sectors is one click, not a back button.
+        st.markdown("<div class='chip-label' style='margin-top:10px;'>Sector</div>",
+                    unsafe_allow_html=True)
+        sector = st.pills(
+            "sentiment_sector", sector_options, key="sentiment_sector",
+            label_visibility="collapsed", default=sector_options[0],
+        )
+        sector = sector or sector_options[0]
+        candidates = by_sector.get(sector, [])
+        picker_label = f"{sector} stocks"
+        # Per-sector widget key: a stock picked under one sector stays
+        # remembered if you come back to it, and switching sectors can
+        # never hand st.pills a prior selection that isn't in its new
+        # option list.
+        picker_key = f"sentiment_symbol_{sector}"
+    else:
+        candidates = sorted(
+            s for s in symbols if search_text.strip().upper() in s.upper()
+        )
+        picker_label = "Search results"
+        picker_key = "sentiment_symbol_search"
+
+    st.markdown(f"<div class='chip-label' style='margin-top:10px;'>{picker_label}</div>",
+                unsafe_allow_html=True)
+    if not candidates:
+        empty_text = (
+            f"No match for \"{search_text.strip()}\" among stocks with sentiment data."
+            if searching else
+            "No sentiment data stored for this sector yet."
+        )
+        st.markdown(
+            f"<div style='color:{P.T2};font-size:13px;margin-top:6px;'>{empty_text}</div>",
+            unsafe_allow_html=True,
+        )
+        return
+
+    symbol = st.pills(
+        picker_key, candidates, key=picker_key,
+        label_visibility="collapsed", default=candidates[0],
+    )
+    symbol = symbol or candidates[0]
 
     rows = get_earnings_call_sentiment(symbol)
     moves = _moves_by_quarter(symbol)

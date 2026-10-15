@@ -1612,6 +1612,78 @@ column here that follows the design language's direction-colour convention
 (`P.UP`/`P.DOWN`, signed, negative-zero suppressed) rather than the neutral styling the rest
 of the tab deliberately uses for tone/category columns.
 
+**Picker rebuilt into Search + sector tiles, 15 Oct 2026 (Adarsh's explicit direction):** a
+single flat `st.pills` row of every stock with data worked fine with one company, but became
+unreadable once several sectors had rows. New `_symbols_by_sector()` groups the current
+`get_earnings_call_sentiment_symbols()` list by each symbol's *primary* display group only
+(`fno.display_groups_of(sym)[0]`, first entry) - deliberately not every group a multi-sector
+stock belongs to, since this is a one-tap navigation aid, not the Correlation tab's sector
+matrix, and a stock appearing in two sector tiles for the same underlying data would be
+confusing rather than useful here.
+
+`render()`'s new flow: a Search box first, then - only when it's empty - a Sector chip row
+(`fno.DISPLAY_GROUPS`-ordered, limited to groups actually present, with "Other" appended if
+any symbol fell through `display_groups_of` empty) sitting permanently above a second chip
+row for the stocks in whichever sector is selected. Picking a different sector is one click,
+not a back button, because the sector row never disappears. Typing in Search overrides the
+sector view entirely (not AND-combined with it) - matches any stock with stored data by
+symbol substring, case-insensitive, regardless of which sector chip happens to be
+highlighted; the sector grouping has no meaning once the user has told you which stock they
+want directly.
+
+**Widget-key design worth calling out:** the stock-picker `st.pills` uses a key that varies
+by context - `sentiment_symbol_{sector}` while browsing (so RELIANCE staying selected under
+"Energy" survives a round-trip through "Auto" and back, and so switching sectors never hands
+the widget a previously-selected value that isn't in its new `options` list, which Streamlit
+would otherwise have to resolve somehow) and a separate fixed `sentiment_symbol_search` while
+searching. A single shared key across both modes was tried first conceptually and rejected
+for exactly that reason - this is the direct analogue of the Calendar subtab's
+`default_df`/`full_df` base-switching problem from earlier the same night, same underlying
+shape (which data a widget's value should be validated against changes based on another
+widget's state), different fix (distinct keys here, vs. peeking `session_state` early there,
+because here the two bases are mutually exclusive views rather than one narrowing the other).
+
+**Auto and Banks sectors backfilled the same session** via
+`fno.symbols_in_display_group("Auto")` (17 symbols) and `("Banks")` (20 symbols), run as one
+combined `--symbols` list (37 total, comma-joined). **A real shell-quoting incident before
+the real run:** the first launch command left `M&M` unquoted in the `--symbols` string;
+zsh parsed the bare `&` as its own background-job operator, splitting the command into
+`...KOTAKBANK,M &` (backgrounded) and `M,MAHABANK,...` (foregrounded, which failed instantly
+as "command not found: M,MAHABANK,..."). The background half silently kept running as a real
+process even though the task runner reported the launch as failed - caught by checking `ps
+aux` after noticing duplicate-looking log lines (two near-simultaneous "Earnings-sentiment
+refresh starting" entries, then ASHOKLEY's first quarter logged twice in a row), confirmed by
+pulling each PID's untruncated command line with `ps -p <pid> -ww -o command=` (`ps aux`'s
+own column truncates a long command line, which is what made the two processes look
+superficially identical at a glance), and killed before it could duplicate Gemini billing or
+race the correctly-quoted retry on the same SQLite rows. The retry, with the whole
+`--symbols` value properly double-quoted, ran clean.
+
+32 of 37 symbols stored data (186 quarters). **A systematic transcript-extraction gap,
+distinct in kind from anything found before:** AXISBANK, INDUSINDBK, KOTAKBANK, and MARUTI
+each failed "suspiciously little text" (`nse_transcripts.fetch_transcript_text`'s
+scanned-PDF guard) on *every single quarter checked* - not an intermittent miss the way
+COFORGE/MPHASIS/PERSISTENT had earlier, where some quarters worked and others didn't. All
+four symbols' failing filenames contain "Signed" (e.g. `...EarningsCallTranscriptSigned.pdf`,
+`...TranscriptofEarningCallfinal.pdf`), suggesting a document-signing/stamping workflow these
+particular filers use that flattens the PDF into an image layer `pypdf` can't read text from -
+a real hypothesis, not yet verified by actually opening one of the PDFs to check. FORCEMOT
+has no transcript filed for any checked quarter at all (a `nse_transcripts` discovery miss,
+not an extraction failure - distinct failure mode, same "kept as a gap, not retried
+needlessly" treatment). None of these five are mistreated as transient errors:
+`refresh_earnings_sentiment.py` already separates "no transcript filed" (logged, retried
+next run) from "transcript filed but unreadable" (a `ValueError`, which `call_with_retry`
+deliberately does NOT retry, since the issue is the document itself, not a flaky fetch).
+Not investigated further or fixed this session - a real gap worth a closer look later,
+flagged rather than quietly left for the UI to explain via "no stored quarters."
+
+Verified via `AppTest`: Sector chips render with 4 sectors present (`Banks`, `Energy`, `IT`,
+`Auto` - in `fno.DISPLAY_GROUPS` order, not insertion order), switching to `Auto` lists all
+15 of its symbols with data (`MARUTI` and `FORCEMOT` correctly absent, matching the gap
+above), Search for a known symbol returns exactly that one pill option, and a nonsense search
+term renders the "No match" empty state rather than an exception. No real-browser check
+done, same caveat as the rest of this app's newer UI work.
+
 ---
 
 ### `analytics/expected_move.py`, `trading_calendar.py`, `db/schema_expected_move.sql`, `jobs/refresh_expected_moves.py`, and the Events tab expected-move columns

@@ -427,6 +427,30 @@ verified against real data - the UI piece (Chart-tab trend line) is not.
   without leaving the tab. A quarter the Expected-move job hasn't reached, or whose reaction
   window isn't usable, shows "-", never a fabricated 0%. This is a read-only join inside
   `tabs/sentiment.py` - no new table, and earnings_call_sentiment itself is untouched.
+- **Symbol picker rebuilt into sector tiles (15 October 2026), Adarsh's explicit direction:**
+  the flat row of every stock's chip (fine at 1 symbol, unreadable once several sectors have
+  data) is now a Search box plus two-level navigation - Sector chips first, then a chip row
+  for just the stocks in the picked sector that have stored data. `_symbols_by_sector()`
+  groups by each symbol's PRIMARY `fno.display_groups_of()` entry (first match only, so a
+  multi-group stock lands in one tile, not several - this is a navigation aid, not the
+  Correlation tab's sector matrix). Search overrides sector browsing entirely rather than
+  narrowing within it (type to search finds any stock with data regardless of which sector
+  chip is highlighted) - scoped to stocks that already have sentiment data, not the full
+  213-symbol F&O universe, since there's nothing meaningful to show for one with none yet.
+  Each sector's stock-picker uses a per-sector widget key (`sentiment_symbol_{sector}`) so
+  switching sectors never hands `st.pills` a previous selection outside its new option list,
+  and a stock picked under one sector is remembered if you come back to it.
+- **Auto and Banks sectors backfilled the same night** (`fno.symbols_in_display_group`,
+  37 symbols combined - 17 Auto, 20 Banks). 32 of 37 stored data (186 quarters). **A
+  systematic gap found, bigger than anything seen before:** AXISBANK, INDUSINDBK,
+  KOTAKBANK, and MARUTI each failed "suspiciously little text" (scanned-PDF) on
+  **every single quarter checked**, not an intermittent miss like COFORGE/MPHASIS
+  earlier - likely a signing/stamping process these filers use that flattens the PDF to
+  an image layer. FORCEMOT simply has no transcript filed for any checked quarter. None
+  of these five are treated as errors to retry; `refresh_earnings_sentiment.py` already
+  distinguishes "no transcript filed" (retried next run) from a genuine scanned-PDF
+  extraction failure (not retried, since retrying can't fix what's in the document) -
+  not yet investigated further, a real gap worth a closer look later, not fixed tonight.
 
 ## Starting state (handoff: 3 October 2026)
 
