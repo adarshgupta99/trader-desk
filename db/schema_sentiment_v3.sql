@@ -162,6 +162,12 @@ CREATE TABLE IF NOT EXISTS earnings_call_extraction (
     sector_unmapped         INTEGER NOT NULL DEFAULT 0,
 
     extractor_version       TEXT NOT NULL,
+    -- Which stage-2 model actually produced this row. Stage 2 walks a
+    -- fallback chain when a model is rate-limited or unavailable, and the
+    -- last-resort model is measurably weaker on evasiveness, so the row
+    -- must say which one judged it rather than hiding the difference.
+    stage2_model            TEXT,
+    stage2_model_fallback   INTEGER NOT NULL DEFAULT 0,
     announcement_at         TEXT,
     announcement_at_precision TEXT,
     source_published_at     TEXT,
@@ -225,6 +231,11 @@ CREATE TABLE IF NOT EXISTS earnings_sector_slots (
     value_num           REAL,               -- parsed, only when the speaker gave a number
     unit                TEXT,
     period_basis        TEXT,               -- QoQ | YoY | FY | LTM, as stated
+    -- Who stated the figure. Adarsh's call, 16 Oct 2026, overriding spec
+    -- 3.6's "management actually said": an analyst quoting a number back
+    -- uncontested still puts it on the call, and management correcting it
+    -- takes precedence. Stored so the distinction stays visible.
+    speaker_role        TEXT CHECK (speaker_role IN ('management','analyst')),
     quote               TEXT,
     exchange_ref        TEXT,
     char_start          INTEGER,

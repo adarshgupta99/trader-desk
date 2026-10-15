@@ -40,6 +40,10 @@ def get_connection(db_path=None):
         "ALTER TABLE earnings_call_extraction ADD COLUMN cite_failures "
         "INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE earnings_call_extraction ADD COLUMN cite_failure_detail TEXT",
+        "ALTER TABLE earnings_call_extraction ADD COLUMN stage2_model TEXT",
+        "ALTER TABLE earnings_sector_slots ADD COLUMN speaker_role TEXT",
+        "ALTER TABLE earnings_call_extraction ADD COLUMN stage2_model_fallback "
+        "INTEGER NOT NULL DEFAULT 0",
     ):
         try:
             conn.execute(ddl)
@@ -151,7 +155,8 @@ def _guidance_cell(parsed):
 
 def write_extraction(conn, symbol, quarter_end, parsed, provenance, timestamps,
                      sector_info, price_move=None, fiscal_quarter=None,
-                     call_date=None, transcript_url=None, cite_failures=None):
+                     call_date=None, transcript_url=None, cite_failures=None,
+                     stage2_model=None, stage2_model_fallback=0):
     def tone(key):
         field = parsed.get(key) or {}
         return field.get("score"), json.dumps(field.get("cites") or [])
@@ -177,10 +182,11 @@ def write_extraction(conn, symbol, quarter_end, parsed, provenance, timestamps,
              transcript_url, source_pdf_sha256, cleaned_text_sha256,
              row_status, failure_reason, cite_failures, cite_failure_detail,
              sector, sector_card, sector_unmapped,
-             extractor_version, announcement_at, announcement_at_precision,
+             extractor_version, stage2_model, stage2_model_fallback,
+             announcement_at, announcement_at_precision,
              source_published_at, feature_available_at, timestamp_quality,
              extracted_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
         (symbol, quarter_end, fiscal_quarter, call_date,
          price_move.get("pct"), price_move.get("from_date"), price_move.get("to_date"),
@@ -197,7 +203,8 @@ def write_extraction(conn, symbol, quarter_end, parsed, provenance, timestamps,
          "; ".join(cite_failures[:5]) if cite_failures else None,
          sector_info.get("sector"), sector_info.get("sector_card"),
          1 if sector_info.get("sector_card") is None else 0,
-         provenance["extractor_version"], *_ts(timestamps)),
+         provenance["extractor_version"], stage2_model,
+         1 if stage2_model_fallback else 0, *_ts(timestamps)),
     )
 
 
@@ -235,6 +242,7 @@ def write_sector_slots(conn, symbol, quarter_end, parsed, provenance, timestamps
             symbol, quarter_end, sector_card, key,
             field.get("status", "NOT_GIVEN"), field.get("value_text"),
             field.get("value_num"), field.get("unit"), field.get("period_basis"),
+            field.get("speaker_role"),
             field.get("quote"), field.get("exchange_ref"),
             field.get("char_start"), field.get("char_end"),
             provenance["extractor_version"], provenance["source_pdf_sha256"],
@@ -244,12 +252,12 @@ def write_sector_slots(conn, symbol, quarter_end, parsed, provenance, timestamps
         """
         INSERT OR REPLACE INTO earnings_sector_slots
             (symbol, quarter_end, sector, slot_key, status, value_text,
-             value_num, unit, period_basis, quote, exchange_ref, char_start,
-             char_end, extractor_version, source_pdf_sha256,
+             value_num, unit, period_basis, speaker_role, quote, exchange_ref,
+             char_start, char_end, extractor_version, source_pdf_sha256,
              cleaned_text_sha256, announcement_at, announcement_at_precision,
              source_published_at, feature_available_at, timestamp_quality,
              extracted_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, rows)
 
 
@@ -330,7 +338,8 @@ def write_failed_row(conn, symbol, quarter_end, provenance, timestamps, reason,
 
 def write_all(conn, symbol, quarter_end, parsed, exchanges, prepared,
               provenance, timestamps, sector_info, price_move=None,
-              fiscal_quarter=None, call_date=None, cite_failures=None):
+              fiscal_quarter=None, call_date=None, cite_failures=None,
+              stage2_model=None, stage2_model_fallback=0):
     """Everything for one (symbol, quarter), in one transaction."""
     with conn:
         write_source(conn, symbol, quarter_end, prepared, timestamps,
@@ -340,7 +349,9 @@ def write_all(conn, symbol, quarter_end, parsed, exchanges, prepared,
                          sector_info, price_move=price_move,
                          fiscal_quarter=fiscal_quarter, call_date=call_date,
                          transcript_url=prepared.get("url"),
-                         cite_failures=cite_failures)
+                         cite_failures=cite_failures,
+                         stage2_model=stage2_model,
+                         stage2_model_fallback=stage2_model_fallback)
         write_frame(conn, symbol, quarter_end, parsed, provenance, timestamps)
         write_guidance(conn, symbol, quarter_end, parsed, provenance, timestamps)
         if sector_info.get("sector_card"):

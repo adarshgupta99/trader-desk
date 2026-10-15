@@ -34,7 +34,8 @@ import streamlit.components.v1 as components
 import theme
 from prices import clear_price_cache
 from symbols import refresh_symbols
-from tabs import asset_grids, chart, correlation, events, sentiment, watchlist
+from tabs import (asset_grids, chart, correlation, events, guidance,
+                  sentiment, watchlist)
 
 st.set_page_config(page_title="Trader Desk", layout="wide", page_icon="📊", initial_sidebar_state="collapsed")
 
@@ -70,7 +71,7 @@ st.markdown(
 # Only the selected section is rendered. st.tabs would run every tab's body on
 # every interaction — 53 charts rebuilt to show at most 8 — which cost ~650ms a
 # click regardless of what was clicked.
-NAV = ["Watchlist", "Chart", "Indices", "India", "FX", "Commodities", "Volatility", "Events", "Correlation", "Sentiment"]
+NAV = ["Watchlist", "Chart", "Indices", "India", "FX", "Commodities", "Volatility", "Events", "Correlation", "Sentiment", "Guidance"]
 
 # `required` keeps a section selected: without it, clicking the active item
 # deselects it and the app falls back to the first section.
@@ -89,6 +90,8 @@ elif nav == "Correlation":
     correlation.render()
 elif nav == "Sentiment":
     sentiment.render()
+elif nav == "Guidance":
+    guidance.render()
 elif nav in asset_grids.GRIDS:
     asset_grids.render(nav)
 

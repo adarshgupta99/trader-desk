@@ -61,7 +61,34 @@ EXTRACTOR_VERSION = "v3.0.0"
 #: model for stage 1 only") and warns against changing the stage 2 model
 #: without re-running the TCS reference check.
 STAGE1_MODEL = os.environ.get("SENTIMENT_STAGE1_MODEL", "gemini-3.5-flash-lite")
-STAGE2_MODEL = os.environ.get("SENTIMENT_STAGE2_MODEL", "gemini-3.5-flash")
+
+#: Stage 2 is a CHAIN, not one model. Pinning it to a single model means one
+#: model's capacity decides whether a 213 x 6 backfill completes, which is
+#: exactly what happened on 16 Oct 2026: gemini-3.5-flash hit 429
+#: RESOURCE_EXHAUSTED mid-run while 3.7-flash was 503 and only 3.8-flash and
+#: flash-lite were answering. Each entry is tried in order; a transient
+#: failure moves to the next rather than failing the quarter.
+#:
+#: Order is quality-first. flash-lite is LAST and is a genuine degradation,
+#: not an equal option - it cannot do the evasiveness rubric (measured: 0
+#: evasive found against the reference's 8, labelling all 11 exchanges
+#: "open-ended, answered"). It is in the chain so a backfill completes with a
+#: labelled-weaker row rather than a hole, and every row records the model
+#: that produced it so the difference is visible in the data.
+#: Adarsh's call, 16 Oct 2026: flash-lite for everything. It is the only tier
+#: that answered reliably all session (the others returned 429/503 in bursts
+#: that cost ~6 minutes of backoff per quarter), and once the prompt forced a
+#: per-exchange verdict its evasiveness output stopped being the outlier it
+#: first appeared to be. The heavier models stay in the chain behind it so a
+#: lite outage still completes rather than halting a backfill.
+STAGE2_MODEL_CHAIN = [
+    m.strip() for m in os.environ.get(
+        "SENTIMENT_STAGE2_MODELS",
+        "gemini-3.5-flash-lite,gemini-3.8-flash,gemini-3.5-flash,gemini-3.7-flash",
+    ).split(",") if m.strip()
+]
+#: Kept for callers and tests that want to force one model.
+STAGE2_MODEL = os.environ.get("SENTIMENT_STAGE2_MODEL") or STAGE2_MODEL_CHAIN[0]
 
 #: Spec 2.3: a cite quote is "up to ~40 words". Enforced on the way in so an
 #: over-long quote is trimmed to a checkable span rather than rejected.
@@ -383,8 +410,20 @@ def _stage2_schema(slot_keys):
                         "period_basis": {"type": "string", "nullable": True,
                                          "description": "QoQ / YoY / FY / LTM, "
                                                         "only as stated."},
+                        # Adarsh's call, 16 Oct 2026, overriding spec 3.6's
+                        # "management actually said" wording: an analyst
+                        # stating a figure uncontested is still that figure
+                        # being said on the call, and management correcting
+                        # it is the stronger signal. Storing WHO said it keeps
+                        # the distinction visible instead of discarding the
+                        # value or silently blurring the two.
+                        "speaker_role": {
+                            "type": "string",
+                            "enum": ["management", "analyst"],
+                            "nullable": True,
+                        },
                     },
-                    ["value_num", "unit", "period_basis"],
+                    ["value_num", "unit", "period_basis", "speaker_role"],
                 )
                 for key in slot_keys
             },
@@ -480,12 +519,24 @@ GUIDANCE - two parts, kept strictly separate:
 """
 
 _SLOT_INSTRUCTIONS = """\
-SECTOR METRICS - fill each slot below ONLY from something management actually
-said on this call. Give the number as spoken with its unit, and period_basis
-(QoQ / YoY / FY / LTM) only if stated. If the call is silent on a slot, return
-NOT_GIVEN; if the slot cannot apply to this company at all, NOT_APPLICABLE. A
-figure that appears in a press release or presentation but was not said on the
-call is NOT_GIVEN here.
+SECTOR METRICS - fill each slot below from what was actually SAID ON THIS
+CALL. Give the number as spoken with its unit, and period_basis (QoQ / YoY /
+FY / LTM) only if stated. If the call is silent on a slot, return NOT_GIVEN;
+if the slot cannot apply to this company at all, NOT_APPLICABLE. A figure
+that appears only in a press release or presentation, and was not said on the
+call, is NOT_GIVEN here.
+
+WHO SAID IT. A figure counts whether management or an analyst said it - an
+analyst quoting a number back ("you added 10,000 people this quarter") is
+still that number being stated on the call. Record who said it in
+speaker_role:
+  - "management" when a company speaker gave the figure.
+  - "analyst" when only an analyst stated it and management did not dispute
+    or restate it.
+If management explicitly corrects, disputes or restates an analyst's figure,
+use MANAGEMENT'S version and set speaker_role to "management" - management
+addressing the number directly always takes precedence over the analyst's
+framing of it.
 
 {slot_list}
 """
@@ -528,9 +579,27 @@ def derive_evasive(parsed):
     return parsed
 
 
-def extract(api_key, cleaned_text, exchanges, symbol):
+def _is_transient_model_error(exc):
+    """A capacity or quota problem, where another model may well answer. A
+    schema or content failure is NOT transient and must not silently walk
+    down the chain to a weaker model."""
+    text = str(exc).lower()
+    return any(s in text for s in (
+        "429", "resource_exhausted", "rate limit", "too many requests",
+        "503", "unavailable", "high demand", "500", "internal error",
+        "timeout", "deadline", "overloaded",
+    ))
+
+
+def extract(api_key, cleaned_text, exchanges, symbol, models=None):
     """Stage 2. Returns (parsed, usage). Slot list comes from the symbol's
-    sector card; a universal-only symbol gets no sector_slots key at all."""
+    sector card; a universal-only symbol gets no sector_slots key at all.
+
+    Walks STAGE2_MODEL_CHAIN until one answers. usage carries the model that
+    actually produced the result, which the caller stores on the row - a
+    quarter extracted by the last-resort model is measurably weaker on
+    evasiveness and must be identifiable as such afterwards.
+    """
     slots = sector_cards.slots_for_symbol(symbol)
     slot_keys = [s["key"] for s in slots]
     slot_instructions = ""
@@ -543,9 +612,23 @@ def extract(api_key, cleaned_text, exchanges, symbol):
         slot_instructions=slot_instructions,
         transcript=cleaned_text,
     )
-    parsed, usage = _call_llm(
-        api_key, STAGE2_MODEL, prompt, _stage2_schema(slot_keys))
-    return derive_evasive(parsed), usage
+    schema = _stage2_schema(slot_keys)
+    chain = models or STAGE2_MODEL_CHAIN
+    last_error = None
+    for model in chain:
+        try:
+            parsed, usage = _call_llm(api_key, model, prompt, schema)
+        except Exception as e:
+            if not _is_transient_model_error(e):
+                raise
+            last_error = e
+            continue
+        usage["model"] = model
+        usage["model_was_fallback"] = model != chain[0]
+        return derive_evasive(parsed), usage
+    raise ExtractionFailed(
+        f"every stage-2 model was unavailable ({', '.join(chain)}): {last_error}"
+    ) from last_error
 
 
 # ── cite verification (spec 2.3) ─────────────────────────────────────────────

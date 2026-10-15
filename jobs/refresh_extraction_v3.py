@@ -264,13 +264,16 @@ def process_quarter(conn, api_key, symbol, filing_dt, quarter_end, force=False):
         fiscal_quarter=_fiscal_quarter(quarter_end),
         call_date=filing_dt.date().isoformat(),
         cite_failures=failures,
+        stage2_model=u2.get("model"),
+        stage2_model_fallback=u2.get("model_was_fallback", False),
     )
     slots = parsed.get("sector_slots") or {}
     given = sum(1 for v in slots.values() if v.get("status") == "GIVEN")
-    log(f"  {label}: stored - tone {parsed['overall_tone']['score']:+d} "
+    fallback = " (fallback model)" if u2.get("model_was_fallback") else ""
+    log(f"  {label}: stored{fallback} - tone {parsed['overall_tone']['score']:+d} "
         f"evasive {len(parsed['evasive_exchanges'])} "
         f"divergence {parsed['qa_divergence']['grade']} "
-        f"slots {given}/{len(slots)} tokens {tokens:,}")
+        f"slots {given}/{len(slots)} tokens {tokens:,} via {u2.get('model')}")
     return "stored"
 
 
@@ -328,7 +331,7 @@ def main():
     try:
         log(f"v3 extraction starting: {len(symbols)} symbol(s), "
             f"{args.quarters} quarter(s) each, extractor {ex.EXTRACTOR_VERSION}, "
-            f"stage1 {ex.STAGE1_MODEL}, stage2 {ex.STAGE2_MODEL}")
+            f"stage1 {ex.STAGE1_MODEL}, stage2 chain {'>'.join(ex.STAGE2_MODEL_CHAIN)}")
         counts = run(conn, api_key, symbols, args.quarters, force=args.force)
         log("Summary: " + " ".join(f"{k}={v}" for k, v in counts.items()))
     finally:

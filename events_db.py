@@ -417,3 +417,131 @@ def get_expected_move_history(symbol):
     except sqlite3.OperationalError:
         return []
     return [dict(zip(columns, r)) for r in rows]
+
+
+# ── v3 sector-aware extraction (Guidance tab) ────────────────────────────────
+# Read-only, same discipline as every accessor above: return empty rather than
+# raise when a table does not exist yet, so the app renders on a fresh clone
+# before any extraction job has run.
+
+@st.cache_data(ttl=3600)
+def get_extraction_symbols():
+    """Symbols with at least one stored v3 extraction, alphabetical."""
+    if not os.path.exists(DB_PATH):
+        return []
+    try:
+        with _read_connection() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT symbol FROM earnings_call_extraction "
+                "WHERE row_status='OK' ORDER BY symbol"
+            ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    return [r[0] for r in rows]
+
+
+@st.cache_data(ttl=3600)
+def get_extraction_quarters(symbol):
+    """Every stored quarter for a symbol, newest first - the quarter selector
+    and the history strip both read this."""
+    if not os.path.exists(DB_PATH):
+        return []
+    columns = ["quarter_end", "fiscal_quarter", "call_date", "price_move_pct",
+               "mgmt_confidence", "overall_tone", "qa_tone", "analyst_tone",
+               "guidance_cell", "evasive_count", "evasive_exchanges",
+               "qa_divergence", "qa_divergence_note", "transcript_url",
+               "sector", "sector_card", "sector_unmapped", "row_status",
+               "cite_failures", "stage2_model", "extractor_version",
+               "announcement_at", "source_published_at", "feature_available_at",
+               "timestamp_quality"]
+    try:
+        with _read_connection() as conn:
+            rows = conn.execute(
+                f"SELECT {', '.join(columns)} FROM earnings_call_extraction "
+                "WHERE symbol=? AND row_status='OK' ORDER BY quarter_end DESC",
+                (symbol,),
+            ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    return [dict(zip(columns, r)) for r in rows]
+
+
+@st.cache_data(ttl=3600)
+def get_guidance_formal(symbol, quarter_end):
+    """The four generic guidance fields for one quarter, keyed by field_key.
+    NOT_GIVEN rows are included deliberately - the UI must be able to show a
+    designed 'NOT GIVEN' state rather than an absent cell."""
+    if not os.path.exists(DB_PATH):
+        return {}
+    columns = ["field_key", "status", "value_text", "value_num_low",
+               "value_num_high", "unit", "applies_to_period",
+               "prior_value_text", "quote", "exchange_ref"]
+    try:
+        with _read_connection() as conn:
+            rows = conn.execute(
+                f"SELECT {', '.join(columns)} FROM earnings_guidance_formal "
+                "WHERE symbol=? AND quarter_end=?", (symbol, quarter_end),
+            ).fetchall()
+    except sqlite3.OperationalError:
+        return {}
+    return {r[0]: dict(zip(columns, r)) for r in rows}
+
+
+@st.cache_data(ttl=3600)
+def get_guidance_soft(symbol, quarter_end):
+    if not os.path.exists(DB_PATH):
+        return []
+    columns = ["item_no", "topic", "direction", "quote", "exchange_ref"]
+    try:
+        with _read_connection() as conn:
+            rows = conn.execute(
+                f"SELECT {', '.join(columns)} FROM earnings_guidance_soft "
+                "WHERE symbol=? AND quarter_end=? ORDER BY item_no",
+                (symbol, quarter_end),
+            ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    return [dict(zip(columns, r)) for r in rows]
+
+
+@st.cache_data(ttl=3600)
+def get_sector_slots(symbol, quarter_end):
+    if not os.path.exists(DB_PATH):
+        return []
+    columns = ["slot_key", "sector", "status", "value_text", "value_num",
+               "unit", "period_basis", "speaker_role", "quote", "exchange_ref"]
+    try:
+        with _read_connection() as conn:
+            rows = conn.execute(
+                f"SELECT {', '.join(columns)} FROM earnings_sector_slots "
+                "WHERE symbol=? AND quarter_end=? ORDER BY slot_key",
+                (symbol, quarter_end),
+            ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    return [dict(zip(columns, r)) for r in rows]
+
+
+@st.cache_data(ttl=3600)
+def get_estimate_surprise(symbol, period_end_date=None):
+    """Stored estimate-vs-actual comparisons for a symbol (spec 5A). Every
+    row carries the source's own caveats, which the UI must surface - these
+    are not verified pre-print consensus figures."""
+    if not os.path.exists(DB_PATH):
+        return []
+    columns = ["period_end_date", "source_quarter_label", "metric",
+               "estimate_value", "actual_value", "surprise_pct", "unit",
+               "basis", "snapshot_status", "comparability", "flags"]
+    query = (f"SELECT {', '.join(columns)} FROM earnings_estimate_surprise "
+             "WHERE symbol=?")
+    params = [symbol]
+    if period_end_date:
+        query += " AND period_end_date=?"
+        params.append(period_end_date)
+    try:
+        with _read_connection() as conn:
+            rows = conn.execute(query + " ORDER BY period_end_date DESC, metric",
+                                params).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    return [dict(zip(columns, r)) for r in rows]
