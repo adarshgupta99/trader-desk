@@ -297,6 +297,37 @@ upcoming event.
   matching the Calendar's existing 14-day-lookback events), the IT-sector filter correctly
   narrows to exactly 13 rows, and "My watchlist" scope still works. No real-browser check
   done, same caveat as the rest of this tab.
+- **Refined same day, within hours:** showing all 213 rows by default buried what actually
+  matters under a long "not yet announced" tail. The default view is narrowed back to a
+  30-day lookahead (plus the existing 14-day lookback) - but Search still reaches the full
+  213-symbol universe, so an unscheduled stock stays findable, just not shown unasked.
+  Implementation note: deciding which base set (narrowed-default vs full-universe) the
+  Sector filter and Search should apply to requires knowing whether the user is actively
+  searching - but the Sector chip renders, in code, before the Search box is instantiated.
+  Solved by peeking `st.session_state.get("ev_search", "")` early rather than reordering the
+  visible UI or calling `st.text_input` twice - Streamlit already has the prior run's value
+  in session_state by the time the script body re-executes.
+- **`jobs/refresh_earnings_history.py`'s own default scope widened to match**, not just a
+  one-off manual backfill: `due_symbols()` used to only return symbols with an events-table
+  row, which would have silently reopened this exact gap next quarter for every stock that's
+  currently unscheduled. Now returns the full `fno.symbols()` universe, each paired with its
+  real event_date where `events` has one, or today's date as a window anchor otherwise (the
+  same fallback an explicit `--symbols` call already used, which correctly resolves to "the
+  6 most recently completed quarters" via `quarter_end_for_event_date`). One-off full
+  213-symbol backfill run by hand the same night to populate the ~120 symbols that had never
+  been fetched (only 93 of 213 had any `earnings_history_quarters` row before this).
+- **Why the other fields stayed "no estimate" even after the universe fix, and that's
+  correct, not a gap:** an analyst-estimate snapshot is taken T-1 before a specific announced
+  results date (see the Analyst estimates tracker section below) - there is structurally
+  nothing to snapshot for a symbol with no scheduled event, unlike HISTORY 6Q which only
+  needs *past* reported quarters and was fixable.
+- **Sector filter follow-up, same session:** the 30-day narrowing above was correctly applied
+  to the unfiltered default view, but it was ALSO still being applied underneath a sector
+  pick - so clicking "IT" showed only 10 of its 13 F&O stocks, silently dropping the 3
+  unscheduled ones again. Fixed: picking a sector now filters from the full 213-symbol set,
+  not from whichever base the default view happened to be using - the same "full universe,
+  not the narrowed default" exception Search already gets. Verified: IT sector now shows all
+  13 stocks, including "not scheduled" ones.
 
 ## Earnings call sentiment tracker - backend built (14 October 2026)
 

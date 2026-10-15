@@ -63,9 +63,21 @@ def test_due_symbols_includes_a_recently_reported_event(tmp_path, monkeypatch):
     # last few days and still shown in Calendar, were never backfilled -
     # permanently "no history" despite being exactly the rows a reader
     # would want it for.
+    #
+    # Widened 15 Oct 2026: due_symbols now returns EVERY symbol in the
+    # universe (fno.symbols(), monkeypatched here to a small fixed set so
+    # this test stays fast and isolated from the real 213-symbol list,
+    # per the test suite's existing network-free discipline) - a symbol
+    # outside the lookback window, or with no events row at all, is no
+    # longer dropped, it's included with today's date as its window
+    # anchor instead (same fallback an explicit --symbols call already
+    # used for refresh_symbol's quarter-window calc).
     import sqlite3
     from datetime import date, timedelta
 
+    monkeypatch.setattr(
+        reh.fno, "symbols", lambda: ["RECENTCO", "STALECO", "UPCOMINGCO", "NEVERCO"],
+    )
     db_path = str(tmp_path / "events_test.db")
     monkeypatch.setattr(reh, "DB_PATH", db_path)
     conn = sqlite3.connect(db_path)
@@ -81,8 +93,12 @@ def test_due_symbols_includes_a_recently_reported_event(tmp_path, monkeypatch):
     )
     conn.commit()
 
-    symbols = {row[0] for row in reh.due_symbols(conn)}
-    assert "RECENTCO" in symbols
-    assert "UPCOMINGCO" in symbols
-    assert "STALECO" not in symbols
+    today_iso = date.today().isoformat()
+    by_symbol = dict(reh.due_symbols(conn))
+    assert by_symbol == {
+        "RECENTCO": recent,
+        "UPCOMINGCO": upcoming,
+        "STALECO": today_iso,   # outside the window - falls back to today, not dropped
+        "NEVERCO": today_iso,   # no events row at all - still included, same fallback
+    }
     conn.close()

@@ -5,16 +5,31 @@ of consolidated revenue/PAT per symbol, for the Calendar subtab's HISTORY
 
 Run manually: python -m jobs.refresh_earnings_history [--symbols A,B,C]
 Scheduled in the same daily cron as snapshot_estimates/fill_actuals, after
-them - this only needs to run for symbols with an upcoming results board
-meeting, same universe fill_actuals already reads from `events`.
+them (no cron/launchd entry exists yet - run by hand).
 
-SCOPE: only symbols with an upcoming ('event_date >= today') results board
-meeting get backfilled - that's the full set of rows the Calendar table
-can ever show a sparkline on. Not the full 213-symbol F&O universe (that
-was the Expected-move tracker's call, for its own dedicated ranking
-subtab that lists every symbol regardless of a scheduled event - a
-different requirement). Pass --symbols to backfill an explicit list
-instead (manual testing, or a symbol just added to a watchlist).
+SCOPE, widened 15 Oct 2026 (Adarsh's direction): every F&O symbol
+(fno.symbols(), 213), not just ones with an upcoming/recent events-table
+row. The narrower scope (superseded - see git history for the original
+reasoning, which argued this was the Expected-move tracker's call to
+make, not this job's) left a real gap: the Calendar subtab's own
+universe was widened the same day to show every F&O stock including ones
+with no announced board meeting yet, and those rows' HISTORY 6Q column
+has nothing to do with whether a next meeting is scheduled - it's just
+the last 6 REPORTED quarters. A symbol with no real event_date gets
+today's date as its window anchor instead (same fallback an explicit
+--symbols call already used, which correctly resolves to "the 6 most
+recently completed quarters" via quarter_end_for_event_date). Pass
+--symbols to backfill an explicit list instead (manual testing, or to
+re-run just a few names).
+
+NSE LOAD NOTE: this does mean a routine run (once this is actually on a
+cron) now walks all 213 symbols instead of ~90, every time - more total
+request volume, though each symbol's upsert is already idempotent
+(ON CONFLICT DO UPDATE) so a routine rerun is mostly re-checking for a
+newly-filed quarter, not redoing work. Worth knowing if NSE pacing ever
+becomes a real constraint; no change made to the per-symbol fetch
+pattern itself (still the same polite, sequential, one-archive-fetch-
+plus-up-to-6-XBRL-fetches shape).
 
 WHY 6 FETCHES PER SYMBOL, NOT 1: each historical quarter is a SEPARATE
 NSE filing with its own XBRL document - there is no "give me 6 quarters"
@@ -53,6 +68,7 @@ import time
 from datetime import date, datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+import fno  # noqa: E402
 import nse_results  # noqa: E402
 from jobs.fill_actuals import quarter_end_for_event_date  # noqa: E402
 
@@ -129,22 +145,29 @@ CALENDAR_LOOKBACK_DAYS = 14
 
 
 def due_symbols(conn):
-    """Symbols with a results board meeting in the window the Calendar
-    table actually shows - upcoming, plus the last CALENDAR_LOOKBACK_DAYS
-    days so a just-reported quarter still gets its HISTORY 6Q filled in."""
+    """Every F&O symbol, paired with the event_date its 6-quarter window
+    should be anchored to: the real results board-meeting date where
+    `events` has one in the Calendar's own lookback window, or today's
+    date otherwise - the window calc only needs to know "which quarter
+    does the next report cover", and today's date already gives the
+    right answer (the 6 most recently completed quarters) for a symbol
+    with nothing scheduled, same fallback an explicit --symbols call
+    uses. Widened 15 Oct 2026 from "only symbols with an events row" to
+    the full universe - see this module's docstring for why."""
     today = date.today()
     from_date = (today - timedelta(days=CALENDAR_LOOKBACK_DAYS)).isoformat()
     rows = conn.execute(
         """
-        SELECT DISTINCT symbol, event_date FROM events
+        SELECT symbol, MIN(event_date) FROM events
         WHERE event_type = 'board_meeting'
           AND LOWER(purpose) LIKE '%result%'
           AND event_date >= ?
-        ORDER BY symbol
+        GROUP BY symbol
         """,
         (from_date,),
     ).fetchall()
-    return rows
+    scheduled = dict(rows)
+    return [(s, scheduled.get(s, today.isoformat())) for s in fno.symbols()]
 
 
 def upsert_quarter(conn, symbol, quarter_end, facts):

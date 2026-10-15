@@ -467,7 +467,7 @@ def render():
         # estimate", same as it always could for an F&O name with nothing
         # upcoming).
         universe = fno.symbols() if symbols is None else sorted(symbols)
-        type_df = pd.DataFrame({"symbol": universe}).merge(
+        full_df = pd.DataFrame({"symbol": universe}).merge(
             board_meetings_df, on="symbol", how="left",
         )
         # A left-join miss leaves these as float NaN, not Python None - the
@@ -482,16 +482,45 @@ def render():
         # or ...` check below behaves correctly instead of hitting a stray
         # "nan" string or an AttributeError on nan.lower().
         for col in ("event_date", "purpose", "event_type", "subtype", "record_date", "source"):
-            type_df[col] = type_df[col].astype(object).where(type_df[col].notna(), None)
+            full_df[col] = full_df[col].astype(object).where(full_df[col].notna(), None)
+
+        # Default view, 15 Oct 2026 (Adarsh's follow-up to the universe fix
+        # above): showing all 213 rows by default buried the stocks that
+        # actually matter right now under a long "not yet announced" tail.
+        # The default is narrowed back to a 30-day lookahead (plus the
+        # existing 14-day lookback, for a just-reported row's actual/
+        # surprise) - but Search below still reaches the full universe,
+        # so an unscheduled stock is never truly unreachable, just not
+        # shown unasked.
+        # Filtered to non-null event_date FIRST, not combined into one
+        # vectorized boolean expression - pandas evaluates both sides of
+        # `&` regardless of short-circuiting, so `col <= cutoff` would run
+        # over the None entries too and raise (None has no ordering
+        # against a str), the exact same family of trap as the dtype bug
+        # above, just at comparison time instead of assignment time.
+        lookahead_cutoff = (datetime.now(IST) + timedelta(days=30)).strftime("%Y-%m-%d")
+        dated_df = full_df[full_df["event_date"].notna()]
+        default_df = dated_df[dated_df["event_date"] <= lookahead_cutoff].sort_values("event_date")
 
         # Known schedule first (nearest date first), then every "not yet
-        # announced" row, alphabetical - so that tail isn't left in
-        # arbitrary join order.
-        has_date = type_df["event_date"].notna()
-        type_df = pd.concat([
-            type_df[has_date].sort_values("event_date"),
-            type_df[~has_date].sort_values("symbol"),
+        # announced" row, alphabetical - only relevant to full_df, since
+        # default_df above only ever contains dated rows already.
+        has_date = full_df["event_date"].notna()
+        full_df_sorted = pd.concat([
+            full_df[has_date].sort_values("event_date"),
+            full_df[~has_date].sort_values("symbol"),
         ])
+
+        # Peeking at the Search box's session-state value here (before the
+        # widget itself is instantiated further down) decides which base
+        # set the Sector filter and the generic Search block below apply
+        # to - the full universe while actively searching, the narrowed
+        # default otherwise. This can't be done by calling st.text_input
+        # twice; reading the key early works because Streamlit already has
+        # the prior run's value in session_state by the time this script
+        # body executes.
+        searching = bool(st.session_state.get("ev_search", "").strip())
+        type_df = full_df_sorted if searching else default_df
     elif subtab == "Past earnings":
         # Results already out - the frozen estimate next to NSE's own
         # reported numbers, for every quarter where at least one actual
@@ -519,7 +548,14 @@ def render():
         )
         if sector:
             in_sector = set(fno.symbols_in_display_group(sector))
-            type_df = type_df[type_df["symbol"].isin(in_sector)]
+            # A sector pick shows every stock in that sector, including
+            # ones with no announced earnings yet (Adarsh's follow-up,
+            # 15 Oct 2026) - picking the sector base (full_df_sorted) here
+            # rather than filtering whatever type_df already is, the same
+            # "full universe, not just the narrowed default" exception
+            # Search already gets below, since the 30-day narrowing was
+            # only ever meant for the unfiltered default view.
+            type_df = full_df_sorted[full_df_sorted["symbol"].isin(in_sector)]
 
     st.markdown("<div class='chip-label' style='margin-top:8px;'>Search</div>", unsafe_allow_html=True)
     search_text = st.text_input(

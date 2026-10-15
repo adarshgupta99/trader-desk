@@ -1330,6 +1330,93 @@ existing 14-day-lookback query already found). The IT-sector filter chip correct
 exactly 13 rows (`fno.symbols_in_display_group("IT")`'s own count). "My watchlist" scope still
 renders without exception. No real-browser check done, same caveat as the rest of this tab.
 
+**Refined the same session, within hours, after Adarsh looked at the live 213-row table:**
+showing everything by default buried the 95 rows that actually matter under a 118-row "not
+yet announced" tail. `full_df` (the complete left-joined universe, exactly as above) is kept
+for Search to fall back to, but the default `type_df` is narrowed to `default_df` - `full_df`
+rows with a non-null `event_date` at or before a rolling 30-day-ahead cutoff
+(`datetime.now(IST) + timedelta(days=30)`), sorted ascending. The existing 14-day lookback is
+unchanged (still baked into `get_upcoming_events`'s own SQL filter upstream), so a
+just-reported row stays visible for its actual/surprise, same as before this whole universe
+change started.
+
+Deciding which base (`default_df` vs `full_df`) the Sector filter and Search apply to needs
+to know whether the user is actively searching - but in the render() script, the Sector
+`st.pills` call executes *before* the Search `st.text_input` call, so the search term isn't
+known yet at the point the Calendar branch needs to pick a base. Reordering the two widgets
+was avoidable: `st.session_state.get("ev_search", "")` is read once, early, before either
+widget's own call for this run - Streamlit has already pre-populated session_state with the
+prior run's value by the time the script body executes, which is the same mechanism that
+makes any widget's value available to code written above its own declaration. `searching =
+bool(...)` then picks `full_df_sorted` (the old all-213 sort order, known-date-first then
+alphabetical-unscheduled, kept for this path) or `default_df` before the Sector/Search blocks
+run - both blocks' own code is otherwise unchanged.
+
+**A second pandas trap caught before it shipped, this time at comparison time rather than
+assignment time (the dtype-cast bug above was the first):** computing the 30-day window
+naively as one vectorized expression -
+`full_df["event_date"].notna() & (full_df["event_date"] <= cutoff)` - looks safe because of
+the `&`, but pandas evaluates BOTH operands independently before combining them elementwise;
+it does not short-circuit. The right-hand comparison runs over every row including the `None`
+ones regardless of the left-hand `.notna()` check, and `None <= str` raises `TypeError`.
+Fixed by filtering to non-null rows first (`full_df[full_df["event_date"].notna()]`) and only
+then comparing the remaining rows' dates against the cutoff - never comparing `None` to a
+string at all, rather than trying to make the comparison `None`-tolerant.
+
+Verified via `AppTest`: the default view renders 95 rows, zero containing "not scheduled"
+(confirming the narrowing actually took effect, not just that nothing broke); searching for
+"ABCAPITAL" (a real symbol with no scheduled event, confirmed via direct SQL - zero rows in
+`earnings_history_quarters` or `earnings_estimates`) returns exactly 1 row, correctly showing
+"not scheduled" / "Not yet announced" / "no estimate" for its empty fields, proving Search
+genuinely reaches past the default window into the full universe. Sector filter still
+composes correctly with the narrowed default (IT sector: 10 of its 13 F&O stocks fall within
+the 30-day window, the other 3 correctly excluded by default but still reachable via Search).
+
+**Separately, `jobs/refresh_earnings_history.py`'s own default scope widened to match -
+not left as a one-off manual backfill.** `due_symbols()` previously returned only symbols
+with a qualifying `events` row; left as-is, this would have silently reopened the exact same
+gap next quarter for every currently-unscheduled stock the moment this one-off backfill's
+data aged out of relevance. Now returns every symbol in `fno.symbols()`, each paired with its
+real `event_date` where one exists (`SELECT symbol, MIN(event_date) ... GROUP BY symbol` over
+the existing 14-day-lookback query - changed from the prior `SELECT DISTINCT symbol,
+event_date` specifically so a symbol with two qualifying rows in the window still yields
+exactly one dict entry, not an ambiguous duplicate), or `date.today().isoformat()` as a
+fallback anchor otherwise - the exact fallback an explicit `--symbols` call on this job
+already used (`run()`'s `targets = [(s, date.today().isoformat()) for s in symbols]`), which
+correctly resolves to "the 6 most recently completed quarters" via
+`quarter_end_for_event_date`. `test_due_symbols_includes_a_recently_reported_event` (the
+existing regression test for the 14-day lookback) was updated to monkeypatch `fno.symbols`
+to a small fixed 4-symbol set (keeping the test network-free and fast) and assert the full
+`{symbol: date}` mapping, including a symbol with NO events row at all resolving to today's
+date rather than being dropped - the exact case this widening exists for. One-off full
+213-symbol backfill run the same night (`--symbols` with every `fno.symbols()` entry,
+comma-joined) to populate the ~120 symbols that had never been fetched - only 93 of 213 had
+any `earnings_history_quarters` row before this (confirmed via direct `COUNT(DISTINCT
+symbol)`; e.g. ABCAPITAL had zero rows, filled to 6/6 within the first few symbols of the
+run).
+
+**Why "no estimate" is correct, not a remaining gap, for an unscheduled row:** an
+analyst-estimate snapshot is taken T-1 before a specific *announced* results date (see the
+Analyst estimates tracker section above) - there is structurally nothing to snapshot for a
+symbol with no scheduled event. This is the one field in this feature that genuinely cannot
+be backfilled the way HISTORY 6Q was, and isn't being treated as a bug.
+
+**Sector filter follow-up, same session (Adarsh noticed it live):** the 30-day narrowing
+correctly applied to the unfiltered default view, but the Sector chip's own filtering code
+was still narrowing from whatever `type_df` already was at that point in the script -
+`default_df` when no search was active - rather than from the full universe. Clicking "IT"
+therefore showed only 10 of its 13 F&O stocks, re-dropping the 3 unscheduled ones the
+universe fix was supposed to make reachable. Fixed with the same pattern Search already
+uses: `if sector: type_df = full_df_sorted[full_df_sorted["symbol"].isin(in_sector)]` -
+filtering from `full_df_sorted` (the complete, already-sorted 213-symbol set, in scope at
+this point in `render()` regardless of which earlier branch assigned it, since Python's
+function-level scoping doesn't care which `if`/`elif` arm ran) rather than mutating whatever
+`type_df` happened to be. A sector pick and an active search now compose correctly too, in
+either order: whichever runs last narrows further from the full-universe base the other one
+already established, instead of either one silently re-imposing the 30-day window. Verified
+via `AppTest`: IT sector now renders all 13 rows, with "not scheduled" present among them
+(previously present in the ungrouped view but absent once filtered to this sector).
+
 ---
 
 ### Earnings call sentiment tracker (Week 5-6 task, built 14 Oct 2026)
