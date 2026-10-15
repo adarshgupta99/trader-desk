@@ -18,3 +18,11 @@ pandas_market_calendars
 # had never actually been declared here either.
 pypdf
 google-genai
+# Sector-aware extraction build (v3 pipeline). PyMuPDF replaces pypdf for
+# transcript reading - Adarsh's call, 16 Oct 2026, per the spec. pypdf stays
+# declared above because nse_transcripts.py (the current, still-live
+# extractor) uses it; it goes when that path is retired.
+# openpyxl reads the uploaded estimates sheet and the TCS reference workbook
+# (spec 5A.1 / 8.1) - both .xlsx, read-only, never written back.
+PyMuPDF
+openpyxl
