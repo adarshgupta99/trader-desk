@@ -1,0 +1,172 @@
+{
+  "_comment": [
+    "Sector slot-cards for the sector-aware extraction (spec section 3.3).",
+    "",
+    "TAXONOMY: Adarsh's call, 16 Oct 2026 - use the app's EXISTING sector data",
+    "(fno_sectors.json via fno.DISPLAY_GROUPS), not a new LLM-built sector_map.",
+    "A symbol's card is resolved at config level from its primary display group",
+    "(fno.display_groups_of(symbol)[0]), never classified at extraction time.",
+    "",
+    "COVERAGE: the cheat sheet defines 9 cards. The app has 15 display groups.",
+    "Seven map cleanly, two are deliberate approximations (see _mapping_notes),",
+    "and six have no card at all - those run universal-only (spec 3.4), because",
+    "Adarsh chose the spec's default of adding no new cards beyond the cheat",
+    "sheet. Adding a card later is an edit to this file, not a code change.",
+    "",
+    "SLOTS: taken verbatim from the cheat sheet's 'Watch first' bullets. The",
+    "spec's three ADD? proposals (ai_revenue_disclosed for IT, capital_ratios",
+    "for banks) are NOT included - Adarsh chose the default of none."
+  ],
+  "version": "sector-cards-v1",
+  "built": "2026-10-16",
+
+  "_mapping_notes": {
+    "Financial Services -> nbfcs": "Approximate, accepted by Adarsh. The cheat sheet's NBFC card (AUM growth, disbursements, cost of funds) fits Bajaj Finance/Shriram/Chola well but is a loose fit for the capital-markets and insurance names that also sit in this group (CDSL, BSE, ANGELONE). Those slots return NOT_GIVEN for such names rather than being forced.",
+    "Consumer Services -> value_retail": "Approximate, accepted by Adarsh. The cheat sheet's retail card explicitly names DMart and Trent, which are in this group; hotels/travel names in the same group will mostly return NOT_GIVEN on store-count and SSG slots.",
+    "banks_include_psu": "PSU banks use the private-bank card (same metrics), with bank_type recorded as PSU metadata. Adarsh confirmed 16 Oct 2026. Derived from 'PSU Bank' appearing in fno.sectors_of(symbol).",
+    "conglomerates": "One primary sector only (fno.display_groups_of()[0]); no per-segment slot extraction in v1. Reliance resolves to Energy and therefore runs universal-only."
+  },
+
+  "group_to_card": {
+    "Banks": "private_banks",
+    "Financial Services": "nbfcs",
+    "IT": "it_services",
+    "FMCG": "fmcg",
+    "Auto": "autos",
+    "Healthcare & Pharma": "pharma",
+    "Metals": "metals",
+    "Consumer Services": "value_retail",
+    "Capital Goods & Infra": "industrials",
+    "Energy": null,
+    "Consumer Durables": null,
+    "Realty & Construction": null,
+    "Chemicals": null,
+    "Telecom": null,
+    "Textiles": null
+  },
+
+  "cards": {
+    "it_services": {
+      "label": "IT SERVICES METRICS",
+      "slots": [
+        {"key": "cc_revenue_growth_qoq", "label": "CC revenue growth (QoQ)", "capture": "Constant-currency revenue growth quarter on quarter. The rupee figure moves with the exchange rate; CC is the real demand signal."},
+        {"key": "cc_revenue_growth_yoy", "label": "CC revenue growth (YoY)", "capture": "Constant-currency revenue growth year on year."},
+        {"key": "tcv_deal_wins", "label": "TCV / deal wins", "capture": "Total contract value of deal wins, with its currency."},
+        {"key": "book_to_bill", "label": "Book-to-bill", "capture": "Book-to-bill ratio - whether future revenue is being booked faster than current revenue is delivered."},
+        {"key": "ebit_margin", "label": "EBIT margin", "capture": "Operating (EBIT) margin as stated."},
+        {"key": "ebit_margin_vs_guided_band", "label": "EBIT margin vs guided band", "capture": "The company's own margin band if stated, and management's reason for any drift (wage hikes, pricing, acquisitions)."},
+        {"key": "attrition_ltm", "label": "Attrition (LTM)", "capture": "Last-twelve-months attrition rate."},
+        {"key": "net_headcount_adds", "label": "Net headcount adds", "capture": "Net additions to headcount in the quarter."},
+        {"key": "fy_guidance_band", "label": "FY guidance band", "capture": "Full-year guidance band where the company guides (Infosys, HCLTech); a shift in the band outweighs the quarter."}
+      ]
+    },
+
+    "private_banks": {
+      "label": "BANK METRICS",
+      "slots": [
+        {"key": "nii", "label": "NII", "capture": "Net interest income."},
+        {"key": "nim", "label": "NIM", "capture": "Net interest margin, as stated."},
+        {"key": "nim_direction", "label": "NIM direction", "capture": "Which way NIM moved and why - direction matters more than the level."},
+        {"key": "gnpa", "label": "GNPA", "capture": "Gross non-performing assets ratio."},
+        {"key": "nnpa", "label": "NNPA", "capture": "Net non-performing assets ratio."},
+        {"key": "slippages", "label": "Slippages", "capture": "Fresh bad loans in the quarter."},
+        {"key": "credit_cost", "label": "Credit cost", "capture": "Credit cost, in bps or absolute, as stated."},
+        {"key": "provision_coverage", "label": "Provision coverage", "capture": "Provision coverage ratio."},
+        {"key": "loan_growth", "label": "Loan growth", "capture": "Advances growth; note the basis stated."},
+        {"key": "deposit_growth", "label": "Deposit growth", "capture": "Deposit growth; loans growing much faster than deposits squeezes NIM later."},
+        {"key": "casa_share", "label": "CASA share", "capture": "Current and savings account share of deposits - deposit quality."},
+        {"key": "fee_income_growth", "label": "Fee income growth", "capture": "Fee income growth, the second and less rate-sensitive engine."},
+        {"key": "ex_one_off_disclosure", "label": "Ex-one-off numbers", "capture": "Underlying growth excluding one-offs where management discloses it (e.g. an FCNR(B) swap window). The cheat sheet's instruction is to always ask for the ex-one-off numbers."},
+        {"key": "pre_result_business_update", "label": "Pre-result business update", "capture": "Whether the call references the earlier provisional deposits/advances update filed before results."}
+      ]
+    },
+
+    "nbfcs": {
+      "label": "NBFC METRICS",
+      "slots": [
+        {"key": "aum_growth", "label": "AUM growth", "capture": "Assets under management growth - the volume line."},
+        {"key": "disbursement_momentum", "label": "Disbursement momentum", "capture": "Disbursements in the quarter and their trend."},
+        {"key": "nim", "label": "NIM", "capture": "Net interest margin."},
+        {"key": "cost_of_funds", "label": "Cost of funds", "capture": "Cost of borrowing - NBFCs borrow to lend, so rising rates squeeze them first."},
+        {"key": "credit_cost", "label": "Credit cost", "capture": "Credit cost, with any segment split management gives."},
+        {"key": "slippages", "label": "Slippages", "capture": "Slippages, especially any unsecured and microfinance commentary."},
+        {"key": "fee_income_crosssell", "label": "Fee income / cross-sell", "capture": "Fee income and cross-sell metrics where disclosed."},
+        {"key": "regulatory_commentary", "label": "Regulatory commentary", "capture": "RBI/IRDAI rules management names as live margin risks."}
+      ]
+    },
+
+    "fmcg": {
+      "label": "FMCG METRICS",
+      "slots": [
+        {"key": "volume_growth", "label": "Volume growth", "capture": "Volume growth - real demand. Store separately from price growth."},
+        {"key": "price_growth", "label": "Price growth", "capture": "Price-led growth, which the cheat sheet calls 'rented' growth in an inflationary phase."},
+        {"key": "gross_margin", "label": "Gross margin", "capture": "Gross margin - the raw-material read before cost controls blur it."},
+        {"key": "rural_vs_urban_commentary", "label": "Rural vs urban", "capture": "Rural versus urban demand commentary."},
+        {"key": "base_effect_commentary", "label": "Base effect", "capture": "Management's own commentary on base effects distorting the YoY figure."},
+        {"key": "next_quarter_festive_commentary", "label": "Festive / next quarter", "capture": "Festive-season and next-quarter commentary; Q3 is the biggest consumption quarter."},
+        {"key": "segment_commentary", "label": "Segment commentary", "capture": "Segment-level commentary where the company reports distinct segments (the cheat sheet's instruction for ITC: read segments, not the consolidated headline)."}
+      ]
+    },
+
+    "autos": {
+      "label": "AUTO METRICS",
+      "slots": [
+        {"key": "volume_growth", "label": "Volume growth (wholesale)", "capture": "Wholesale dispatch volumes and their growth."},
+        {"key": "retail_vs_wholesale_commentary", "label": "Retail vs wholesale", "capture": "Any retail-registration versus wholesale-dispatch commentary."},
+        {"key": "segment_mix", "label": "Segment mix", "capture": "PV / 2W / CV / tractor mix. The cheat sheet warns these cycles move on different clocks and must never be averaged together."},
+        {"key": "premiumisation_ev_mix", "label": "Premiumisation / EV mix", "capture": "SUV and EV share and realisation - premiumisation carries higher realisations."},
+        {"key": "commodity_cost_vs_price_hikes", "label": "Commodity cost vs price hikes", "capture": "The margin bridge: steel/aluminium cost movement against price hikes taken."},
+        {"key": "ev_investment_drag", "label": "EV investment drag", "capture": "EV investment drag versus EV scale."},
+        {"key": "export_and_supply_chain_commentary", "label": "Exports / supply chain", "capture": "Export performance and supply-chain commentary."}
+      ]
+    },
+
+    "pharma": {
+      "label": "PHARMA METRICS",
+      "slots": [
+        {"key": "us_generics_price_erosion", "label": "US generics price erosion", "capture": "Price erosion in the US base business."},
+        {"key": "one_product_cliff_commentary", "label": "One-product cliff", "capture": "Commentary on a known exclusivity anniversary or single-product cliff. The cheat sheet's trap: a YoY PAT collapse from a lapsed exclusivity is not deterioration."},
+        {"key": "india_formulations_vs_ipm", "label": "India formulations vs IPM", "capture": "India formulations growth versus the Indian pharma market, and chronic versus acute mix."},
+        {"key": "specialty_new_product_revenue", "label": "Specialty / new products", "capture": "Specialty and new-product revenue, including biosimilars."},
+        {"key": "rd_sga_trajectory", "label": "R&D / SG&A trajectory", "capture": "R&D and SG&A trajectory - margin compression from pipeline spend is deliberate, not operational decay."},
+        {"key": "regulatory_usfda_headlines", "label": "USFDA / regulatory", "capture": "USFDA or other regulatory headlines attached to the result."}
+      ]
+    },
+
+    "metals": {
+      "label": "METALS METRICS",
+      "slots": [
+        {"key": "realisation_vs_benchmark", "label": "Realisation vs benchmark", "capture": "Realisations against the benchmark (domestic HRC price, LME aluminium) - the company is a price-taker."},
+        {"key": "spread_realisation_minus_input_cost", "label": "Spread over input cost", "capture": "Realisation minus key input cost (coking coal, alumina)."},
+        {"key": "ebitda_per_tonne", "label": "EBITDA per tonne", "capture": "EBITDA per tonne, for steel."},
+        {"key": "volume_growth", "label": "Volume growth", "capture": "Volumes - the one lever management controls."},
+        {"key": "debt_and_capex_cycle", "label": "Debt / capex cycle", "capture": "Debt position and where the company sits in its capex cycle."}
+      ]
+    },
+
+    "value_retail": {
+      "label": "VALUE RETAIL METRICS",
+      "slots": [
+        {"key": "ssg_or_proxy", "label": "SSG (or proxy)", "capture": "Same-store sales growth where given; otherwise the workable proxy of store adds plus revenue per store."},
+        {"key": "store_adds", "label": "Store adds", "capture": "Stores added in the quarter."},
+        {"key": "total_stores", "label": "Total stores", "capture": "Total store count."},
+        {"key": "ebitda_margin_commentary", "label": "EBITDA margin", "capture": "EBITDA margin and its movement - value retail lives on thin margins, where 30bps is a big move."},
+        {"key": "opex_wage_commentary", "label": "Opex / wage pressure", "capture": "Operating cost and wage-inflation commentary."},
+        {"key": "store_opening_guidance", "label": "Store-opening guidance", "capture": "Forward store-opening plans as stated."},
+        {"key": "ecommerce_quickcommerce_drag", "label": "E-commerce / quick-commerce drag", "capture": "E-commerce or quick-commerce losses and their drag."},
+        {"key": "reporting_basis", "label": "Reporting basis", "capture": "Standalone versus consolidated, whichever management quotes. The cheat sheet's trap is mixing the two across sources."}
+      ]
+    },
+
+    "industrials": {
+      "label": "INDUSTRIALS METRICS",
+      "slots": [
+        {"key": "order_inflow", "label": "Order inflow", "capture": "Order inflow in the quarter - revenue is backward-looking here, orders are the future."},
+        {"key": "order_book", "label": "Order book", "capture": "Total order book / backlog."},
+        {"key": "execution_margin", "label": "Execution margin", "capture": "Margin on the order book being executed."},
+        {"key": "working_capital", "label": "Working capital", "capture": "Working capital position and movement."},
+        {"key": "private_vs_govt_capex_commentary", "label": "Private vs govt capex", "capture": "Private capex versus government capex commentary."}
+      ]
+    }
+  }
+}
