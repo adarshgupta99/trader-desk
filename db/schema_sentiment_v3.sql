@@ -150,6 +150,13 @@ CREATE TABLE IF NOT EXISTS earnings_call_extraction (
     row_status              TEXT NOT NULL DEFAULT 'OK'
                             CHECK (row_status IN ('OK', 'EXTRACTION_FAILED', 'NOT_VERIFIED')),
     failure_reason          TEXT,
+    -- Cites that failed the spec 2.3 substring check. The affected FIELD is
+    -- demoted to NOT_VERIFIED rather than the whole quarter being voided
+    -- (see extraction_v3.verify_and_locate for why), so these columns are
+    -- how QA 8.2 stays auditable: a row that is OK but carries failures had
+    -- some fields rejected, and the detail says which.
+    cite_failures           INTEGER NOT NULL DEFAULT 0,
+    cite_failure_detail     TEXT,
     sector                  TEXT,                   -- resolved fno display group
     sector_card             TEXT,                   -- slot-card key, or NULL when unmapped
     sector_unmapped         INTEGER NOT NULL DEFAULT 0,
