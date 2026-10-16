@@ -33,6 +33,7 @@ import argparse
 import json
 import os
 import sys
+import threading
 import time
 from datetime import date, datetime, timedelta, timezone
 
@@ -96,24 +97,75 @@ def _is_transient(exc):
                             "internal error", "timeout", "deadline"))
 
 
+#: Hard ceiling on a single attempt. nse_urlfetch (nselib) opens its
+#: requests.Session().get() calls with NO timeout at all - confirmed by
+#: reading its source - so a connection NSE accepts but never answers hangs
+#: the process forever rather than raising anything retry logic can see.
+#: This is exactly what happened on the live Nifty-50 pilot run: the process
+#: sat alive for 11+ hours with 31 seconds of total CPU time used, no
+#: exception, nothing in the log. A plain function call cannot be timed out
+#: from the outside in Python, so each attempt runs in its own thread and is
+#: abandoned (not killed - the thread leaks, but the process moves on) if it
+#: doesn't return in time.
+CALL_TIMEOUT_SECONDS = 120
+
+
+def _run_with_timeout(fn, args, kwargs, timeout):
+    """Runs fn in a DAEMON thread and waits up to `timeout` seconds.
+
+    Not ThreadPoolExecutor: its worker threads are non-daemon, so even with
+    shutdown(wait=False) the leaked thread still blocks the whole PROCESS
+    from exiting at the end of a run - verified live, the retry logic itself
+    worked (two correctly-logged timeouts) but the script then hung on exit
+    and had to be force-killed. A plain daemon thread has no such effect:
+    Python exits regardless of what it's still doing.
+
+    Returns ("ok", value), ("timeout", None) or ("error", exception).
+    """
+    box = {}
+
+    def runner():
+        try:
+            box["value"] = fn(*args, **kwargs)
+            box["state"] = "ok"
+        except BaseException as e:          # noqa: BLE001 - re-raised by the caller
+            box["error"] = e
+            box["state"] = "error"
+
+    thread = threading.Thread(target=runner, daemon=True)
+    thread.start()
+    thread.join(timeout=timeout)
+    if thread.is_alive():
+        return "timeout", None
+    if box.get("state") == "error":
+        return "error", box["error"]
+    return "ok", box.get("value")
+
+
 def call_with_retry(label, fn, *args, **kwargs):
     """Retries transient failures with backoff; never retries a deterministic
     one. A ValueError here means the document itself is the problem (an
     unreadable PDF, a cite that is not in the text) - the same fail-fast
-    contract every other job in this repo uses."""
+    contract every other job in this repo uses. A hang past
+    CALL_TIMEOUT_SECONDS is treated as transient, same as a 503."""
     last = None
     for attempt, delay in enumerate((0,) + RETRY_DELAYS):
         if delay:
             log(f"    retrying {label} in {delay}s (attempt {attempt + 1})")
             time.sleep(delay)
-        try:
-            return fn(*args, **kwargs)
-        except ValueError:
-            raise
-        except Exception as e:
-            last = e
-            if not _is_transient(e):
-                raise
+        state, result = _run_with_timeout(fn, args, kwargs, CALL_TIMEOUT_SECONDS)
+        if state == "ok":
+            return result
+        if state == "timeout":
+            last = TimeoutError(f"{label} exceeded {CALL_TIMEOUT_SECONDS}s")
+            log(f"    {label}: hung past {CALL_TIMEOUT_SECONDS}s - abandoning "
+                f"attempt {attempt + 1}")
+            continue
+        if isinstance(result, ValueError):
+            raise result
+        last = result
+        if not _is_transient(result):
+            raise result
     raise RuntimeError(f"{label} failed after {len(RETRY_DELAYS)} retries") from last
 
 
