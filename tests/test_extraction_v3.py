@@ -295,3 +295,107 @@ def test_divergence_is_graded_not_boolean():
     schema = ex._stage2_schema([])
     grade = schema["properties"]["qa_divergence"]["properties"]["grade"]
     assert grade["enum"] == ["N", "MILD", "STRONG"]
+
+
+def test_schema_has_risks_array():
+    schema = ex._stage2_schema([])
+    assert "risks" in schema["properties"]
+    assert "risks" in schema["required"]
+    item = schema["properties"]["risks"]["items"]["properties"]
+    assert set(item) == {"text", "sized", "quote", "exchange_ref"}
+
+
+def test_qa_assessments_items_carry_a_quote_field():
+    # Added for the Guidance tab's Analyst Pushback example - the pushback
+    # count existed before, but there was nothing to quote.
+    schema = ex._stage2_schema([])
+    props = schema["properties"]["qa_assessments"]["items"]["properties"]
+    assert "quote" in props
+    assert "quote" in schema["properties"]["qa_assessments"]["items"]["required"]
+
+
+# --- derive_pushback (v3.1.0) -------------------------------------------------
+
+def _qa(ref, ask="a specific number", evasive=False, quote="Some quote."):
+    return {"exchange_ref": ref, "specific_ask": ask,
+           "answered": "no" if evasive else "yes",
+           "redirects_or_generalises": evasive, "evasive": evasive,
+           "evasive_by_rubric": evasive, "quote": quote}
+
+
+def test_pushback_counts_only_specific_asks_not_open_ended():
+    parsed = {"qa_assessments": [
+        _qa("Q1", ask="none - open-ended", quote=None),
+        _qa("Q2", ask="EBIT margin number"),
+        _qa("Q3", ask="order book figure", evasive=True),
+    ]}
+    out = ex.derive_pushback(parsed)
+    assert out["pushback_total"] == 2          # Q1 does not count
+    assert out["pushback_dodged"] == 1          # only Q3
+
+
+def test_pushback_example_is_the_first_dodged_exchange():
+    parsed = {"qa_assessments": [
+        _qa("Q1", ask="revenue growth", evasive=True, quote="What drove growth?"),
+        _qa("Q2", ask="margin band", evasive=True, quote="Will margin improve?"),
+    ]}
+    out = ex.derive_pushback(parsed)
+    assert out["pushback_example"] == {"exchange_ref": "Q1", "quote": "What drove growth?"}
+
+
+def test_pushback_summary_present_but_example_none_when_nothing_dodged():
+    # 0 dodged is still a reportable finding ("every tough question was
+    # answered"), so the summary line is kept; only the illustrative
+    # quote is absent since nothing was dodged.
+    parsed = {"qa_assessments": [_qa("Q1", ask="margin", evasive=False)]}
+    out = ex.derive_pushback(parsed)
+    assert out["pushback_example"] is None
+    assert out["pushback_summary"] == "0 of 1 pointed question was not directly answered."
+
+def test_pushback_summary_pluralises_correctly():
+    one = ex.derive_pushback({"qa_assessments": [_qa("Q1", evasive=True)]})
+    assert one["pushback_summary"] == "1 of 1 pointed question was not directly answered."
+
+    many = ex.derive_pushback({"qa_assessments": [
+        _qa("Q1", evasive=True), _qa("Q2", evasive=False), _qa("Q3", evasive=True)]})
+    assert many["pushback_summary"] == "2 of 3 pointed questions were not directly answered."
+
+
+def test_pushback_on_no_assessments_is_all_zero():
+    out = ex.derive_pushback({"qa_assessments": []})
+    assert out["pushback_total"] == 0
+    assert out["pushback_dodged"] == 0
+    assert out["pushback_example"] is None
+
+
+# --- risks verification (field-granular, like every other list field) -------
+
+def test_risk_with_a_verified_quote_is_kept():
+    text = "CFO: A key risk is input cost inflation, which we have not fully hedged."
+    parsed = _result(risks=[
+        {"text": "unhedged input cost inflation", "sized": False,
+         "quote": "A key risk is input cost inflation, which we have not fully hedged.",
+         "exchange_ref": "P2"},
+    ])
+    out, failures = ex.verify_and_locate(parsed, text)
+    assert failures == []
+    assert len(out["risks"]) == 1
+    assert out["risks"][0]["char_start"] is not None
+
+
+def test_risk_with_an_unverifiable_quote_is_dropped():
+    text = "CFO: A key risk is input cost inflation."
+    parsed = _result(risks=[
+        {"text": "a risk nobody mentioned", "sized": None,
+         "quote": "Something that was never actually said on this call.",
+         "exchange_ref": "P2"},
+    ])
+    out, failures = ex.verify_and_locate(parsed, text)
+    assert len(failures) == 1
+    assert out["risks"] == []
+
+
+def test_empty_risks_list_is_not_a_failure():
+    out, failures = ex.verify_and_locate(_result(risks=[]), TEXT)
+    assert failures == []
+    assert out["risks"] == []

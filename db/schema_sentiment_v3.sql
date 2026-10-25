@@ -173,6 +173,21 @@ CREATE TABLE IF NOT EXISTS earnings_call_extraction (
     -- must say which one judged it rather than hiding the difference.
     stage2_model            TEXT,
     stage2_model_fallback   INTEGER NOT NULL DEFAULT 0,
+
+    -- Analyst Pushback (added v3.1.0, Guidance tab redesign). Derived from
+    -- qa_assessments after cite verification (extraction_v3.derive_pushback)
+    -- - arithmetic over already-judged, already-verified data, not a new
+    -- model field. pushback_total is exchanges with a concrete ask
+    -- (open-ended questions don't count); pushback_dodged is the subset
+    -- that were evasive. pushback_summary is a plain templated line from
+    -- the counts, safe to generate without grounding since it states only
+    -- numbers already computed here, not new prose.
+    pushback_total              INTEGER,
+    pushback_dodged             INTEGER,
+    pushback_example_quote      TEXT,
+    pushback_example_exchange_ref TEXT,
+    pushback_summary            TEXT,
+
     announcement_at         TEXT,
     announcement_at_precision TEXT,
     source_published_at     TEXT,
@@ -362,3 +377,105 @@ CREATE TABLE IF NOT EXISTS earnings_estimate_surprise (
 
 CREATE INDEX IF NOT EXISTS idx_estimate_surprise_symbol
     ON earnings_estimate_surprise (symbol, period_end_date);
+
+-- ── Verdict (added v3.1.0, Guidance tab redesign) ───────────────────────────
+-- A short synthesized headline for the tab's top card. Built as a SEPARATE,
+-- cheap stage-3 LLM call over the ALREADY-EXTRACTED structured facts for this
+-- quarter (tones, divergence, guidance status/direction, promised-vs-
+-- delivered verdicts, risks, pushback counts) - never over the raw
+-- transcript. This keeps it grounded: the model can only compose from facts
+-- that already passed stage 2's evidence-or-null discipline, it cannot
+-- introduce a new claim the transcript never supported. Chips are structured
+-- (label + semantic role), not free text, so the UI's colour-by-role
+-- convention stays consistent without re-parsing the headline.
+CREATE TABLE IF NOT EXISTS earnings_verdict (
+    id                  INTEGER PRIMARY KEY,
+    symbol              TEXT NOT NULL,
+    quarter_end         TEXT NOT NULL,
+    headline            TEXT NOT NULL,
+    supporting_line     TEXT,
+    chips               TEXT NOT NULL,      -- JSON array of {label, role}
+                                            -- role in kept|raised|risk
+    input_facts_json    TEXT NOT NULL,      -- exact facts given to the model, for audit
+    extractor_version   TEXT NOT NULL,
+    generated_at         TEXT NOT NULL,
+    UNIQUE (symbol, quarter_end, extractor_version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_earnings_verdict_symbol
+    ON earnings_verdict (symbol, quarter_end);
+
+-- ── Commitments (added v3.2.0, Guidance tab redesign) ───────────────────────
+-- List-shaped like earnings_guidance_soft: each row IS its own quote, cite-
+-- verified the same way. Company-specific named line items ("Exports
+-- run-rate", "Capacity"), NOT the four generic earnings_guidance_formal
+-- fields - most companies give no formal numeric guidance at all (normal,
+-- not a gap), but still say specific, holdable things on the call.
+CREATE TABLE IF NOT EXISTS earnings_commitments (
+    id                  INTEGER PRIMARY KEY,
+    symbol              TEXT NOT NULL,
+    quarter_end         TEXT NOT NULL,
+    item_no             INTEGER NOT NULL,
+    metric              TEXT NOT NULL,
+    value               TEXT NOT NULL,
+    support             TEXT,
+    status              TEXT NOT NULL CHECK (status IN
+                            ('raised', 'lowered', 'stated', 'new', 'dodged')),
+    quote               TEXT NOT NULL,
+    exchange_ref        TEXT,
+    char_start          INTEGER,
+    char_end            INTEGER,
+    extractor_version   TEXT NOT NULL,
+    source_pdf_sha256   TEXT,
+    cleaned_text_sha256 TEXT,
+    announcement_at     TEXT,
+    announcement_at_precision TEXT,
+    source_published_at TEXT,
+    feature_available_at TEXT,
+    timestamp_quality   TEXT NOT NULL DEFAULT 'OK',
+    extracted_at        TEXT NOT NULL,
+    UNIQUE (symbol, quarter_end, item_no, extractor_version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_commitments_symbol
+    ON earnings_commitments (symbol, quarter_end);
+
+-- ── Promise checks (added v3.2.0, Guidance tab redesign) ────────────────────
+-- "Promises Tested": each row tests ONE commitment from the PRIOR quarter
+-- against what THIS quarter's call actually says. A SEPARATE, transcript-
+-- grounded stage-3 call (promise_check.py) - not facts-only like
+-- earnings_verdict, because the actual outcome must be located as real
+-- evidence in THIS quarter's transcript, cite-verified the same way stage 2
+-- is. quarter_end is the TESTING quarter (this call); prior_quarter_end is
+-- the quarter the commitment was made in, so a row always names both ends of
+-- the comparison.
+CREATE TABLE IF NOT EXISTS earnings_promise_checks (
+    id                  INTEGER PRIMARY KEY,
+    symbol              TEXT NOT NULL,
+    quarter_end         TEXT NOT NULL,
+    prior_quarter_end   TEXT NOT NULL,
+    item_no             INTEGER NOT NULL,
+    metric              TEXT NOT NULL,
+    promised_value      TEXT NOT NULL,
+    promised_support    TEXT,
+    delivered_value     TEXT,
+    quote               TEXT,
+    exchange_ref        TEXT,
+    char_start          INTEGER,
+    char_end            INTEGER,
+    verdict             TEXT NOT NULL CHECK (verdict IN
+                            ('BEAT', 'MET', 'PARTIAL', 'MISSED', 'NOT_ADDRESSED')),
+    extractor_version   TEXT NOT NULL,
+    source_pdf_sha256   TEXT,
+    cleaned_text_sha256 TEXT,
+    announcement_at     TEXT,
+    announcement_at_precision TEXT,
+    source_published_at TEXT,
+    feature_available_at TEXT,
+    timestamp_quality   TEXT NOT NULL DEFAULT 'OK',
+    extracted_at        TEXT NOT NULL,
+    UNIQUE (symbol, quarter_end, item_no, extractor_version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_promise_checks_symbol
+    ON earnings_promise_checks (symbol, quarter_end);

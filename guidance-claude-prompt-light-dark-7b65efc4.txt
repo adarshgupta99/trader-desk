@@ -1,0 +1,85 @@
+Restyle the Guidance tab of the Trader Desk Streamlit app to the design below. Design and layout only. Do not change data sources, extraction or logic in this task. Build it so it works for any stock. Both themes: the app follows the viewer's system setting, light or dark.
+
+1. THEME
+- Do NOT pin a base in .streamlit/config.toml. Remove any theme.base, backgroundColor or similar overrides there, so Streamlit follows the viewer's system theme.
+- Define every colour below as a named CSS variable once, in one injected style block, and use only those. No hardcoded hexes elsewhere, no new colours.
+- Light values on :root. Dark overrides under @media (prefers-color-scheme: dark). Every variable exists in both themes. Set the app background and all surfaces from these variables in both modes so the page actually renders in these colours, not Streamlit's defaults.
+
+Light tokens
+--bg #DDD6C4 page
+--card #F8F5EC card surface
+--card-hi #F3EFE4 verdict card
+--border #B3AC9A
+--text #2A251F primary
+--muted #4F493E supporting text (never lighter than this)
+--accent #8A6A3B brand/verdict accent
+--green #2F7A4B beat / met / positive
+--red #C0502E missed / dodged / risk
+--blue #2F6690 raised / links
+--purple #7B5694 new
+--ochre #A8741A stated / maintained
+--teal #2A7F7A segment accent
+
+Dark tokens
+--bg #24211E page
+--card #302B27 card surface
+--card-hi #38322C verdict card
+--border #554A40
+--text #ECE5DA primary
+--muted #AAA197 supporting text (never darker than this)
+--accent #D8B58A brand/verdict accent
+--green #9AC69C beat / met / positive
+--red #E8A078 missed / dodged / risk
+--blue #8FB4D4 raised / links
+--purple #B99ACB new
+--ochre #D4A95C stated / maintained
+--teal #7FBDB5 segment accent
+
+Chip backgrounds are the chip colour at 12% opacity with a 1px border in the chip colour and text in the chip colour, in both themes. The colour semantics never change between themes: green is always beat/met/positive, blue raised, purple new, ochre stated/maintained, red missed/dodged/risk.
+
+2. TYPOGRAPHY (one scale, steps down evenly, nothing fainter than the content below it, in both themes)
+- Fonts: Source Sans 3 for headings and all numbers, Inter for body text.
+- Section label: Inter 12px, 700, uppercase, letter-spacing 0.12em, colour --text, with a 10px rounded square dot in that section's accent colour before it.
+- Verdict headline: Source Sans 3 26px, 700, line-height 1.25.
+- Big value (short number or short phrase): Source Sans 3 24px/700 in rows, 30px/700 in KPI tiles, 34px/700 for hit-rate scores. Values must be short ("2.5 lakh+", "7M to 9M", "Not sized"), never a full sentence. The explanation goes in supporting text.
+- Row title: Source Sans 3 16px, 600, --text.
+- Supporting text: Inter 13.5px, 400, --muted.
+- Chips: Inter 11px, 600, uppercase, letter-spacing 0.06em, pill radius, padding 3px 9px.
+- Quote text: Inter 13.5px italic, --muted, speaker and call in 600 non-italic --text.
+
+3. SURFACES AND SPACING
+- Page content max-width 1100px, centred. 30px between sections, 10px between a label and its card.
+- Cards: --card background, 1px --border, 8px radius, box-shadow 0 1px 3px rgba(60,50,30,.18) in light and 0 1px 3px rgba(0,0,0,.35) in dark. Cards must visibly separate from the page in both themes.
+- Card padding 14px 20px for rows, 16px 18px for KPI tiles. KPI tiles have a 3px top border in their accent colour and a minimum height of 128px so tiles in a row are equal height.
+- Inside any group, every row uses the same grid and equal height. No card with a different layout from its siblings.
+- Two-column sections use two equal columns with an 18px gap. Nothing clips on the right at any width. Below 800px, stack to one column.
+
+4. GUIDANCE VIEW, TOP TO BOTTOM
+Header: ticker in Source Sans 3 28px/700, company name beside it in muted, and a pill chip on the right with the call name and date. Tabs underneath with the active tab in --text, 600, with a 2px --red underline.
+
+a) VERDICT (accent --accent). One full-width card in --card-hi with a 5px left border in --accent. Headline of 1 to 2 lines, one line of muted supporting text, then up to three summary chips (green for promises kept, blue for targets raised, red for risk not sized).
+
+b) COMMITMENTS THIS CALL (accent --blue). One card, rows separated by 1px --border lines. Row grid: 230px value | flexible title + supporting line + a "Receipt" toggle | 110px status chip. Status chips: Raised (blue), New (purple), Stated or Maintained (ochre), Lowered (red), Dodged (red). Receipt is an expander: collapsed shows a small blue "Receipt" link, open shows a quote block (left border 3px --red, background rgba(0,0,0,.05) in light and rgba(0,0,0,.22) in dark, 6px right radius) with the quote, speaker and call. A one-line muted note under the card covers any formal guidance fields the company does not give.
+
+c) PROMISES TESTED (accent --green). One card. Top strip: large hit rate score in green (for example 4 / 4) with a bold one-line label and one muted line. Then a four-column table: Promise | Said last call | Delivered | Result. Header row in 12px 700 caps --text. Delivered values are bold. Result chips: Beat or Met (green), Missed (red), Partial (ochre). Chips are left-aligned and content-width, never stretched.
+
+d) RISKS MANAGEMENT RAISED (accent --red) and ANALYST PUSHBACK (accent --purple), side by side. Risks: a card list, bold title plus muted line per item, 1px dividers. Pushback: a big count ("2 of 2") in --red with muted caption, a full-width 8px progress bar in --red on --border, one quote block, one muted summary line.
+
+e) SEGMENT SCORECARD (accent --teal). A row of 4 equal KPI tiles: small caps label, 30px value, muted unit or context. Tile accent colours are set per tile from --blue, --green, --purple, --ochre.
+
+f) ACTUALS VS ESTIMATES (accent --ochre). A row of 3 equal KPI tiles, same style, with a green delta line (red if negative).
+
+g) FORWARD CALENDAR (accent --blue) and LANGUAGE DELTA (accent --purple), side by side. Calendar: one card split into equal cells separated by 1px dividers, each with a bold 18px date in a different accent colour and a short event line. Language delta: one card with a red chip for the earlier call, an arrow, a green chip for the latest call, and a short descriptor under each.
+
+h) Footer: 12px muted source line above a 1px --border top rule.
+
+5. SECTOR-AWARE BEHAVIOUR (generic, no per-stock content)
+- Only render a slot if it has a value. Never render NOT GIVEN cards. If every formal guidance field is empty, replace the guidance card grid with the single muted note line from (b).
+- If a company gives formal numeric guidance, render a Guidance box first: one equal-height tile per guided field with a short band as the value (for example 1.5-3%), the prior band shown as a small struck-through value next to a revision arrow, and supporting text for basis. Colour the revision chip blue for raised, red for lowered, ochre for maintained.
+- Hide any of sections c to g that has no data. Never show an empty card, placeholder dash or empty heading.
+- Section order and the tile labels in e) and f) come from the data. Do not hardcode names.
+
+6. ACCEPTANCE
+- Run the app and screenshot the Guidance tab at 1100px width and at 390px width, in both light and dark mode (emulate prefers-color-scheme for the second). Check with your own eyes in both themes: no clipped columns, no label fainter than its content, equal-height rows and tiles, chips never stretched, cards clearly separated from the page.
+- Contrast: all text at least 4.5:1 on its background, in both themes. Check muted text on --card and on --bg, and chip text on chip backgrounds.
+- Touch only the Guidance tab's styling, the theme config and shared CSS variables the tab needs. No other tab changes.

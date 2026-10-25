@@ -1,0 +1,122 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#DDD6C4;--tx:#2A251F;--mu:#4F493E;--cd:#F8F5EC;--bd:#B3AC9A;--ac:#8A6A3B;--gr:#2F7A4B;--or:#C0502E;--bl:#2F6690;--pu:#7B5694;--am:#A8741A;--te:#2A7F7A}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--tx);font:14px/1.5 Inter,'Source Sans 3',sans-serif;width:1100px;padding:36px 44px 48px}
+h1,h2,.num,.big{font-family:'Source Sans 3',sans-serif}
+.top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.tk{font:700 28px 'Source Sans 3';letter-spacing:.02em}.tk small{font:400 14px Inter;color:var(--mu);margin-left:10px}
+.tabs{display:flex;gap:22px;border-bottom:1px solid var(--bd);margin:14px 0 26px;color:var(--mu)}
+.tabs span{padding:8px 0}.tabs .on{color:var(--tx);font-weight:600;border-bottom:2px solid var(--or)}
+.label{font:700 11px Inter;letter-spacing:.12em;text-transform:uppercase;color:var(--sc,var(--mu));margin-bottom:10px;display:flex;align-items:center;gap:8px}.label:before{content:'';width:10px;height:10px;border-radius:3px;background:var(--sc,var(--mu))}.kpi .label{color:var(--mu)!important}.kpi .label:before{display:none}.kpi{border-top:3px solid var(--sc,var(--bd))}
+section{margin-bottom:30px}
+.verdict{background:#F3EFE4;border:1px solid var(--bd);border-left:5px solid var(--ac);border-radius:8px;padding:20px 24px}
+.verdict .big{font-size:26px;font-weight:700;line-height:1.25}
+.verdict p{color:var(--mu);margin-top:8px}
+.chip{display:inline-block;font:600 11px Inter;letter-spacing:.06em;padding:3px 9px;border-radius:99px;border:1px solid;text-transform:uppercase;white-space:nowrap}
+.g{color:var(--gr);border-color:var(--gr);background:rgba(47,122,75,.12)}
+.o{color:var(--or);border-color:var(--or);background:rgba(192,80,46,.12)}
+.a{color:var(--pu);border-color:var(--pu);background:rgba(123,86,148,.12)}.b{color:var(--bl);border-color:var(--bl);background:rgba(47,102,144,.12)}.y{color:var(--am);border-color:var(--am);background:rgba(168,116,26,.14)}
+.m{color:var(--mu);border-color:var(--bd)}
+.card{box-shadow:0 1px 3px rgba(60,50,30,.18);background:var(--cd);border:1px solid var(--bd);border-radius:8px}
+.row{display:grid;grid-template-columns:230px 1fr 110px;gap:18px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--bd)}
+.row:last-child{border:0}
+.row .num{font-size:24px;font-weight:700}.row .num s{font-size:15px;color:var(--mu);font-weight:400;margin-right:4px}
+.row .t{font-weight:600}.row .d{color:var(--mu);font-size:13px}
+.rc{margin:0 20px 14px;padding:10px 14px;border-left:3px solid var(--or);color:var(--mu);font-style:italic;font-size:13.5px;background:rgba(0,0,0,.05);border-radius:0 6px 6px 0}
+.rc b{font-style:normal;color:var(--tx);font-weight:600}
+.exp{color:var(--bl);font-size:12px;margin-top:3px}
+.hit{display:flex;align-items:center;gap:20px;padding:14px 20px;border-bottom:1px solid var(--bd)}
+.hit .score{font:700 34px 'Source Sans 3';color:var(--gr)}
+.pr{display:grid;grid-template-columns:1fr 130px 130px 90px;gap:14px;padding:12px 20px;border-bottom:1px solid var(--bd);align-items:center}
+.pr:last-child{border:0}.pr .h{font:600 11px Inter;letter-spacing:.1em;color:var(--mu);text-transform:uppercase}
+.pr b{font:700 17px 'Source Sans 3'}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+ul{list-style:none;padding:0}li{padding:9px 0;border-bottom:1px solid var(--bd)}li:last-child{border:0}
+li span{color:var(--mu);font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.kpi{padding:16px 18px;min-height:128px}.kpi .num{font-size:30px;font-weight:700;margin:2px 0}.kpi .d{color:var(--mu);font-size:13px}
+.act{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.act .kpi .num{color:var(--tx)}.up{color:var(--gr);font-weight:600}
+.foot{color:var(--mu);font-size:12px;border-top:1px solid var(--bd);padding-top:14px;margin-top:10px}
+.ev{display:flex;gap:6px;margin-top:8px}
+.bar{height:8px;border-radius:4px;background:var(--bd);margin-top:8px;position:relative}.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--or)}
+.tl{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.tl div{padding:14px 18px;border-right:1px solid var(--bd)}.tl div:last-child{border:0}
+.tl b{display:block;font:700 18px 'Source Sans 3'}.tl div:nth-child(1) b{color:var(--bl)}.tl div:nth-child(2) b{color:var(--pu)}.tl div:nth-child(3) b{color:var(--am)}
+.lang{display:grid;grid-template-columns:1fr 40px 1fr;align-items:center;padding:18px 22px;gap:10px}
+.lang .ar{color:var(--mu);font-size:24px;text-align:center}
+</style></head><body>
+<div class="top"><div class="tk">BAJAJ-AUTO<small>Bajaj Auto Ltd · Two-wheelers, three-wheelers, EV</small></div><span class="chip m">Q1 FY27 call · 21 Jul 2026</span></div>
+<div class="tabs"><span>Overview</span><span>Results</span><span class="on">Guidance</span><span>Surprise</span><span>History</span></div>
+
+<section><div class="label" style="--sc:var(--ac)">Verdict</div>
+<div class="verdict"><div class="big">Record quarter. Exports target raised. Q2 cost risk flagged but not sized.</div>
+<p>Margin is the swing factor. Management gives no formal numeric guidance by policy, so the commitments below are what you can hold them to.</p>
+<div class="ev"><span class="chip g">4 of 4 promises kept</span><span class="chip b">1 target raised</span><span class="chip o">Inflation not sized</span></div></div></section>
+
+<section><div class="label" style="--sc:var(--bl)">Commitments this call</div>
+<div class="card">
+<div class="row"><div><div class="num"><s></s>2.5 lakh+<span style="font-size:14px;color:var(--mu);font-weight:400"> /mo</span></div></div><div><div class="t">Exports run-rate</div><div class="d">Was 2.2 lakh in May, 2 lakh before</div><div class="exp">▸ Receipt</div></div><div><span class="chip b">Raised</span></div></div>
+<div class="row"><div><div class="num">7M → 9M<span style="font-size:14px;color:var(--mu);font-weight:400"> units/yr</span></div></div><div><div class="t">Capacity</div><div class="d">Chetak 50k → 60k per month. Capacity is the constraint</div><div class="exp">▸ Receipt</div></div><div><span class="chip b">Raised</span></div></div>
+<div class="row"><div><div class="num">~10</div></div><div><div class="t">New variants, Aug to Sep</div><div class="d">2 new Pulsars, 2 new 125cc</div><div class="exp">▸ Receipt</div></div><div><span class="chip a">New</span></div></div>
+<div class="row"><div><div class="num">Double-digit</div></div><div><div class="t">EV EBITDA margin</div><div class="d">Chetak EBITDA-positive this quarter</div><div class="exp">▸ Receipt</div></div><div><span class="chip y">Stated</span></div></div>
+<div class="row"><div><div class="num">~₹15,000 cr</div></div><div><div class="t">Cash by FY-end</div><div class="d">After the ₹10,000 cr payout. Now ₹21,000 cr</div><div class="exp">▸ Receipt</div></div><div><span class="chip y">Stated</span></div></div>
+<div class="row" style="border-bottom:0;padding-bottom:10px"><div><div class="num" style="color:var(--or)">Not sized</div></div><div><div class="t">Q2 inflation impact</div><div class="d">Flagged as a risk, refused to put a number on it</div><div class="exp" style="color:var(--ac)">▾ Receipt</div></div><div><span class="chip o">Dodged</span></div></div>
+<div class="rc">“It would be premature to put a precise number around the inflationary impact.” <b>· Thapar, CFO, Q1 FY27 call</b></div>
+</div>
+<div class="foot" style="border:0;margin:8px 0 0;padding:0">No formal numeric guidance on revenue, margin, capex or order book. This is company policy, not a data gap. Bajaj sells through dealers and has no order book.</div></section>
+
+<section><div class="label" style="--sc:var(--gr)">Promises tested · last call (May) vs actuals</div>
+<div class="card">
+<div class="hit"><div class="score">4 / 4</div><div><b>Met or beaten, running hit rate</b><div style="color:var(--mu);font-size:13px">Credibility signal. Margin promise was soft, so “met” there means held.</div></div></div>
+<div class="pr"><span class="h">Promise</span><span class="h">Said in May</span><span class="h">Delivered</span><span class="h">Result</span></div>
+<div class="pr"><span>Exports run-rate</span><span>220k / mo</span><b>244k / mo</b><span class="chip g">Beat</span></div>
+<div class="pr"><span>Price hikes vs inflation</span><span>Cover about half</span><b>Margin 20.9%, +10 bps QoQ</b><span class="chip g">Met</span></div>
+<div class="pr"><span>Volumes</span><span>Record</span><b>1.4M units, +29% YoY</b><span class="chip g">Met</span></div>
+<div class="pr"><span>EV margin</span><span>Hold</span><b>Held</b><span class="chip g">Met</span></div>
+</div></section>
+
+<section class="two">
+<div><div class="label" style="--sc:var(--or)">Risks management raised</div><div class="card" style="padding:6px 20px"><ul>
+<li><b>Inflation broadening</b><br><span>~4.5% of revenue gross, about half offset by price</span></li>
+<li><b>10-15% availability hit</b><br><span>Supply side, flagged for the quarter ahead</span></li>
+<li><b>MENA</b><br><span>Export region exposure</span></li>
+<li><b>Currency</b><br><span>Raised alongside export growth</span></li>
+<li><b>Capacity</b><br><span>The constraint on volumes, hence 7M to 9M</span></li></ul></div></div>
+<div><div class="label" style="--sc:var(--pu)">Analyst pushback</div><div class="card" style="padding:18px 20px">
+<div style="display:flex;align-items:baseline;gap:12px"><span class="num big" style="font-size:34px;font-weight:700;color:var(--or)">2 of 2</span><span style="color:var(--mu)">margin-anchor asks refused</span></div>
+<div class="bar"><i style="width:100%"></i></div>
+<div class="rc" style="margin:16px 0 0">Asked for a margin range to anchor on: “we are playing it truly month by month.” <b>· CFO, May call</b></div>
+<div style="margin-top:14px;color:var(--mu);font-size:13px">Evasiveness is on margin only. Exports, capacity and cash were answered with numbers.</div></div></div>
+</section>
+
+<section><div class="label" style="--sc:var(--te)">Segment scorecard</div>
+<div class="kpis">
+<div class="card kpi" style="--sc:var(--bl)"><div class="label" style="margin:0">Exports</div><div class="num">732k</div><div class="d">units · $735M</div></div>
+<div class="card kpi" style="--sc:var(--gr)"><div class="label" style="margin:0">EV share</div><div class="num">30%</div><div class="d">of domestic revenue</div></div>
+<div class="card kpi" style="--sc:var(--pu)"><div class="label" style="margin:0">BACL AUM</div><div class="num">₹20,000 cr</div><div class="d">finance arm</div></div>
+<div class="card kpi" style="--sc:var(--am)"><div class="label" style="margin:0">Cash</div><div class="num">₹21,000 cr</div><div class="d">before ₹10,000 cr payout</div></div></div></section>
+
+<section><div class="label" style="--sc:var(--am)">Actuals vs your estimates sheet</div>
+<div class="act">
+<div class="card kpi" style="--sc:var(--bl)"><div class="label" style="margin:0">Revenue</div><div class="num">₹17,244 cr</div><div class="up">+37% YoY</div></div>
+<div class="card kpi" style="--sc:var(--gr)"><div class="label" style="margin:0">EBITDA margin</div><div class="num">20.9%</div><div class="up">+10 bps QoQ</div></div>
+<div class="card kpi" style="--sc:var(--pu)"><div class="label" style="margin:0">PAT</div><div class="num">₹2,983 cr</div><div class="up">+42% YoY</div></div></div></section>
+
+<section class="two">
+<div><div class="label" style="--sc:var(--bl)">Forward calendar</div><div class="card tl"><div><b>Aug 1</b>Pulsar launches begin</div><div><b>By Sep</b>~10 variants live</div><div><b>Oct</b>Acceptance reads</div></div></div>
+<div><div class="label" style="--sc:var(--pu)">Language delta</div><div class="card" style="padding:0"><div class="lang"><div><span class="chip o">May</span><div style="margin-top:6px">Defensive</div></div><div class="ar">→</div><div><span class="chip g">July</span><div style="margin-top:6px">Confident, with a cost caveat</div></div></div></div></div>
+</section>
+<div class="foot">Sources: Bajaj Auto Q1 FY27 earnings call transcript and press release, Q4 FY26 transcript (NSE-filed). Every claim opens to its quote and speaker. Mockup built from real transcript data.</div>
+</body></html>
+<style>
+.label{font-size:12px!important;font-weight:700!important;color:var(--tx)!important}
+.kpi .label{color:var(--tx)!important;font-size:12px!important}
+.pr .h{color:var(--tx)!important;font-size:12px!important;font-weight:700}
+.pr .chip{justify-self:start}
+.row .t{font-size:16px}
+.d,.kpi .d,li span{color:var(--mu)!important;font-size:13.5px!important}
+.card .label{color:var(--tx)!important}
+</style>

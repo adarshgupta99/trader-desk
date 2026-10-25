@@ -453,12 +453,24 @@ def get_extraction_quarters(symbol):
                "sector", "sector_card", "sector_unmapped", "row_status",
                "cite_failures", "stage2_model", "extractor_version",
                "announcement_at", "source_published_at", "feature_available_at",
-               "timestamp_quality"]
+               "timestamp_quality", "pushback_total", "pushback_dodged",
+               "pushback_example_quote", "pushback_example_exchange_ref",
+               "pushback_summary"]
+    # One row per quarter, latest extractor_version only. A re-extraction
+    # under a new version ADDS a row (the idempotency key includes the
+    # version) rather than replacing the old one, so without this every
+    # re-extracted quarter showed up twice in the quarter picker - seen
+    # live after the v3.2.0 backfill left v3.0.0 rows in place beside it.
     try:
         with _read_connection() as conn:
             rows = conn.execute(
-                f"SELECT {', '.join(columns)} FROM earnings_call_extraction "
-                "WHERE symbol=? AND row_status='OK' ORDER BY quarter_end DESC",
+                f"SELECT {', '.join(columns)} FROM earnings_call_extraction e "
+                "WHERE symbol=? AND row_status='OK' "
+                "AND extractor_version = ("
+                "  SELECT MAX(e2.extractor_version) FROM earnings_call_extraction e2 "
+                "  WHERE e2.symbol = e.symbol AND e2.quarter_end = e.quarter_end "
+                "    AND e2.row_status='OK') "
+                "ORDER BY quarter_end DESC",
                 (symbol,),
             ).fetchall()
     except sqlite3.OperationalError:
@@ -542,6 +554,113 @@ def get_estimate_surprise(symbol, period_end_date=None):
         with _read_connection() as conn:
             rows = conn.execute(query + " ORDER BY period_end_date DESC, metric",
                                 params).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    return [dict(zip(columns, r)) for r in rows]
+
+
+@st.cache_data(ttl=3600)
+def get_risks(symbol, quarter_end):
+    """Risks disclosed on the call (Guidance tab redesign). Stored as the
+    'risks_disclosed' row in earnings_frame with the full list in value_json
+    - a NOT_GIVEN row means the frame was extracted but no risks were raised,
+    distinct from the symbol/quarter never having been extracted at all."""
+    if not os.path.exists(DB_PATH):
+        return []
+    try:
+        with _read_connection() as conn:
+            row = conn.execute(
+                "SELECT status, value_json FROM earnings_frame "
+                "WHERE symbol=? AND quarter_end=? AND field_key='risks_disclosed'",
+                (symbol, quarter_end),
+            ).fetchone()
+    except sqlite3.OperationalError:
+        return []
+    if not row or row[0] != "GIVEN" or not row[1]:
+        return []
+    try:
+        return json.loads(row[1])
+    except (TypeError, ValueError):
+        return []
+
+
+@st.cache_data(ttl=3600)
+def get_verdict(symbol, quarter_end):
+    """The stage-3 synthesized verdict for one quarter, or None if the
+    synthesis call hasn't run or failed - the UI must not invent a verdict
+    when this is absent."""
+    if not os.path.exists(DB_PATH):
+        return None
+    columns = ["headline", "supporting_line", "chips", "generated_at"]
+    try:
+        with _read_connection() as conn:
+            row = conn.execute(
+                f"SELECT {', '.join(columns)} FROM earnings_verdict "
+                "WHERE symbol=? AND quarter_end=? "
+                "ORDER BY extractor_version DESC LIMIT 1",
+                (symbol, quarter_end),
+            ).fetchone()
+    except sqlite3.OperationalError:
+        return None
+    if not row:
+        return None
+    result = dict(zip(columns, row))
+    try:
+        result["chips"] = json.loads(result["chips"]) if result["chips"] else []
+    except (TypeError, ValueError):
+        result["chips"] = []
+    return result
+
+
+@st.cache_data(ttl=3600)
+def get_commitments(symbol, quarter_end):
+    """Commitments This Call (v3.2.0 Guidance tab redesign): company-specific
+    named line items management put a number, count or timeline on - broader
+    than the four generic earnings_guidance_formal fields, which are
+    NOT_GIVEN for most companies. Latest extractor_version only."""
+    if not os.path.exists(DB_PATH):
+        return []
+    columns = ["item_no", "metric", "value", "support", "status", "quote",
+               "exchange_ref"]
+    try:
+        with _read_connection() as conn:
+            rows = conn.execute(
+                f"SELECT {', '.join(columns)} FROM earnings_commitments "
+                "WHERE symbol=? AND quarter_end=? "
+                "AND extractor_version = (SELECT MAX(extractor_version) "
+                "FROM earnings_commitments c2 WHERE c2.symbol=earnings_commitments.symbol "
+                "AND c2.quarter_end=earnings_commitments.quarter_end) "
+                "ORDER BY item_no",
+                (symbol, quarter_end),
+            ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    return [dict(zip(columns, r)) for r in rows]
+
+
+@st.cache_data(ttl=3600)
+def get_promise_checks(symbol, quarter_end):
+    """Promises Tested (v3.2.0 Guidance tab redesign): each row tests one of
+    the PRIOR quarter's own commitments against what THIS quarter's call
+    actually says. Empty when the prior quarter has no stored commitments to
+    test (e.g. its own extraction predates v3.2.0) - a normal, visible gap,
+    not an error; the UI hides the section rather than showing it empty."""
+    if not os.path.exists(DB_PATH):
+        return []
+    columns = ["item_no", "metric", "promised_value", "promised_support",
+               "delivered_value", "quote", "exchange_ref", "verdict",
+               "prior_quarter_end"]
+    try:
+        with _read_connection() as conn:
+            rows = conn.execute(
+                f"SELECT {', '.join(columns)} FROM earnings_promise_checks "
+                "WHERE symbol=? AND quarter_end=? "
+                "AND extractor_version = (SELECT MAX(extractor_version) "
+                "FROM earnings_promise_checks p2 WHERE p2.symbol=earnings_promise_checks.symbol "
+                "AND p2.quarter_end=earnings_promise_checks.quarter_end) "
+                "ORDER BY item_no",
+                (symbol, quarter_end),
+            ).fetchall()
     except sqlite3.OperationalError:
         return []
     return [dict(zip(columns, r)) for r in rows]

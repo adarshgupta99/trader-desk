@@ -42,10 +42,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from dotenv import load_dotenv  # noqa: E402
 
 import extraction_v3 as ex  # noqa: E402
+import guidance_logic  # noqa: E402
 import nse_transcripts  # noqa: E402
+import promise_check  # noqa: E402
 import sector_cards  # noqa: E402
 import sentiment_store_v3 as store  # noqa: E402
 import transcript_source as ts  # noqa: E402
+import verdict_synthesis  # noqa: E402
 from jobs.refresh_expected_moves import fetch_archive, identify_filings  # noqa: E402
 
 load_dotenv()
@@ -242,6 +245,61 @@ def _price_move(conn, symbol, quarter_end):
     return {"pct": row[0], "from_date": row[1], "to_date": row[2]}
 
 
+def _find_prior_quarter(conn, symbol, quarter_end):
+    """The most recent stored quarter CHRONOLOGICALLY before this one, for
+    promised-vs-delivered. Not "the previous row processed in this run" -
+    due_quarters walks newest-first, so a symbol's actual prior quarter is
+    very often not yet reached when the current one is being processed; this
+    queries what is actually in storage, any extractor_version, regardless
+    of backfill order."""
+    row = conn.execute(
+        "SELECT quarter_end, fiscal_quarter FROM earnings_call_extraction "
+        "WHERE symbol=? AND quarter_end<? AND row_status='OK' "
+        "ORDER BY quarter_end DESC LIMIT 1",
+        (symbol, quarter_end),
+    ).fetchone()
+    return row
+
+
+def _build_verdict_facts(conn, symbol, qe, parsed):
+    """Compact, already-verified facts for verdict_synthesis - never the
+    transcript. Pulls sector slots from `parsed` directly (already verified
+    moments ago in this same call) rather than re-reading them, and reads the
+    prior quarter's guidance straight off `conn` via sentiment_store_v3's
+    uncached helpers - events_db's cached reads could return a stale result
+    for a write this same process just made."""
+    formal = parsed.get("guidance_formal") or {}
+    facts = {
+        "tones": {
+            k: (parsed.get(k) or {}).get("score")
+            for k in ("mgmt_confidence", "overall_tone", "qa_tone", "analyst_tone")
+        },
+        "qa_divergence": {
+            "grade": (parsed.get("qa_divergence") or {}).get("grade"),
+            "note": (parsed.get("qa_divergence") or {}).get("note"),
+        },
+        "guidance_formal": {
+            key: {"status": f.get("status"), "value_text": f.get("value_text"),
+                 "applies_to_period": f.get("applies_to_period")}
+            for key, f in formal.items()
+        },
+        "risks": [{"text": r.get("text"), "sized": r.get("sized")}
+                 for r in (parsed.get("risks") or [])],
+        "pushback": {"total": parsed.get("pushback_total"),
+                    "dodged": parsed.get("pushback_dodged")},
+        "promised_vs_delivered": None,
+    }
+
+    prior = _find_prior_quarter(conn, symbol, qe)
+    if prior:
+        prior_qe, prior_label = prior
+        prior_formal = store.read_guidance_formal(conn, symbol, prior_qe)
+        current_slots = parsed.get("sector_slots") or {}
+        facts["promised_vs_delivered"] = guidance_logic.promised_vs_delivered(
+            prior_formal, current_slots, prior_label)
+    return facts
+
+
 def process_quarter(conn, api_key, symbol, filing_dt, quarter_end, force=False):
     qe = quarter_end.isoformat()
     label = f"{symbol} {qe}"
@@ -306,6 +364,10 @@ def process_quarter(conn, api_key, symbol, filing_dt, quarter_end, force=False):
     parsed, u2 = call_with_retry(f"extract({label})", ex.extract,
                                  api_key, text, exchanges, symbol)
     parsed, failures = ex.verify_and_locate(parsed, text)
+    # Pushback's example quote is picked from qa_assessments, which the line
+    # above just verified - deriving it any earlier risks picking an
+    # unverified quote as the Guidance tab's one illustrative example.
+    parsed = ex.derive_pushback(parsed)
 
     tokens = (u1.get("total_tokens") or 0) + (u2.get("total_tokens") or 0)
     if failures:
@@ -333,6 +395,56 @@ def process_quarter(conn, api_key, symbol, filing_dt, quarter_end, force=False):
         f"evasive {len(parsed['evasive_exchanges'])} "
         f"divergence {parsed['qa_divergence']['grade']} "
         f"slots {given}/{len(slots)} tokens {tokens:,} via {u2.get('model')}")
+
+    # Verdict synthesis: a third, small call over the facts just stored, not
+    # the transcript (verdict_synthesis.py). Failure here does not undo the
+    # extraction above - a missing verdict is a smaller, separately-visible
+    # gap (the UI's top card falls back to a plain summary, spec 5's "hide
+    # what has no data" rule), not a reason to discard a correct extraction.
+    try:
+        facts = _build_verdict_facts(conn, symbol, qe, parsed)
+        verdict, u3 = call_with_retry(f"verdict({label})",
+                                      verdict_synthesis.synthesize, api_key, facts)
+        with conn:
+            store.write_verdict(conn, symbol, qe, verdict, facts,
+                               ex.EXTRACTOR_VERSION, timestamps["extracted_at"])
+        log(f"  {label}: verdict stored - tokens {u3.get('total_tokens') or 0:,}")
+    except Exception as e:
+        log(f"  {label}: verdict synthesis failed (extraction itself still "
+            f"stored): {type(e).__name__}: {e}")
+
+    # Promise checking: tests the PRIOR quarter's own commitments against
+    # what THIS call actually says (promise_check.py) - transcript-grounded,
+    # unlike verdict synthesis, so its quotes are cite-verified against THIS
+    # quarter's text the same way stage 2's are. Needs the prior quarter to
+    # already have commitments stored; on the first run after v3.2.0, a
+    # quarter whose prior hasn't been re-extracted yet simply has nothing to
+    # test against, which is a normal, visible gap (the UI hides the section),
+    # not a failure. Non-fatal for the same reason verdict synthesis is: a
+    # failure here must not undo the extraction already stored.
+    try:
+        prior = _find_prior_quarter(conn, symbol, qe)
+        if prior:
+            prior_qe, _ = prior
+            prior_commitments = store.read_commitments(conn, symbol, prior_qe)
+            if prior_commitments:
+                checks, u4 = call_with_retry(
+                    f"promise_check({label})", promise_check.check,
+                    api_key, prior_commitments, ex.exchange_map(exchanges), text)
+                checks, pc_failures = promise_check.verify(checks, text)
+                if pc_failures:
+                    log(f"  {label}: promise_check {len(pc_failures)} cite "
+                        f"failure(s), first: {pc_failures[0]}")
+                with conn:
+                    store.write_promise_checks(conn, symbol, qe, prior_qe,
+                                               checks, provenance, timestamps)
+                log(f"  {label}: promise_check stored - {len(checks)}/"
+                    f"{len(prior_commitments)} testable, "
+                    f"tokens {u4.get('total_tokens') or 0:,}")
+    except Exception as e:
+        log(f"  {label}: promise_check failed (extraction itself still "
+            f"stored): {type(e).__name__}: {e}")
+
     return "stored"
 
 

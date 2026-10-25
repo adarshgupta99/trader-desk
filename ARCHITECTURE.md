@@ -1525,6 +1525,277 @@ so it measures a mixture. Pin one model and re-run for a clean baseline.
 
 ---
 
+### Guidance tab visual redesign: `tabs/guidance.py`, `guidance_logic.py`, `verdict_synthesis.py` (21 Oct 2026)
+
+Built against `guidance-claude-prompt-light-dark-7b65efc4.txt`. Design and
+layout only by the spec's own framing, except for one deliberate exception:
+Adarsh's call was that sections with no backing data should get real data,
+not placeholder styling, so three genuinely new pieces of extraction/synthesis
+landed alongside the restyle. See CLAUDE.md's "Guidance tab visual redesign"
+section for the product-level summary; this is the code-level detail.
+
+**New in `extraction_v3.py` (bumped to `EXTRACTOR_VERSION = "v3.1.0"`):**
+- `risks`: a new array sibling to `frame` in the stage-2 schema, cite-verified
+  the same way `guidance_soft` is in `verify_and_locate()` - each item IS its
+  quote (`text`, `sized`, `quote`, `exchange_ref`), and one that fails the
+  substring check is dropped from the list rather than demoting a field, since
+  a list has no single field to demote. Stored as a `risks_disclosed` summary
+  row in `earnings_frame` (`status` GIVEN/NOT_GIVEN by list emptiness,
+  `value_json` holds the full list; `write_frame()` in `sentiment_store_v3.py`
+  appends this one extra row after its normal per-field loop).
+- `qa_assessments` items gained a `quote` field (nullable - required key,
+  null only for `specific_ask == "none - open-ended"`), verified in its own
+  loop in `verify_and_locate()` with `required=False` since most open-ended
+  questions legitimately have none.
+- `derive_pushback(parsed)`: pure arithmetic over `qa_assessments`, not a new
+  model field - counts exchanges with a concrete ask (`pushback_total`), the
+  evasive subset (`pushback_dodged`), picks one dodged example's quote, and
+  templates a summary line. Deliberately called from
+  `jobs/refresh_extraction_v3.process_quarter()` AFTER `verify_and_locate()`
+  runs, not inside `extract()` - the example quote must come from an
+  already-verified exchange, and `extract()` returns before verification has
+  happened. A 0-dodged result still produces a summary ("0 of 3 pointed
+  questions were not directly answered") rather than `None`; only
+  `pushback_total == 0` (no pointed questions at all) suppresses it. Subject-
+  verb agreement in the templated sentence follows the TOTAL count
+  (`pressing`), not the dodged count - a real bug caught by a test that
+  initially asserted the wrong thing (`tests/test_extraction_v3.py`): "0 of 1
+  pointed question WAS not answered" is correct English, "WERE" is not, and
+  the original code picked the verb form off `len(dodged)` instead of
+  `len(pressing)`.
+- Five new columns on `earnings_call_extraction`: `pushback_total`,
+  `pushback_dodged`, `pushback_example_quote`, `pushback_example_exchange_ref`,
+  `pushback_summary`.
+
+**`guidance_logic.py` (new, pure function, no I/O):** `promised_vs_delivered()`
+is `tabs/guidance.py`'s old inline comparison, factored out so the SAME
+computation feeds both the UI's Promises Tested table and
+`jobs/refresh_extraction_v3.py`'s verdict-facts builder - two independent
+implementations would drift the first time one changed. Takes already-fetched
+dicts (`prior_formal`, `current_slots`) and returns one of five verdicts per
+formal field (`NO_PROMISE_TO_TEST`, `NOT_COMPARABLE`, `IN_BAND`, `ABOVE`,
+`BELOW`) - only `guidance_margin` against the `ebit_margin` sector slot has a
+routinely comparable spoken actual in this build, so every other field stays
+`NOT_COMPARABLE` rather than guessing a basis match it can't assert. 12 pytest
+cases (`tests/test_guidance_logic.py`) cover all five verdicts, inclusive band
+edges, and the `WITHDRAWN_OR_CHANGED` promise still counting as testable.
+
+**`verdict_synthesis.py` (new):** a third, separate Gemini call per quarter
+(`gemini-3.5-flash-lite`, same tier as everything else in this build), whose
+ONLY input is a compact JSON dict of already-extracted, already-verified facts
+for that one quarter - tones, divergence, guidance status,
+`promised_vs_delivered` results, risks (text + sized only), pushback totals.
+It never receives the transcript, which is the whole point: it can only
+restate what stage 2 already proved, never introduce a claim the transcript
+never supported. Returns `{headline, supporting_line, chips}`; `synthesize()`
+filters any chip whose `role` falls outside `kept`/`raised`/`risk` before
+returning, so a malformed model response can't render an uncoloured or
+miscoloured chip. 6 pytest cases (`tests/test_verdict_synthesis.py`) with the
+`genai.Client` mocked out - schema shape, the chip-role filter, and that the
+lite model is actually the one requested, all offline. Written via
+`sentiment_store_v3.write_verdict()` to a new `earnings_verdict` table, called
+from `jobs/refresh_extraction_v3.process_quarter()` right after
+`store.write_all()`, in a try/except that logs but never re-raises - a verdict
+failure must not undo an otherwise-good stored extraction.
+
+**New direct-read helpers in `sentiment_store_v3.py`** (`read_guidance_formal`,
+`read_sector_slots`, `read_risks`): uncached SQL reads, each scoped to the MAX
+`extractor_version` per key, for job-context use. `_build_verdict_facts()` in
+`jobs/refresh_extraction_v3.py` needs the PRIOR quarter's formal guidance
+while potentially still mid-writing the CURRENT quarter in the same process -
+`events_db.py`'s `@st.cache_data`-wrapped accessors can't be trusted to see a
+write from earlier in the same run, so job-context reads go direct to SQLite
+instead. UI-context reads keep using `events_db.py`'s cached accessors as
+before; three new ones were added there this round: `get_risks`,
+`get_verdict`, and five pushback columns appended to the existing
+`get_extraction_quarters` column list.
+
+**Palette: scoped to this tab only, switches on `prefers-color-scheme`, not
+Streamlit's theme.** All new CSS custom properties (`--bg`, `--card`,
+`--accent`, `--green`/`--red`/`--blue`/`--purple`/`--ochre`/`--teal`, plus an
+rgb-triple twin of each for the 12%-opacity chip backgrounds) live on a
+`.g-redesign` wrapper div inside `tabs/guidance.py`'s own injected `<style>`
+block, with the dark values under `@media (prefers-color-scheme: dark)`
+nested inside the same selector - not `:root`, so nothing leaks into any
+other tab even though the token names (`--bg`, `--card`, `--text`...) are
+generic. This is a second, independent dual-theme mechanism living alongside
+`theme.py`'s `palette()` (which reads `st.context.theme.type` for every other
+tab) rather than a replacement for it - deliberate, per Adarsh's "follow the
+new spec doc" call for this tab specifically.
+`.streamlit/config.toml`'s `[theme]`/`[theme.dark]` pair, which every OTHER
+tab's palette depends on, was left untouched: the new spec's literal
+instruction ("remove any theme.base... override") and its own acceptance
+line ("touch only the Guidance tab... no other tab changes") point in
+opposite directions here, and the config already achieves the *stated goal*
+(following the viewer's system theme) through a working, separately-locked
+mechanism. See CLAUDE.md for the fuller reasoning.
+
+**Commitments status chips never include "Dodged."** The spec's status set
+for formal-guidance rows is Raised/New/Stated-or-Maintained/Lowered/Dodged,
+but this build has no field distinguishing "a field was asked about and the
+company declined" from "nobody asked" - only GIVEN/NOT_GIVEN/
+WITHDRAWN_OR_CHANGED/NOT_VERIFIED exist on `earnings_guidance_formal`, and
+NOT_GIVEN fields are never rendered as commitment rows at all (spec: never
+render an empty slot). `_formal_status_role()` in `tabs/guidance.py` only ever
+returns `new`/`raised`/`lowered`/`stated`. The "management evaded a direct
+question" case this would otherwise cover is already surfaced by the
+Analyst Pushback section's own dodged count.
+
+**Forward Calendar and Language Delta needed no new extraction** - both are
+pure composition in `tabs/guidance.py` itself: the calendar reads
+`events_db.get_upcoming_events(symbols=[symbol])` directly, and the delta
+diffs the current and prior quarter's already-stored `guidance_soft` rows for
+a topic whose direction changed between the two calls.
+
+**Verified**: full pytest suite (234 passing, +18 from this round) and a
+Streamlit `AppTest` sweep that clicked through every one of the 20 stored
+symbols and every stored quarter under each - zero exceptions. **Not yet
+verified**: no real-browser/screenshot pass (the spec's own section 6 wants
+1100px and 390px, both themes) - no browser/screenshot tool exists in this
+environment, same recurring caveat as every other UI build this session.
+Also not yet run: a v3.1.0 extraction pass to backfill `risks`/pushback/
+verdict onto the 20 symbols already stored under v3.1.0's predecessor
+version - a metered Gemini-cost operation, held back pending Adarsh's
+go-ahead same as prior backfills.
+
+**A real bug the AppTest sweep above did NOT catch (21 Oct 2026, found by
+Adarsh in the real app):** the new pushback columns were added to
+`events_db.get_extraction_quarters()`'s SELECT list in code, but the
+migration that adds those columns to an EXISTING `events.db` on disk
+(`sentiment_store_v3.get_connection()`'s try/except ALTER TABLE block) had
+only ever been exercised against scratch/temp databases during this
+session's own testing, never applied to the real, committed `events.db`.
+Every call hit `sqlite3.OperationalError: no such column: pushback_total`,
+caught by the function's own `except sqlite3.OperationalError: return []` -
+so the Guidance tab showed "No stored quarters" for every symbol instead of
+an error. AppTest only checks for unhandled exceptions, not "a function
+quietly returned empty when it shouldn't have" - a silently-swallowed
+`OperationalError` is invisible to that kind of sweep. Fixed by backing up
+`events.db` (`events.db.bak-pre-v3.1-migration`) and opening it once through
+`sentiment_store_v3.get_connection()`, which ran the pending migration and
+created `earnings_verdict`. Worth remembering for any future schema change
+on this branch: a migration living only in `get_connection()`'s try/except
+list is not "done" until it has actually been run against the real file, not
+just a test fixture.
+
+**A second, bigger extraction build the same day (21 Oct 2026):** Adarsh
+shared a hand-built HTML/CSS mockup (`guidance-light.html.txt`,
+`guidance-dark.html.txt`) showing the intended Guidance tab content, not just
+layout - COMMITMENTS THIS CALL and PROMISES TESTED in the mockup are
+company-specific named line items ("Exports run-rate", "Capacity", "BACL
+AUM"), not the four generic `earnings_guidance_formal` fields the first
+redesign pass used (which are NOT_GIVEN for most companies - a normal
+result, not a gap, but one that left those two sections nearly always
+empty). Checking BAJAJ-AUTO's actual sector card confirmed the gap: its 7
+`autos` slots are broad categories ("volume_growth",
+"commodity_cost_vs_price_hikes"), nothing like the mockup's specific
+numbers. Adarsh's explicit call when asked whether to treat the mockup as
+styling-only or build the richer extraction too: build the extraction.
+
+- **`commitments`** (new stage-2 array field, bumps `EXTRACTOR_VERSION` to
+  "v3.2.0"): company-specific, model-judged line items - metric, value,
+  support (a prior figure ALSO stated on the same call, which is what lets
+  status be judged without any cross-quarter lookup at extraction time),
+  status (raised/lowered/stated/new/dodged), cite-verified the same way
+  risks and guidance_soft are (list-shaped, an unverifiable item is dropped
+  rather than demoted in place). New `earnings_commitments` table.
+- **`promise_check.py` (new module, new stage 3) is transcript-grounded,
+  unlike `verdict_synthesis.py`.** Promises Tested needs to match an
+  arbitrary prior commitment ("cover about half") against an arbitrary
+  actual outcome phrased completely differently this quarter ("margin
+  20.9%, +10 bps QoQ") - that requires reading THIS quarter's transcript to
+  find and quote the right passage, not comparing two stored numbers. So
+  this call takes the prior quarter's stored commitments plus THIS
+  quarter's full transcript, and its quotes are cite-verified against THAT
+  transcript with the same `locate_quote`/`trim_quote` helpers extraction_v3
+  uses - a check whose quote can't be located is dropped, same list-shaped
+  convention as everywhere else. New `earnings_promise_checks` table,
+  columns `quarter_end` (the testing quarter) and `prior_quarter_end` (the
+  quarter the commitment was made in) naming both ends of the comparison.
+- **Wired into `jobs/refresh_extraction_v3.py` as a second non-fatal
+  post-extraction step**, right after verdict synthesis: finds the prior
+  quarter via the same `_find_prior_quarter()` verdict synthesis already
+  uses, reads its commitments via `store.read_commitments()` (a direct,
+  uncached read - job-context, same reasoning as the other read_* helpers),
+  and skips cleanly (not an error) if the prior quarter has none yet.
+- **A real backfill-ordering consequence, discovered running it live on
+  BAJAJ-AUTO:** `due_quarters()` processes newest-first (spec 7.3: a run
+  that stops early still leaves the useful end populated). That means on
+  the FIRST run after the v3.2.0 bump, every quarter's chronological prior
+  is either still on the OLD extractor version (no commitments stored under
+  v3.2.0 yet) or, for the oldest quarter in the window, not in storage at
+  all - so promise_check legitimately produces zero rows across an entire
+  first pass, by design, not a bug. A second pass (`--force`, since the
+  idempotency key already matches after pass one) then has every quarter's
+  real v3.2.0 commitments to test against. Verified live: pass one over
+  BAJAJ-AUTO's 6 quarters stored 6 commitments sets and 6 verdicts with zero
+  promise_checks; pass two, same 6 quarters, produced promise_check rows for
+  5 of 6 (the oldest has no stored quarter before it to test against, which
+  is correct, not a gap). Cost note: because the job couples promise_check
+  to the full extraction rather than offering a lighter "just redo the
+  check" path, pass two re-spends roughly the same tokens as pass one - a
+  one-time cost worth noting before backfilling the full universe.
+- New `events_db.get_commitments`/`get_promise_checks` accessors;
+  `tabs/guidance.py`'s Commitments This Call and Promises Tested sections
+  rewritten to read these instead of the old formal-guidance-only
+  comparison (`guidance_logic.promised_vs_delivered` is no longer called
+  from the UI, though it stays as the pure function `tests/
+  test_guidance_logic.py` covers - nothing currently reads it, which is
+  worth revisiting if nothing ends up using it).
+- **Promises Tested shows `NOT_ADDRESSED` rows rather than hiding them** -
+  CLAUDE.md's "report honest sample sizes" instinct applied here: a promise
+  the call goes silent on is itself a fact worth keeping visible, excluded
+  from the headline hit-rate (which is about promises the call actually
+  spoke to) but still a row in the table.
+- **"Dodged" is never produced for formal guidance fields, only for
+  `commitments`** - the model directly judges dodged status there (asked to
+  quantify, declined), a real signal this build has; formal guidance fields
+  only carry GIVEN/NOT_GIVEN/WITHDRAWN_OR_CHANGED/NOT_VERIFIED, with no
+  "asked and declined" distinction to draw a dodged chip from honestly.
+- Tests: `tests/test_promise_check.py` (cite-verification offline, call-
+  shaping with the Gemini client mocked) and extended
+  `tests/test_sentiment_store_v3.py` (commitments/promise_checks round-trip
+  and no-duplicate-on-rewrite coverage). Full suite 247 passing.
+
+**A second real bug, found by Adarsh looking at the live app right after
+the backfill (25 Oct 2026): the whole redesigned tab was rendering flat and
+colourless** - no card backgrounds, chips with no colour, KPI tiles with no
+accent border - despite the CSS looking correct in isolation. **Root cause:**
+every `st.markdown()`/`st.expander()`/`st.columns()` call in Streamlit
+renders as an INDEPENDENT sibling block in the DOM, not nested inside
+whatever HTML a previous call emitted. The stylesheet opened
+`<div class='g-redesign'>` in one `st.markdown()` call (defining every CSS
+custom property on that class) and closed `</div>` in a much later,
+separate call at the very end of `render()` - but because Streamlit never
+actually nests those calls' output inside each other, nothing in between
+was ever really wrapped by `.g-redesign`, so every `var(--card)`,
+`var(--green)`, `var(--border)` etc. used by any of that content resolved to
+nothing. **Fixed** by moving every custom property to `:root` instead (plus
+its dark-mode override) - safe because this `<style>` block only exists in
+the DOM while the Guidance tab is the active one (app.py only builds the
+selected section per rerun), and no other tab's CSS reads these variable
+names. Page-shell rules (background, font-family, max-width/centering) were
+moved the same way, onto `[data-testid="stAppViewContainer"] .block-container`
+(the real, persistent Streamlit container `theme.py`'s own `_MAIN_CSS`
+already targets for the same purpose), rather than the non-functional
+`.g-redesign` wrapper. The vestigial opening/closing `st.markdown("<div
+class='g-redesign'>"...)` calls were removed - they did nothing. **A second,
+related fix the same investigation surfaced:** Receipt disclosures used
+`st.expander()`, which renders Streamlit's own boxed accordion chrome (a
+bordered box with a label), not the spec's "small blue 'Receipt' link" -
+replaced with a raw `<details>/<summary>` HTML fragment (`_receipt_inline()`
+in `tabs/guidance.py`) embedded directly inside each row's own markdown
+string, both because it matches the intended minimal look and because it
+avoids the same sibling-block problem (a `st.expander()` call is itself a
+separate widget, not nestable inside a row's HTML). Verified: full pytest
+suite still green (247), AppTest sweep still zero exceptions across all 20
+symbols/quarters, and the stylesheet string confirmed (via AppTest, reading
+`at.markdown[0].value`) to define its variables under `:root`, not
+`.g-redesign`. **Not yet re-confirmed by eye in a real browser** since this
+fix - Adarsh's last screenshot predates it.
+
+---
+
 ### Earnings call sentiment tracker (Week 5-6 task, built 14 Oct 2026)
 
 The CLAUDE.md-specced feature: for each watchlist symbol's completed results quarters, find
@@ -3055,6 +3326,11 @@ pushed.
   verified via `AppTest` (zero exceptions) — no browser/screenshot tool exists in this
   environment, so Adarsh still needs to look at it in a real browser before it's
   considered visually confirmed.
+- **Guidance tab redesign:** real-browser/screenshot check (1100px and 390px, both
+  themes) per the new spec's own acceptance section — not available in this
+  environment. A v3.1.0 backfill run to populate risks/pushback/verdict for the
+  20 already-stored symbols has not been run yet (metered Gemini cost, held for
+  Adarsh's go-ahead). See the module writeup above.
 - **F&O correlation matrix:** merged to `main` (`8f8661b`, 8 Oct 2026) — see Git History
   above. Still open: a daily cron/launchd entry for `jobs/fetch_intraday.py` is designed
   (spec section 5) but not installed on Adarsh's Mac — until it is, the store only has

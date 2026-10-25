@@ -85,6 +85,12 @@ def _parsed(**overrides):
                               "period_basis": None, "quote": None,
                               "exchange_ref": None},
         },
+        "commitments": [
+            {"metric": "Headcount growth", "value": "10,000 net adds",
+             "support": "was 8,000 last quarter", "status": "raised",
+             "quote": "we expect to add ten thousand net this year",
+             "exchange_ref": "P1", "char_start": 40, "char_end": 90},
+        ],
     }
     base.update(overrides)
     return base
@@ -125,14 +131,15 @@ def test_write_all_populates_every_table(conn):
               for t in ("earnings_transcript_sources", "earnings_call_exchanges",
                         "earnings_call_extraction", "earnings_frame",
                         "earnings_guidance_formal", "earnings_guidance_soft",
-                        "earnings_sector_slots")}
+                        "earnings_sector_slots", "earnings_commitments")}
     assert counts["earnings_transcript_sources"] == 1
     assert counts["earnings_call_exchanges"] == 2
     assert counts["earnings_call_extraction"] == 1
-    assert counts["earnings_frame"] == 4        # the four frame fields
+    assert counts["earnings_frame"] == 5        # the four frame fields + risks_disclosed
     assert counts["earnings_guidance_formal"] == 4   # the four generic fields
     assert counts["earnings_guidance_soft"] == 1
     assert counts["earnings_sector_slots"] == 2
+    assert counts["earnings_commitments"] == 1
 
 
 def test_sheet_row_holds_the_v3_shape(conn):
@@ -218,11 +225,13 @@ def test_rewriting_the_same_quarter_does_not_duplicate(conn):
     _write(conn)
     for table in ("earnings_call_extraction", "earnings_frame",
                   "earnings_guidance_formal", "earnings_guidance_soft",
-                  "earnings_sector_slots", "earnings_call_exchanges"):
+                  "earnings_sector_slots", "earnings_call_exchanges",
+                  "earnings_commitments"):
         count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-        expected = {"earnings_call_extraction": 1, "earnings_frame": 4,
+        expected = {"earnings_call_extraction": 1, "earnings_frame": 5,
                     "earnings_guidance_formal": 4, "earnings_guidance_soft": 1,
-                    "earnings_sector_slots": 2, "earnings_call_exchanges": 2}[table]
+                    "earnings_sector_slots": 2, "earnings_call_exchanges": 2,
+                    "earnings_commitments": 1}[table]
         assert count == expected, f"{table} duplicated on rewrite"
 
 
@@ -274,3 +283,85 @@ def test_guidance_cell_with_no_soft_outlook():
 ])
 def test_fiscal_quarter_labels(quarter_end, label):
     assert _fiscal_quarter(quarter_end) == label
+
+
+# --- commitments / promise checks (v3.2.0) -----------------------------------
+
+def test_read_commitments_round_trips_through_write_all(conn):
+    _write(conn)
+    commitments = store.read_commitments(conn, "TCS", "2026-09-30")
+    assert len(commitments) == 1
+    assert commitments[0]["metric"] == "Headcount growth"
+    assert commitments[0]["value"] == "10,000 net adds"
+    assert commitments[0]["status"] == "raised"
+
+
+def test_read_commitments_empty_when_none_stored(conn):
+    _write(conn, parsed=_parsed(commitments=[]))
+    assert store.read_commitments(conn, "TCS", "2026-09-30") == []
+
+
+def test_write_commitments_does_not_duplicate_on_rewrite(conn):
+    _write(conn)
+    _write(conn)
+    count = conn.execute(
+        "SELECT COUNT(*) FROM earnings_commitments WHERE symbol='TCS'"
+    ).fetchone()[0]
+    assert count == 1
+
+
+def test_write_commitments_shrinking_item_count_does_not_leave_stale_rows(conn):
+    # A re-run can legitimately produce FEWER commitments than before (one
+    # dropped by cite verification) - delete-then-insert, not INSERT OR
+    # REPLACE, so item_no 2 from an earlier run can't survive as a ghost row.
+    two = _parsed(commitments=[
+        {"metric": "A", "value": "1", "support": None, "status": "new",
+         "quote": "a quote", "exchange_ref": "P1"},
+        {"metric": "B", "value": "2", "support": None, "status": "new",
+         "quote": "b quote", "exchange_ref": "P1"},
+    ])
+    _write(conn, parsed=two)
+    assert len(store.read_commitments(conn, "TCS", "2026-09-30")) == 2
+
+    one = _parsed(commitments=[
+        {"metric": "A", "value": "1", "support": None, "status": "new",
+         "quote": "a quote", "exchange_ref": "P1"},
+    ])
+    _write(conn, parsed=one)
+    assert len(store.read_commitments(conn, "TCS", "2026-09-30")) == 1
+
+
+def test_write_promise_checks_round_trips(conn):
+    checks = [
+        {"metric": "Exports run-rate", "promised_value": "220k/mo",
+         "delivered_value": "244k/mo", "quote": "demand is improving",
+         "exchange_ref": "P1", "char_start": 10, "char_end": 30,
+         "verdict": "BEAT"},
+        {"metric": "Margin", "promised_value": "cover about half",
+         "delivered_value": None, "quote": None, "exchange_ref": None,
+         "verdict": "NOT_ADDRESSED"},
+    ]
+    with conn:
+        store.write_promise_checks(conn, "TCS", "2026-12-31", "2026-09-30",
+                                   checks, PROVENANCE, TIMESTAMPS)
+    rows = conn.execute(
+        "SELECT metric, delivered_value, verdict, prior_quarter_end "
+        "FROM earnings_promise_checks WHERE symbol='TCS' ORDER BY item_no"
+    ).fetchall()
+    assert len(rows) == 2
+    assert rows[0] == ("Exports run-rate", "244k/mo", "BEAT", "2026-09-30")
+    assert rows[1] == ("Margin", None, "NOT_ADDRESSED", "2026-09-30")
+
+
+def test_write_promise_checks_does_not_duplicate_on_rewrite(conn):
+    checks = [{"metric": "A", "promised_value": "1", "delivered_value": "1",
+              "quote": "q", "exchange_ref": "P1", "verdict": "MET"}]
+    with conn:
+        store.write_promise_checks(conn, "TCS", "2026-12-31", "2026-09-30",
+                                   checks, PROVENANCE, TIMESTAMPS)
+        store.write_promise_checks(conn, "TCS", "2026-12-31", "2026-09-30",
+                                   checks, PROVENANCE, TIMESTAMPS)
+    count = conn.execute(
+        "SELECT COUNT(*) FROM earnings_promise_checks WHERE symbol='TCS'"
+    ).fetchone()[0]
+    assert count == 1

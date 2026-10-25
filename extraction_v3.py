@@ -45,7 +45,28 @@ import sector_cards
 #: Bumped whenever a prompt, schema or rubric changes in a way that could
 #: change an extracted value. Part of the idempotency key (spec 7.4): a new
 #: version re-extracts, an unchanged one is skipped.
-EXTRACTOR_VERSION = "v3.0.0"
+#: v3.1.0: adds risks_disclosed (list-shaped frame field), analyst pushback
+#: aggregates (derived from qa_assessments, which now also carries a quote),
+#: and nothing else changes in stage 1 or the other stage-2 fields.
+#: v3.2.0: adds `commitments` (list-shaped, stage 2) - the Guidance tab
+#: redesign's "Commitments This Call" / "Promises Tested" sections need
+#: company-specific named line items ("Exports run-rate", "Capacity"), not
+#: just the four generic guidance_formal fields, which are NOT_GIVEN for
+#: most companies (most don't give formal numeric guidance at all - that is
+#: a normal, common result, not a gap). Bumped so a normal (non-forced)
+#: re-run of already-extracted quarters picks these up automatically via the
+#: (symbol, quarter, pdf_hash, extractor_version) idempotency key, without
+#: needing --force.
+#: v3.2.1: tightens the `commitments.value` instruction to a hard 5-word cap.
+#: The first live run returned "9 million units per annum" where the design
+#: calls for "9M units/yr" - a sentence in a 230px column wraps to three
+#: lines and breaks the row rhythm the whole layout depends on.
+#: v3.2.2: the same cap for sector slots' value_text (6 words). DRREDDY's
+#: india_formulations_vs_ipm came back as a 143-character sentence, which
+#: rendered at headline size in a KPI tile and dragged the whole row's
+#: height with it. The UI now also defends against this independently, since
+#: a prompt is a request, not a guarantee.
+EXTRACTOR_VERSION = "v3.2.2"
 
 #: Model settings live in the environment, not in app logic (CLAUDE.md repo
 #: convention). Stage 1 is mechanical segmentation; stage 2 carries every
@@ -108,6 +129,15 @@ _FRAME_FIELDS = [
      "Dividend, buyback, fundraise, acquisition or management change "
      "mentioned on the call."),
 ]
+
+#: Risks are list-shaped (zero or more items), not a single value like the
+#: flat frame fields above, so they get their own schema branch (_risks_
+#: schema) and their own storage shape (earnings_frame.value_json, an array)
+#: rather than reusing _evidenced(). Added for the Guidance tab's "Risks
+#: management raised" section and the verdict's "risk not sized" chip -
+#: `sized` records whether management put a number/magnitude on the risk or
+#: just named it, which is exactly the distinction that chip needs to draw.
+RISKS_FIELD_KEY = "risks_disclosed"
 
 
 class ExtractionFailed(RuntimeError):
@@ -365,9 +395,18 @@ def _stage2_schema(slot_keys):
                         },
                         "redirects_or_generalises": {"type": "boolean"},
                         "evasive": {"type": "boolean"},
+                        # Added v3.1.0 for the Guidance tab's Analyst Pushback
+                        # section, which needs a verbatim example of the
+                        # sharpest exchange to quote - not just a count.
+                        "quote": {
+                            "type": "string", "nullable": True,
+                            "description": "The analyst's question, verbatim, "
+                                           "<= 40 words. Null only if "
+                                           "specific_ask is 'none - open-ended'.",
+                        },
                     },
                     "required": ["exchange_ref", "specific_ask", "answered",
-                                 "redirects_or_generalises", "evasive"],
+                                 "redirects_or_generalises", "evasive", "quote"],
                 },
             },
             "guidance_formal": {
@@ -393,10 +432,77 @@ def _stage2_schema(slot_keys):
                 "properties": {k: _evidenced() for k, _ in _FRAME_FIELDS},
                 "required": [k for k, _ in _FRAME_FIELDS],
             },
+            # List-shaped, unlike the flat frame fields - zero or more risk
+            # items, each independently evidenced. `sized` is what decides
+            # the Guidance tab's "risk not sized" chip: true when management
+            # put a number or magnitude on the risk, false when they only
+            # named it, null if genuinely ambiguous.
+            "risks": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string",
+                                "description": "The risk, in management's own "
+                                               "terms, as a short phrase."},
+                        "sized": {"type": "boolean", "nullable": True},
+                        "quote": {"type": "string"},
+                        "exchange_ref": {"type": "string"},
+                    },
+                    "required": ["text", "sized", "quote", "exchange_ref"],
+                },
+            },
+            # List-shaped, added v3.2.0 for the Guidance tab's "Commitments
+            # This Call" / "Promises Tested" sections. Broader than
+            # guidance_formal (revenue/margin/capex/order-book targets only)
+            # and more holdable than guidance_soft (non-committal colour,
+            # never a number) - this is any concrete, forward-looking thing
+            # management puts a number, count, range or explicit timeline on,
+            # company-specific and NOT limited to a fixed field list.
+            "commitments": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "metric": {
+                            "type": "string",
+                            "description": "Short label, in management's own "
+                                           "terms, e.g. 'Exports run-rate', "
+                                           "'Capacity', 'Cash by FY-end'.",
+                        },
+                        "value": {
+                            "type": "string",
+                            "description": "The commitment itself as a SHORT "
+                                           "headline value, AT MOST 5 words, "
+                                           "e.g. '2.5 lakh+/mo', '7M to 9M "
+                                           "units/yr', 'Double-digit', 'Not "
+                                           "sized'. Never a sentence - the "
+                                           "explanation belongs in support.",
+                        },
+                        "support": {
+                            "type": "string", "nullable": True,
+                            "description": "A prior figure for this same "
+                                           "metric ALSO stated on this call "
+                                           "(what lets status be judged), or "
+                                           "what was asked for a 'dodged' "
+                                           "item. Null if nothing more to add.",
+                        },
+                        "status": {
+                            "type": "string",
+                            "enum": ["raised", "lowered", "stated", "new", "dodged"],
+                        },
+                        "quote": {"type": "string",
+                                 "description": "Verbatim, <= 40 words."},
+                        "exchange_ref": {"type": "string"},
+                    },
+                    "required": ["metric", "value", "support", "status",
+                                 "quote", "exchange_ref"],
+                },
+            },
         },
         "required": ["mgmt_confidence", "overall_tone", "qa_tone", "analyst_tone",
                      "qa_divergence", "qa_assessments", "guidance_formal",
-                     "guidance_soft", "frame"],
+                     "guidance_soft", "frame", "risks", "commitments"],
     }
 
     if slot_keys:
@@ -488,6 +594,48 @@ For each one:
      redirects_or_generalises is true. A brief answer is not evasive if it
      answered. A plain refusal is NOT evasive - declining openly is an
      answer. An open-ended question with a substantive reply is not evasive.
+  5. quote: the analyst's QUESTION, verbatim, at most 40 words. Required
+     whenever specific_ask is not "none - open-ended" (i.e. whenever you
+     identified a concrete ask) - null otherwise.
+
+RISKS - list every risk, concern or headwind management itself names on the
+call (regulatory risk, a cost pressure, a demand softness, a competitive
+threat, a one-time disruption). For each: text (short, in management's own
+words), sized (true if they attached a number or magnitude to it, false if
+they only named it with no quantification, null if genuinely ambiguous),
+quote and exchange_ref. An analyst raising a risk that management does not
+engage with is NOT a management-disclosed risk - only what management itself
+names counts here. Empty list if none were raised; that is a common and valid
+result, not something to search harder for.
+
+COMMITMENTS - list every concrete, forward-looking thing management puts a
+number, a range, a count, a qualitative target, or an explicit timeline on
+this call - specific enough that a reader could hold them to it next quarter.
+This is BROADER than guidance_formal (which is only revenue/margin/capex/
+order-book targets) and more holdable than guidance_soft (non-committal
+colour, never a number or a timeline). Typical examples: an export run-rate
+target, a capacity expansion number, a count of planned product launches by a
+date, a margin level for one segment, a cash or debt level by a stated date.
+Also include a case where management was specifically ASKED to quantify
+something and declined - that is status "dodged", with value describing what
+was declined (e.g. "Not sized") and support naming what was asked for.
+For each: metric (short label), value (the commitment as a SHORT headline
+value, AT MOST 5 words - "9M units/yr", not "nine million units per annum";
+"2.5 lakh+/mo", not "two hundred fifty thousand per month". A reader scans
+this column, so it must never be a sentence - put the explanation in
+support), support
+(a prior figure for the SAME metric also stated on this call, if any - this
+is what lets status be judged, not your own outside knowledge), status:
+  - raised / lowered: ONLY when a comparable prior figure for the same metric
+    was ALSO stated on this call, and the new one is clearly higher/lower.
+  - new: no prior comparable figure was mentioned on this call.
+  - stated: a reaffirmed or qualitative commitment with no clean quantitative
+    delta to judge raised/lowered from.
+  - dodged: management was specifically asked to quantify something and
+    declined.
+Empty list if the call has no concrete, holdable commitments beyond formal
+guidance - do not force items to fill this out, and never duplicate a
+guidance_formal field here.
 
 Q&A DIVERGENCE - graded. Work through it deliberately: take the main claims
 the prepared remarks made (on demand, margin, growth, guidance posture) and
@@ -521,7 +669,11 @@ GUIDANCE - two parts, kept strictly separate:
 _SLOT_INSTRUCTIONS = """\
 SECTOR METRICS - fill each slot below from what was actually SAID ON THIS
 CALL. Give the number as spoken with its unit, and period_basis (QoQ / YoY /
-FY / LTM) only if stated. If the call is silent on a slot, return NOT_GIVEN;
+FY / LTM) only if stated. value_text is a SHORT headline figure or phrase,
+AT MOST 6 words - "14.6% MQT growth", not "moving quarterly total (MQT)
+growth of 14.6% versus 13.5% for the IPM". It is read as a scannable value
+in a small tile, never as prose; the supporting detail belongs in the quote,
+which is stored alongside it anyway. If the call is silent on a slot, return NOT_GIVEN;
 if the slot cannot apply to this company at all, NOT_APPLICABLE. A figure
 that appears only in a press release or presentation, and was not said on the
 call, is NOT_GIVEN here.
@@ -542,7 +694,11 @@ framing of it.
 """
 
 
-def _exchange_map(exchanges):
+def exchange_map(exchanges):
+    """The human-readable exchange listing stage 2's own prompt uses
+    (exchange_ref: who/kind, one per line). Public so other grounded calls
+    over the SAME quarter's exchanges - promise_check.py's stage 3 - build an
+    identical exchange listing rather than re-deriving their own."""
     lines = []
     for ex in exchanges:
         if ex["kind"] == "prepared":
@@ -579,6 +735,53 @@ def derive_evasive(parsed):
     return parsed
 
 
+def derive_pushback(parsed):
+    """Analyst-pushback aggregates for the Guidance tab's "2 of 2" framing,
+    derived from qa_assessments rather than asked for as a separate model
+    field - "pressing" is just "the analyst asked for something concrete",
+    which is already captured in specific_ask, so this is arithmetic over
+    already-judged data, not a new extraction.
+
+    pushback_total: exchanges where a specific ask was made (the denominator
+    the spec's "2 of 2" wants - open-ended questions don't count as pushback,
+    since there was nothing concrete to dodge).
+    pushback_dodged: the subset of those that were evasive by the rubric.
+    pushback_example: the first dodged exchange with its quote, for the
+    Guidance tab's single illustrative quote block. None if nothing was
+    dodged - the UI hides the section rather than showing an empty example.
+    pushback_summary: a plain templated line from the counts, not model
+    prose - safe to generate without grounding since it states only the
+    numbers already computed.
+    """
+    assessments = parsed.get("qa_assessments") or []
+    pressing = [a for a in assessments
+               if (a.get("specific_ask") or "").strip().lower() != "none - open-ended"]
+    dodged = [a for a in pressing if a.get("evasive_by_rubric")]
+
+    parsed["pushback_total"] = len(pressing)
+    parsed["pushback_dodged"] = len(dodged)
+    example = dodged[0] if dodged else None
+    parsed["pushback_example"] = (
+        {"exchange_ref": example.get("exchange_ref"), "quote": example.get("quote")}
+        if example else None
+    )
+    if pressing:
+        # Subject-verb agreement follows the TOTAL (pressing), not the
+        # dodged count - "0 of 1 question WAS not answered" is correct,
+        # "0 of 1 question WERE" is not. A 0-dodged summary is kept, not
+        # suppressed: "0 of 3 pointed questions were not directly answered"
+        # is itself the finding (every tough question got a real answer).
+        plural = len(pressing) != 1
+        parsed["pushback_summary"] = (
+            f"{len(dodged)} of {len(pressing)} pointed question"
+            f"{'s' if plural else ''} "
+            f"{'were' if plural else 'was'} not directly answered."
+        )
+    else:
+        parsed["pushback_summary"] = None
+    return parsed
+
+
 def _is_transient_model_error(exc):
     """A capacity or quota problem, where another model may well answer. A
     schema or content failure is NOT transient and must not silently walk
@@ -608,7 +811,7 @@ def extract(api_key, cleaned_text, exchanges, symbol, models=None):
         slot_instructions = _SLOT_INSTRUCTIONS.format(slot_list=slot_list)
 
     prompt = _STAGE2_PROMPT.format(
-        exchange_map=_exchange_map(exchanges),
+        exchange_map=exchange_map(exchanges),
         slot_instructions=slot_instructions,
         transcript=cleaned_text,
     )
@@ -625,6 +828,11 @@ def extract(api_key, cleaned_text, exchanges, symbol, models=None):
             continue
         usage["model"] = model
         usage["model_was_fallback"] = model != chain[0]
+        # derive_pushback is NOT called here. It picks an example quote out
+        # of qa_assessments, and those quotes are not verified until
+        # verify_and_locate() runs - calling it here could pick an
+        # unverified quote as the example. The caller runs derive_pushback
+        # AFTER verify_and_locate instead (see jobs/refresh_extraction_v3.py).
         return derive_evasive(parsed), usage
     raise ExtractionFailed(
         f"every stage-2 model was unavailable ({', '.join(chain)}): {last_error}"
@@ -753,6 +961,31 @@ def verify_and_locate(parsed, cleaned_text):
 
     for key, field in (parsed.get("sector_slots") or {}).items():
         check(field, f"sector_slots.{key}", required=field.get("status") == "GIVEN")
+
+    # qa_assessments quotes feed derive_pushback's example (run by the
+    # caller AFTER this function), so they must be verified here like
+    # anything else that reaches the UI - an unverified analyst question
+    # cleared rather than silently kept as if it passed.
+    for i, item in enumerate(parsed.get("qa_assessments") or [], start=1):
+        if item.get("quote"):
+            check(item, f"qa_assessments[{i}]", required=False)
+
+    # Risks are list-shaped like guidance_soft: each item IS its quote, so
+    # one that cannot be verified is dropped rather than demoted in place -
+    # a risk with no evidence left is not a risk worth showing.
+    kept_risks = []
+    for i, item in enumerate(parsed.get("risks") or [], start=1):
+        if check(item, f"risks[{i}]", required=True):
+            kept_risks.append(item)
+    parsed["risks"] = kept_risks
+
+    # Commitments are list-shaped like risks/guidance_soft: each item IS its
+    # quote, so one that cannot be verified is dropped rather than demoted.
+    kept_commitments = []
+    for i, item in enumerate(parsed.get("commitments") or [], start=1):
+        if check(item, f"commitments[{i}]", required=True):
+            kept_commitments.append(item)
+    parsed["commitments"] = kept_commitments
 
     # A soft-outlook item IS its quote (spec 4.2 stores them as quotes with a
     # topic and direction), so one that cannot be verified is dropped rather

@@ -238,3 +238,9 @@ live_data_cache.db
 
 # Local events.db snapshots taken before a job run
 backups/
+
+# Job logs (jobs/*.py write here) - runtime output, not source
+logs/
+
+# Ad-hoc events.db backups taken before a migration or backfill
+events.db.bak-*

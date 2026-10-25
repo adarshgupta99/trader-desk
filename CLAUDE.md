@@ -404,6 +404,154 @@ proven. The v2 path is retired only once v3 has backfill coverage.
 - **Not yet done**: the backfill driver's batching/resume (spec 7.4) beyond the
   per-symbol loop, and the QA 8.4 nine-sector spot-check.
 
+### Guidance tab visual redesign (21 October 2026)
+
+Built against `guidance-claude-prompt-light-dark-7b65efc4.txt`. Adarsh's explicit
+call when it conflicted with the rest of this document: where it conflicts with
+what's already locked, follow the new spec doc for the Guidance tab, and make
+edits here as needed; where a section had no backing data, extract the data
+rather than fake the section.
+
+- **Intentional, scoped palette divergence.** `tabs/guidance.py` now runs its
+  own colour tokens and font pair (Source Sans 3 + Inter), fully independent of
+  `theme.py`'s Swiss Editorial / Charcoal Warm. No other tab's colours, fonts,
+  or layout changed.
+  **Superseded 25 October 2026 (see "Commitments and promise checking" below):**
+  this originally put every token on a `.g-redesign` wrapper div and switched on
+  `prefers-color-scheme`, as the tab's own spec asked for. Both were wrong in
+  practice - the wrapper never actually wrapped anything (Streamlit renders each
+  markdown call as an independent sibling block), and `prefers-color-scheme`
+  reads a different setting from the one the rest of the app follows. Tokens now
+  sit on `:root` and the light/dark set is chosen in Python from
+  `st.context.theme.type`, the same source `theme.py` uses.
+- **`.streamlit/config.toml` was deliberately left alone**, despite the new
+  spec's literal "remove any theme.base... override" instruction. The spec's
+  stated *goal* there - the app following the viewer's system theme - is
+  already what the existing `[theme]` / `[theme.dark]` pair does (documented
+  under "Dark mode: Charcoal Warm" below); every other tab's palette.py depends
+  on that exact mechanism. The new spec's own acceptance section also says
+  "touch only the Guidance tab's styling... no other tab changes," so removing
+  it would satisfy one line of the spec by breaking another and regressing a
+  separately-locked, working feature. Flagging this explicitly rather than
+  silently picking a side.
+- **New extraction this round, all grounded in already-verified facts, never
+  the raw transcript re-read at render time:**
+  - `risks` (stage 2, `extraction_v3.py`): a sibling array to `frame`, cite
+    verified the same way `guidance_soft` is - each item IS its quote, an
+    unverifiable one is dropped from the list rather than demoting the field.
+    Stored as the `risks_disclosed` row in `earnings_frame` (`value_json`).
+  - **Analyst Pushback** is NOT a new model field - `derive_pushback()` in
+    `extraction_v3.py` is arithmetic over the existing `qa_assessments`
+    judgments (pointed-question count, dodged count, one illustrative quote),
+    run AFTER cite verification so the illustrative quote is never an
+    unverified one. Five new columns on `earnings_call_extraction`.
+  - **Verdict** (`verdict_synthesis.py`) is a separate, cheap stage-3 Gemini
+    call (`gemini-3.5-flash-lite`) whose ONLY input is a compact JSON summary
+    of already-extracted, already-verified facts for the quarter - it never
+    sees the transcript, so it cannot introduce a claim stage 2 didn't already
+    support. New `earnings_verdict` table, written by
+    `jobs/refresh_extraction_v3.py` right after `store.write_all`, non-fatally
+    (a verdict failure never undoes the stored extraction).
+  - **Forward Calendar and Language Delta needed no new extraction.** The
+    calendar is a plain read of `events_db.get_upcoming_events`; the delta is
+    pure composition over two quarters' already-stored `guidance_soft` rows
+    (same topic, changed direction) - both built entirely in `tabs/guidance.py`.
+- **`guidance_logic.py`** factors `promised_vs_delivered()` out of the UI so the
+  job's verdict-facts builder and the UI's "Promises Tested" table compute the
+  identical thing from the same inputs - two independent implementations would
+  drift the first time one changed. Deliberately pure (no `events_db` import):
+  the job sometimes needs quarter N-1's data while it is still mid-writing
+  quarter N in the same process, where `events_db`'s `@st.cache_data` layer may
+  not see the fresh row yet, so `sentiment_store_v3.py` grew matching direct
+  (uncached) read helpers (`read_guidance_formal`, `read_sector_slots`,
+  `read_risks`) for job-context use, while `events_db.py`'s cached accessors
+  remain for UI-context use.
+- **"Dodged" chip is never produced from formal guidance fields.** The spec's
+  Commitments status set includes Dodged (red), but this build has no reliable
+  signal distinguishing "asked and declined" from "never asked" on a formal
+  field alone - NOT_GIVEN fields aren't rendered as commitments at all (spec
+  rule: never render an empty slot). Pushback's own dodged-count already covers
+  the "management evaded a direct question" case; duplicating it as a fabricated
+  Dodged commitment chip would be a guess this build's evidence discipline rules
+  out.
+- Sections c-g (Promises Tested, Risks, Pushback, Segment Scorecard, Actuals vs
+  Estimates, Forward Calendar, Language Delta) each hide outright when their
+  backing data is empty, per spec section 5 - never an empty card or a dash.
+- **Verified**: full pytest suite green (234 tests, +18 new: `guidance_logic`
+  pure-function coverage, `verdict_synthesis` schema/chip-filter coverage with
+  the Gemini client mocked out) plus a Streamlit `AppTest` sweep across every
+  stored symbol and every stored quarter for each (20 symbols) - zero
+  exceptions. **Not yet verified**: no real-browser/screenshot check (1100px /
+  390px, both themes, the spec's own acceptance section 6) - same
+  environment caveat as the rest of this tab's history. Treat the redesign as
+  functionally wired but visually unconfirmed until checked by eye.
+- A fresh v3.1.0 extraction pass to backfill `risks`/pushback/verdict onto
+  already-stored quarters has not been run yet - this is a metered Gemini-cost
+  operation and should be done deliberately, same as prior backfills.
+
+### Commitments and promise checking (v3.2.x, 25 October 2026)
+
+Adarsh shared the hand-built mockup the redesign was drawn from
+(`guidance-light.html.txt`, `guidance-dark.html.txt`) and asked why the live tab
+didn't match. The answer was that the mockup specifies CONTENT, not just layout:
+its "Commitments This Call" and "Promises Tested" rows are company-specific named
+line items ("Exports run-rate", "Capacity", "BACL AUM"), not the four generic
+`guidance_formal` fields the first pass used - and those four are NOT_GIVEN for
+most companies, which left both sections nearly always empty. Adarsh's call when
+asked whether to treat the mockup as styling-only or build the extraction behind
+it: **build the extraction.**
+
+- **`commitments`** (new stage-2 array): metric, a SHORT headline value, support
+  (a prior figure stated on the SAME call, which is what lets status be judged
+  without any cross-quarter lookup), status (raised/lowered/stated/new/dodged),
+  cite-verified like every other list field. New `earnings_commitments` table.
+- **`promise_check.py`** (new stage 3) is transcript-grounded, unlike
+  `verdict_synthesis.py`: matching last quarter's "cover about half" to this
+  quarter's "margin 20.9%, +10 bps QoQ" needs the model to read and quote THIS
+  call, not compare two stored numbers. Its quotes are cite-verified against this
+  quarter's transcript; an unverifiable check is dropped. New
+  `earnings_promise_checks` table, storing both `quarter_end` (the testing
+  quarter) and `prior_quarter_end`.
+- **Backfill needs TWO passes, by design.** `due_quarters()` walks newest-first,
+  so on the first run after a version bump every quarter's chronological prior is
+  still on the old version with no commitments stored - promise_check correctly
+  produces nothing. A second pass (`--force`, since the idempotency key already
+  matches) then has real prior commitments to test against. Verified live on
+  BAJAJ-AUTO: pass one gave 6 commitment sets and 6 verdicts, zero promise
+  checks; pass two gave checks for 5 of 6 quarters (the oldest has no stored
+  predecessor, which is correct). Pass two costs roughly the same as pass one,
+  since the job couples promise_check to a full re-extraction.
+- **Three real UI bugs, all found by Adarsh looking at the live app:**
+  1. **The whole tab rendered flat and colourless.** Every CSS custom property
+     was defined on a `.g-redesign` wrapper div - but Streamlit renders each
+     `st.markdown()`/`st.expander()` call as an INDEPENDENT sibling block, so a
+     div opened in one call and closed in another never wraps anything between
+     them. Every `var(--card)` resolved to nothing. Variables moved to `:root`.
+  2. **A black slab over the page.** The fix above also painted
+     `.block-container`'s background - which holds the title and nav, not just
+     this tab - and it picked light/dark from `prefers-color-scheme` (the OS
+     setting) while everything else follows Streamlit's own theme setting. Two
+     independent settings; when they disagreed, dark cards landed on a light
+     page. Now the canvas is left alone entirely and the token set is chosen in
+     Python from `st.context.theme.type`, the same source `theme.py` uses.
+  3. **Duplicate quarter pills.** A re-extraction under a new version ADDS a row
+     (the idempotency key includes the version), so every re-extracted quarter
+     appeared twice. `get_extraction_quarters` now returns the latest version
+     per quarter only.
+- **Long values are defended against in the UI, not just asked for in the
+  prompt.** DRREDDY's `india_formulations_vs_ipm` came back as a 143-character
+  sentence, rendered at 30px in a KPI tile, wrapping to ten lines and dragging
+  every sibling tile's height with it. Value size now steps down by length and
+  clamps past four lines (full text on hover via the existing `data-tip`
+  popup), and `justify-content: space-between` was removed from the tiles - it
+  was leaving a hole in the middle of every shorter tile. The prompts were
+  tightened too (5 words for commitments, 6 for slot values), but a prompt is a
+  request, not a guarantee, so the layout no longer depends on it.
+- **Only BAJAJ-AUTO has been backfilled** under v3.2.x. Every other symbol is
+  still on v3.0.0 and so shows no Verdict/Commitments/Promises/Risks/Pushback at
+  all - those sections hide rather than render empty. The remaining 19 symbols
+  need the same two-pass run (~5 min and a real Gemini spend per symbol).
+
 ## Earnings call sentiment tracker - backend built (14 October 2026)
 
 The Week 5-6 task's data pipeline (schema, discovery, both tracks, the job) is built and
